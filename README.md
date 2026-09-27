@@ -98,20 +98,22 @@ flowchart TB
 Every value carries its trust: **pending** (AI) or **confirmed** (a human). Only a human raises it, and the proof is bound to exactly what was shown.
 
 ```mermaid
-flowchart LR
-    P["AI proposes<br/>a pending value"] --> S["Shown in the inbox<br/>with evidence + a recommendation"]
-    S --> H["Human gate<br/>retype · code · click"]:::owner
-    H --> C["Confirmed<br/>rules read it first"]
-    C -. "anyone may lower trust again" .-> P
-    C --> R["Rules propose actions<br/>+ expected $/day"]
-    R --> AP["Owner approves<br/>each action, expires in 24 h"]:::owner
-    AP --> D["Dry run<br/>writes nothing, full diff"]
-    D --> SW["Writes switch<br/>OFF until a contract"]:::off
-    SW --> W["One writer<br/>allowlist · caps · kill switch"]
-    W --> EXT[(External system)]
+flowchart TB
+    subgraph T["One value's trust"]
+      direction LR
+      P["AI proposes<br/>a pending value"] --> S["Shown in the inbox<br/>evidence + recommendation"] --> H["Human gate<br/>retype · code · click"]:::owner --> C["Confirmed<br/>rules read it first"]
+    end
+    subgraph MP["The money path"]
+      direction LR
+      R["Rules propose actions<br/>+ expected $/day"] --> AP["Owner approves each<br/>expires in 24 h"]:::owner --> D["Dry run<br/>full diff, writes nothing"] --> SW["Writes switch<br/>OFF until a contract"]:::off --> W["One writer<br/>allowlist · caps · kill switch"]
+    end
+    T -- "rules use confirmed values first" --> MP
+    MP --> EXT[(External system)]
     classDef owner fill:#e8f0fe,stroke:#1a73e8,stroke-width:2px
     classDef off stroke:#e37400,stroke-width:2px
 ```
+
+Anyone may lower a value's trust again; only a human raises it.
 
 Approve is the last human act before money moves. There is no second confirm at execute: it would only train rubber-stamping. Say plainly that the gate guards against accidents; the login is the real security boundary.
 
@@ -122,21 +124,23 @@ Approve is the last human act before money moves. There is no second confirm at 
 The first bugs in the source project were silent data loss with green tests, so every layer gets its guard test on day one.
 
 ```mermaid
-flowchart LR
-    subgraph Read["Read chain"]
+flowchart TB
+    subgraph Read["Read chain: each box names the guard its test enforces"]
       direction LR
-      PU["Pull<br/>read-only APIs<br/>never writes the db"] --> RAW["Raw files<br/>append only"] --> IN["Ingest<br/>rebuilds the cache<br/>refuses lossy rebuilds"] --> CA["Cache tables<br/>rebuildable<br/>version stamped"] --> CO["Compute<br/>read-only<br/>--json, add-only keys"]
+      PU["Pull<br/>read-only APIs<br/>never writes the db"] --> RAW["Raw files<br/>append only"] --> IN["Ingest<br/>refuses lossy rebuilds"] --> CA["Cache tables<br/>rebuildable, version stamped"] --> CO["Compute<br/>read-only, --json add-only"]
     end
-    HV["Human verbs<br/>one write path per table"] --> HT["Human tables<br/>never dropped<br/>backed up before ingest"]:::owner
-    HT --> CO
-    CO --> CS["Consumers<br/>agent · console · chat<br/>word it their way"]
+    subgraph Human["Human data"]
+      direction LR
+      HV["Human verbs<br/>one write path per table"] --> HT["Human tables<br/>never dropped, backed up"]
+    end
     subgraph Write["Write path, drawn apart"]
       direction LR
-      Q["Queue<br/>approved actions"] --> E["Execute<br/>dry run by default<br/>re-reads live values"] --> OW["One writer<br/>allowlist · caps<br/>kill switch, no retry"]:::off --> EXT[(External system)]
+      Q["Queue<br/>approved actions"] --> E["Execute<br/>dry run by default"] --> OW["One writer<br/>allowlist · caps · kill switch"]
     end
-    HT -- "only approved queue rows" --> Q
-    classDef owner fill:#e8f0fe,stroke:#1a73e8,stroke-width:2px
-    classDef off stroke:#e37400,stroke-width:2px
+    Read -- "compute reads human tables too" --- Human
+    Read --> CS["Consumers: agent · console · chat<br/>word it their way"]
+    Human -- "only approved queue rows" --> Write
+    Write --> EXT[(External system)]
 ```
 
 Cache tables can always be rebuilt from raw; human tables never can, so they are kept apart, backed up before each ingest and written by one verb each.
