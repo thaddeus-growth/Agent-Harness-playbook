@@ -11,24 +11,26 @@ Distilled from a week-long build of an advertising harness (read-only data pulls
 A new harness starts from recorded client meetings and goes through ten stages. The owner signs only five gates: **meaning, stories, numbers, money, release**. Everything else is signed by a machine: CI tests, or a host check after install.
 
 ```mermaid
-flowchart LR
-    M["0 · Client meetings<br/>recorded, transcribed,<br/>organized by AI"]:::input
-    subgraph Build
+flowchart TB
+    M["0 · Client meetings<br/>recorded, transcribed, organized by AI"]:::input
+    subgraph P1["Spec: the owner signs"]
       direction LR
-      S1["1 · Words<br/>names + rights<br/>owner signs"]:::owner
-      S2["2 · Stories<br/>+ the human step<br/>owner accepts"]:::owner
-      S3["3 · Rules<br/>each with a test<br/>CI"]
-      S4["4 · Data<br/>read-only chain<br/>CI"]
-      S5["5 · Human data<br/>trust levels<br/>CI"]
-      S6["6 · Registries<br/>numbers, --json<br/>owner approves"]:::owner
-      S7["7 · Reports<br/>on real data<br/>host check"]
-      S8["8 · Gate<br/>writes off<br/>owner approves"]:::owner
-      S9["9 · Release<br/>archive, install<br/>owner confirms"]:::owner
+      S1["1 · Words<br/>names + decision rights"]:::owner --> S2["2 · Stories<br/>+ the human step"]:::owner
     end
-    S10["10 · Operate<br/>run and learn<br/>queue ≤ 10 asks"]
-    M --> S1 & S2
-    S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7 --> S8 --> S9 --> S10
-    S10 -. "issues + owner queue feed the next meeting and new stories" .-> M
+    subgraph P2["Build: CI signs"]
+      direction LR
+      S3["3 · Rules<br/>each with a test"] --> S4["4 · Data<br/>read-only chain"] --> S5["5 · Human data<br/>trust levels"]
+    end
+    subgraph P3["Numbers, proof and money"]
+      direction LR
+      S6["6 · Registries<br/>owner approves numbers"]:::owner --> S7["7 · Reports<br/>host check on real data"] --> S8["8 · Gate<br/>owner approves each action"]:::owner
+    end
+    subgraph P4["Ship and run"]
+      direction LR
+      S9["9 · Release<br/>owner confirms"]:::owner --> S10["10 · Operate<br/>owner queue, at most 10 asks"]
+    end
+    M --> P1 --> P2 --> P3 --> P4
+    P4 -. "issues + owner queue feed the next meeting and new stories" .-> M
     classDef owner fill:#e8f0fe,stroke:#1a73e8,stroke-width:2px
     classDef input fill:#f1f3f4,stroke:#5f6368
 ```
@@ -70,21 +72,20 @@ The prompt and output shape for the organizer: [`templates/meeting-intake.md`](t
 
 Write these three lanes into the repository on day one, not into an agent's memory.
 
+**Always the owner:** meaning · numbers · money · the client contract · risky merges · release.
+
 ```mermaid
 flowchart TB
-    subgraph L1["Always the owner"]
-      direction LR
-      a1[meaning] ~~~ a2[numbers] ~~~ a3[money] ~~~ a4[contract] ~~~ a5[risky merges]:::risky ~~~ a6[release]
-    end
     subgraph L2["AI proposes, owner confirms"]
       direction LR
-      b1[AI writes a pending value] --> b2[shown in the inbox with evidence] --> b3[one click or chat code] --> b4[confirmed: rules read it]
+      b1["AI writes a<br/>pending value"] --> b2["shown in the inbox<br/>with evidence"] --> b3["one click<br/>or chat code"] --> b4["confirmed:<br/>rules read it"]
     end
     subgraph L3["AI alone"]
       direction LR
-      c1[issue filed by an agent] --> c2[triage against house rules] --> c3[fix + tests in its own worktree] --> c4[CI green: auto-merge]
+      c1["issue filed<br/>by an agent"] --> c2["triage against<br/>house rules"] --> c3["fix + tests in<br/>its own worktree"] --> c4["CI green:<br/>auto-merge"]
     end
-    c3 -. "touches the risky list" .-> a5
+    OM["Owner merges"]:::risky
+    L3 -. "touches the risky list" .-> OM
     classDef risky stroke:#e37400,stroke-width:2px
 ```
 
