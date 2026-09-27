@@ -1,0 +1,22 @@
+# Protected paths for the risky list: changes here wait for the owner's merge.
+# Replace @owner with the owner's handle. On GitLab Free this file documents
+# ownership; approval enforcement needs a paid tier or a protected-branch rule.
+
+# the human gate
+/src/lib/human.py                 @owner
+
+# the write path
+/src/api/writer.py                @owner
+/src/execute.py                   @owner
+
+# owner files and threshold values
+/ssot/user-stories.tsv            @owner
+/ssot/policies.tsv                @owner
+/ssot/glossary.tsv                @owner
+/ssot/constants.tsv               @owner
+
+# human-data table schema and protections
+/src/lib/db_human.py              @owner
+
+# the agent instructions themselves
+/CLAUDE.md                        @owner

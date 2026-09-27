@@ -1,0 +1,7 @@
+file	owner	reader	test	id_column	purpose
+ssot/index.tsv	registry	—	tests/test_ssot_index.py	file	Every registry and owner file: who owns it, which code reads it, which test guards it. Agents read this first.
+ssot/user-stories.tsv	owner	—	tests/test_ssot.py	id	User stories: what the owner wants, why, and when it counts as done.
+ssot/user-stories.agent.tsv	agent	—	tests/test_ssot.py	id	Same ids: status, blocking issue, proof command, data dependencies, proposed rewording.
+ssot/glossary.tsv	owner	—	tests/test_ssot.py	term	One name and one definition per business idea, in the client's words.
+ssot/glossary.agent.tsv	agent	—	tests/test_ssot.py	term	Where each term lives in data and code; proposed new terms.
+ssot/constants.tsv	registry	src/lib/constants.py	tests/test_constants.py	parameter	Threshold defaults: the only place a number lives.

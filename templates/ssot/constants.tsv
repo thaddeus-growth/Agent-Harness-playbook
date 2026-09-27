@@ -1,0 +1,2 @@
+parameter	label	explanation	group	default	unit	why
+min_clicks_to_judge	clicks before a keyword is judged	fewer clicks than this = too little data to call it good or bad	significance	20	clicks	below ~20 clicks one order swings the conversion rate too far

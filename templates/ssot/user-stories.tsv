@@ -1,0 +1,2 @@
+id	priority	human_step	i_want	so_that	given	done_when
+S01	M1	confirm	one page that lists what waits for my decision, each with its evidence	I decide in minutes without reading tool output	the reports exist and the console is behind a login	① every pending item shows its value, source and a recommendation; ② one click confirms exactly what is shown; ③ nothing I did not confirm changes
