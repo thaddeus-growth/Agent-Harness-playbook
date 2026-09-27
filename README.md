@@ -209,7 +209,7 @@ The owner usually can't read code, so as agents get more autonomy, "approved" an
 Proposed answer — an **evidence ledger** the owner reads as one line a day:
 
 ```mermaid
-flowchart LR
+flowchart TB
     SP["Story proofs as<br/>runnable checks"] --> N["Host runs them after<br/>every install + nightly"]
     N --> L["One line to the owner:<br/>'37 green, 1 red: S0x'"]
     L --> A{"Red?"}
