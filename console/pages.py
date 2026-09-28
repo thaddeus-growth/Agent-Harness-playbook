@@ -32,7 +32,9 @@ The forms drawn here are what serve.py reads (all `method=post`):
     note        token text
 
 A result or error page is the answer to a POST, so it has no poll (a reload
-would send the form again) and its language link goes to `./`. An error page
+would send the form again) and its language link goes to `./`. console.js sends
+each form with fetch and shows that page's `res` (or a redirect's `flash`) lines in
+a notice over the page it is on; a page without the script is used as it is. An error page
 says nothing about who is asking: it may come from a request that never
 reached a person.
 
@@ -59,6 +61,7 @@ CSS classes (console.css styles exactly these):
   empty clear big                  an empty page; `clear` = nothing waits, drawn with a tick; its big line
   rec reopen problems              history: what was answered, the reopen form, ignored entries
   res                              one line of a result page
+  toasts toast                     console.js's tray and one notice in it: the result lines of a form it sent in place
   foot                             footer
 """
 
