@@ -3,12 +3,13 @@ ssot/index.tsv	registry	—	tests/test_ssot.py	file	Every registry and owner fil
 ssot/glossary.tsv	owner	—	tests/test_ssot.py	term	One name and one definition per business idea, in the client's words.
 ssot/glossary.agent.tsv	agent	—	tests/test_ssot.py	term	Same terms: status, source, the ask and the answer that settled it, where each term lives in data and code, proposed new terms.
 ssot/user-stories.tsv	owner	—	tests/test_ssot.py	id	User stories: what the owner wants, why, the human step, and when it counts as done.
-ssot/user-stories.agent.tsv	agent	—	tests/test_ssot.py	id	Same ids: status, source, ask, decided, blocking issue, where the runnable check is, data dependencies, proposed rewording.
-ssot/policies.tsv	owner	—	tests/test_ssot.py	id	Business rules, when X then Y; a rule names thresholds, never their numbers.
-ssot/policies.agent.tsv	agent	—	tests/test_ssot.py	id	Same ids: status, source, ask, decided, where the rule is implemented, proposed rewording.
+ssot/user-stories.agent.tsv	agent	—	tests/test_ssot.py	id	Same ids: status, source, ask, decided, progress, blocking issue, where the runnable check is, data dependencies, notes, proposed rewording.
+ssot/policies.tsv	owner	—	tests/test_ssot.py	id	Business rules: when X, do Y; thresholds named, never numbered; the stories each rule serves.
+ssot/policies.agent.tsv	agent	—	tests/test_ssot.py	id	Same ids: status, source, ask, decided, where the rule is implemented, notes, proposed rewording; a rule not yet approved is a proposed row here only.
 ssot/constants.tsv	registry	scripts/kit/registry.py	tests/test_ssot.py	name	Threshold defaults: the only place a number lives. A client's own value is a confirmed threshold fact, never an edit here.
-ssot/fact_keys.tsv	registry	scripts/kit/registry.py	tests/test_ssot.py; tests/test_human_tables.py	key	The facts a client may state (costs, caps, limits): type, unit and bounds. Setting any other key is refused.
+ssot/fact_keys.tsv	registry	scripts/kit/registry.py	tests/test_ssot.py; tests/test_human_tables.py	key	Every business fact a client may state (costs, caps, limits): type, unit, bounds, required or not. Setting any other key is refused.
 ssot/decision_keys.tsv	registry	scripts/kit/registry.py	tests/test_ssot.py; tests/test_gate.py	entity_type+key	Per-entity decisions: value domain and whether a human must confirm (confirm = human) before it is in force.
-ssot/message_codes.tsv	registry	scripts/kit/messages.py	tests/test_json_contract.py	code	The harness's own message codes: params and one meaning per language. The kit's codes live in the vendored kit, never here.
-ssot/story_checks.tsv	registry	scripts/kit/stories.py	tests/test_ssot.py	story	One runnable check per accepted story: a read verb, what its JSON must hold, which tables it needs.
+ssot/message_codes.tsv	registry	scripts/kit/messages.py	tests/test_json_contract.py	code	The harness's own message codes: params and one meaning per language, checked both ways. The kit's codes live in the vendored kit, never here.
+ssot/alert_rules.tsv	registry	scripts/compute_alerts.py	tests/test_ssot.py	name	Alert rules as rows: grain, metric, comparison, threshold, cooldown. Read by the harness's own alert compute; the kit has no alert reader.
+ssot/story_checks.tsv	registry	scripts/kit/stories.py	tests/test_ssot.py	story	One read-only check per done story: a read verb, what its JSON must hold, which tables it needs.
 ssot/stages.agent.tsv	agent	—	tests/test_ssot.py	stage	Which build step (BUILD.md) the harness is at, who must sign each gate, and the answer, merge or pipeline that signed it.

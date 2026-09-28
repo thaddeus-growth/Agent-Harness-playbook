@@ -34,6 +34,7 @@ PATH = re.compile(r"(?<![\w/.$<-])((?:" + "|".join(TOP_DIRS) + r")/[A-Za-z0-9_./
 LINK = re.compile(r"\]\(([^)#\s]+)(?:#[^)]*)?\)")
 HARNESS_TEST = re.compile(r"(?<![\w/.-])tests/(test_\w+\.py)")
 PLACEHOLDER = re.compile(r"\{\{(\w+)\}\}")
+ACTIONS_EXPR = re.compile(r"\$\{\{[^}]*\}\}")     # a GitHub Actions expression, not a placeholder
 STEPS = ["B0", "B0.5", "B0.6", "B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "B10"]
 GENERATED = {"test_ssot.py", "test_layering.py", "test_json_contract.py", "test_release.py", "test_kit_drift.py",
              "test_human_tables.py", "test_gate.py", "test_boundary.py", "test_run_tests.py"}
@@ -316,7 +317,7 @@ def test_the_registries_refer_only_to_rows_that_exist():
         for r in tsv(rel):
             assert set((r.get("story") or "").split()) <= stories, (rel, r)
     for r in tsv("templates/ssot/decision_keys.tsv"):
-        assert r["confirm"] in ("human", "none"), r
+        assert r["confirm"] in ("human", "none", "harness"), r
     for r in tsv("templates/ssot/message_codes.tsv"):
         params = {p for p in r["params"].split(",") if p}
         for lang in ("meaning_en", "meaning_zh"):
@@ -329,11 +330,12 @@ def test_every_placeholder_is_one_the_templates_readme_explains():
     explained = set(re.findall(r"^\| `\{\{(\w+)\}\}` \|", section(doc(TREADME), "Placeholders"), re.M))
     assert explained >= {"name", "cli", "env_prefix", "owner"}
     assert PLACEHOLDER.findall("{{cli}} and {{ cli }}") == ["cli"]
+    assert ACTIONS_EXPR.sub("", "${{ github.event.pull_request.title }} {{cli}}") == " {{cli}}"
     used = set()
     for rel in template_files():
         if rel == TREADME:
             continue
-        text = doc(rel)
+        text = ACTIONS_EXPR.sub("", doc(rel))
         used |= set(PLACEHOLDER.findall(text))
         assert text.count("{{") == len(PLACEHOLDER.findall(text)), f"{rel}: a malformed placeholder"
     assert used == explained, (sorted(used - explained), sorted(explained - used))

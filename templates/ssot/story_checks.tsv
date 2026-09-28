@@ -1,2 +1,3 @@
 story	verb	expect	needs	note
 S01	pending	asks		every item waiting for a human is listed, ready to post as a console ask
+S02	db sql "SELECT COUNT(*) AS n FROM action_effects e JOIN action_queue q ON q.id = e.queue_id WHERE e.market = {market} AND e.state = 'sent' AND q.decided_by IS NULL"	[].n=0	action_effects	no change was ever sent without my approval

@@ -1,2 +1,3 @@
 name	default	unit	min	max	group	label_en	label_zh	explain	why
-approval_ttl_hours	24	hours	1	168	write path	how long an approval stays valid	审批有效时长	an approved action that has not run within this many hours must be approved again	the playbook's gate: an approval expires in 24 h; P01
+approval_ttl_hours	24	hours	1	168	write path	how long an approval stays valid	审批有效时长	an approved action that has not run within this many hours must be approved again	the playbook's gate: an approval expires in 24 h; P02
+min_clicks_to_judge	20	clicks	1		significance	clicks before a keyword is judged	判断关键词前所需的点击数	fewer clicks than this = too little data to call it good or bad	below ~20 clicks one order swings the conversion rate too far; P01

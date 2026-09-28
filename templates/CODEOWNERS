@@ -1,8 +1,14 @@
 # Protected paths for the risky list (templates/decision-rights.md): a change
 # here waits for the owner's merge. Put this file at .gitlab/CODEOWNERS (GitLab)
 # or .github/CODEOWNERS (GitHub). {{owner}} is the owner's handle. On GitLab Free
-# this names the owner on the merge request; the owner merging is the approval.
-# Every path below exists in a freshly scaffolded harness.
+# this names the owner on the merge request; enforcing the owner's approval needs
+# a paid tier or a protected-branch rule. Without either, nothing blocks the
+# merge: the agent reads this list before setting auto-merge and leaves a
+# matching MR for the owner to merge.
+# A refactor that moves code out of a path below adds its new file here in
+# the same MR; otherwise the moved code quietly starts auto-merging.
+# Every path below exists in a freshly scaffolded harness, except the client
+# console's, which comes with that console.
 
 # the shared kit: the human gate, the write guard, human tables (vendored, never
 # edited here; tests/test_kit_drift.py fails on a local edit)
@@ -23,6 +29,9 @@
 /ssot/user-stories.tsv            {{owner}}
 /ssot/policies.tsv                {{owner}}
 /ssot/constants.tsv               {{owner}}
+
+# the client console's UI rules, an owner file (the owner console's are in /console/)
+/webconsole/ui_rules.tsv          {{owner}}
 
 # which facts and decisions exist, and which keys need a human to confirm
 /ssot/fact_keys.tsv               {{owner}}

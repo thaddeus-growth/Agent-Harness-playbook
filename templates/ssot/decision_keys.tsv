@@ -1,2 +1,5 @@
 entity_type	key	domain	confirm	label_en	label_zh	story	why
 product	hands_off	yes|no	human	keep the harness's hands off this product	此商品不自动调整	S01	a product the owner manages by hand gets no proposals; only a human turns this on or off
+product_group	stage	launch|grow|hold|retire	human	lifecycle stage	生命周期阶段	S02	one stage per group; the agent may write a pending stage, only a human confirms it
+product_group	stage_snapshot	json	harness	evidence at confirm	确认时依据的证据	S02	written only by the harness inside the stage confirm: the evidence it relied on, since the platform keeps a short history
+keyword	relevance_agent	0|2|5|8|10	none	relevance (AI score)	相关度（AI 评分）	S02	the agent's score, in effect at once; a human's score is a second key (confirm: human) that wins when set

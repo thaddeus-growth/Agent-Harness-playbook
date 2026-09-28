@@ -1,2 +1,4 @@
 code	params	meaning_en	meaning_zh
 report_window_short	days,needed	The window holds {days} days of data; this report needs at least {needed}.	数据窗口只有 {days} 天，这份报告至少需要 {needed} 天。
+days_missing	source,days,start,end	{source} has no data for {days} between {start} and {end}; the total is a lower bound	{source} 在 {start} 至 {end} 之间缺少 {days} 的数据；合计只是下限
+verb_failed	verb,error	{verb} failed: {error}	{verb} 失败：{error}

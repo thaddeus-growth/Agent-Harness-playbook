@@ -1,2 +1,3 @@
-id	status	source	ask	decided	blocking_issue	check	data_dependencies	notes	proposed
-S01	accepted	meeting:2026-09-27 00:04:31	intake-s1	console:intake-s1@14		story_checks.tsv	client_facts; decisions; action_queue	the kit's pending verb lists every row waiting on a human	
+id	status	source	ask	decided	progress	blocking_issue	check	data_dependencies	notes	proposed
+S01	accepted	meeting:2026-09-27 00:04:31	intake-s1	console:intake-s1@14	done		story_checks.tsv	client_facts; decisions; action_queue	the kit's pending verb lists every row waiting on a human	
+S02	accepted	meeting:2026-09-27 00:05:10	intake-s2	console:intake-s2@15	done		story_checks.tsv	action_queue; action_effects	① ② ③ built; writes stay off until a client agreement	

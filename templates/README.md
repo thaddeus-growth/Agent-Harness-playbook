@@ -16,6 +16,7 @@ The files a new harness starts from. The build workflow, [BUILD.md](../BUILD.md)
 | [AGENT_INSTRUCTIONS.md](AGENT_INSTRUCTIONS.md) | B1 | `CLAUDE.md` | Invariants only, each naming its test |
 | [CODEOWNERS](CODEOWNERS) | B1 | `.gitlab/CODEOWNERS` | Protected paths for the risky list |
 | [gitlab-ci.yml](gitlab-ci.yml) | B1 | `.gitlab-ci.yml` | Secret scan, story id in the title, the RESULT-gated test job |
+| [ci/story-id.yml](ci/story-id.yml) | B1 | a job in a CI file of your own | The story-id job alone, with why it is a job and not only a rule; gitlab-ci.yml already holds it |
 | [gitignore](gitignore) | B1 | `.gitignore` | Secrets, the console's log, client data |
 | [ssot/README.md](ssot/README.md) | B1 | `ssot/README.md` | Owner files, agent files, registries, the trail columns |
 | [ssot/index.tsv](ssot/index.tsv) | B1 | `ssot/index.tsv` | One row per ssot file: owner, reader, test, id column |
@@ -25,12 +26,16 @@ The files a new harness starts from. The build workflow, [BUILD.md](../BUILD.md)
 | [ssot/constants.tsv](ssot/constants.tsv) | B3 | `ssot/` | Threshold defaults |
 | [ssot/fact_keys.tsv](ssot/fact_keys.tsv), [ssot/decision_keys.tsv](ssot/decision_keys.tsv) | B3, B5 | `ssot/` | Which facts and decisions exist, and which need a human |
 | [ssot/message_codes.tsv](ssot/message_codes.tsv) | B3, B4, B6 | `ssot/` | The harness's own message codes |
-| [ssot/story_checks.tsv](ssot/story_checks.tsv) | B6 | `ssot/` | One runnable check per story |
+| [ssot/story_checks.tsv](ssot/story_checks.tsv) | B6 | `ssot/` | One runnable check per done story |
+| [ssot/alert_rules.tsv](ssot/alert_rules.tsv) | B6 | `ssot/` | Alert rules as rows, read by the harness's own alert compute |
+| [console/ui_rules.tsv](console/ui_rules.tsv) | B5, B7 | `webconsole/ui_rules.tsv` | The client console's UI rules, an owner file; each rule checked by name |
 | [ssot/stages.agent.tsv](ssot/stages.agent.tsv) | every step | `ssot/` | Which build step the harness is at, and who signed each |
 | [SKILL.md](SKILL.md) | B8 | `SKILL.md` | The agent's rules and the skill's scope: read, pending writes, out of scope |
 | [README-operator.md](README-operator.md) | B8 | `README.md` | Install, configure, daily loop, what needs a human, which command answers which question |
 | [workflows.md](workflows.md) | B8 | `references/workflows.md` | Recipes: the daily check, why a number moved, a client meeting |
-| [install-checklist.md](install-checklist.md) | B9 | `docs/install-checklist.md` | What the host agent reports after every install |
+| [install-checklist.md](install-checklist.md) | B9 | `docs/install-checklist.md` | The install message, what the host agent reports after every install, scheduled tasks, and what a host agent can reach |
+| [triage-checklist.md](triage-checklist.md) | B10 | `docs/triage-checklist.md` | Judging an agent-filed issue; the triage line that routes it |
+| [verify-challenge.md](verify-challenge.md) | B10 | (used, not copied) | Reader and skeptic prompts for a report from outside |
 
 ## Placeholders
 

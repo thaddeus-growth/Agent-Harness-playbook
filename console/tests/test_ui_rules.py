@@ -553,12 +553,17 @@ def test_u15_an_answer_on_its_way_cannot_go_twice_be_reloaded_away_or_changed_by
     assert got["pageshow"] == {"plain": 0, "restored": 1}     # the back button must not bring back a page with dead buttons
 
 
-def test_u18_a_form_is_sent_without_leaving_the_page_and_the_page_keeps_what_the_person_had():
+def test_u17_a_form_is_sent_without_leaving_the_page_and_the_page_keeps_what_the_person_had():
     for lang in LANGS:                    # what the script shows is what the console drew: a result line, or the notice a redirect ends on
         d = Doc(pages.render_result(ctx(lang), [{"ok": True, "id": "p1", "title": "P", "value": "y", "code": None, "message": ""}]))
         assert d.find("li", "res") is not None
         n = Doc(pages.render_inbox(full_log().state(), {**ctx(lang), "flash": {"kind": "ok", "text": "x"}}))
         assert n.find("p", "flash") is not None
+        for who in (adviser(lang), decider(lang)):   # a view sent from History, or a reopen from a disagreement's notice, ends the same way
+            h = Doc(pages.render_history(advised_log().state(), {**who, "flash": {"kind": "ok", "text": "x"}}))
+            assert h.find("p", "flash") is not None
+            forms = h.find_all("form")
+            assert forms and all(f.attrs.get("method") == "post" and f.attrs.get("action") for f in forms)   # each one the script can send
     got = script_run()
     if got is None:
         return
@@ -1005,7 +1010,7 @@ def test_u14_an_answer_the_console_cannot_write_draws_no_form_and_says_so_before
         assert [a for a in ok.find_all("details", "ask") if "Title of p1" in a.text()][0].find("form", "answer")
 
 
-def test_u17_an_adviser_sees_everything_decides_nothing_and_a_disagreement_reaches_the_one_who_decides():
+def test_u18_an_adviser_sees_everything_decides_nothing_and_a_disagreement_reaches_the_one_who_decides():
     st = advised_log().state()
     for lang in LANGS:
         for page in (pages.render_inbox(st, adviser(lang)), pages.render_history(st, adviser(lang))):
