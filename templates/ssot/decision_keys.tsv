@@ -1,0 +1,4 @@
+entity_type	key	domain	confirm	label	story	why
+product_group	stage	launch|grow|hold|retire	human	lifecycle stage	S02	one stage per group; the agent may write a pending stage, only a human confirms it
+product_group	stage_snapshot	json	with_stage	evidence at confirm	S02	written only inside the stage confirm: the evidence it relied on, since the platform keeps a short history
+keyword	relevance_agent	0|2|5|8|10	none	relevance (AI score)	S02	the agent's score, in effect at once; a human's score is a second key (confirm: human) that wins when set

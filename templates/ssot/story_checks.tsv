@@ -1,0 +1,3 @@
+story	verb	expect	needs	proves
+S01	db sql "SELECT COUNT(*) AS n FROM client_facts WHERE state = 'pending' AND scope = {scope} AND (value IS NULL OR source IS NULL OR rec IS NULL)"	[].n=0	client_facts	every pending value shows its value, source and a recommendation
+S02	db sql "SELECT COUNT(*) AS n FROM action_log WHERE scope = {scope} AND sent = 1 AND approved_by IS NULL"	[].n=0	action_log	no change was ever sent without my approval
