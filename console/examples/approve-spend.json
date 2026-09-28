@@ -1,0 +1,32 @@
+{
+  "id": "spend-spring-push",
+  "step": "approve",
+  "kind": "spend",
+  "group": "Money",
+  "title": "Approve up to USD 30 a day of ads for the masala chai push?",
+  "why": "The chai push needs ads to be seen. The plan has a hard daily cap, so even a bad day costs at most USD 30.",
+  "evidence": [
+    {
+      "table": {
+        "caption": "Expected daily spend, USD 30 in total. Source: our ad plan",
+        "columns": ["Ad", "Spend a day", "Orders a day"],
+        "rows": [
+          ["Chai, search ads", "USD 15", "3 to 4"],
+          ["Chai, product pages", "USD 10", "2 to 3"],
+          ["Chai gift box", "USD 5", "1"]
+        ]
+      }
+    },
+    {
+      "label": "Sales a day, last month",
+      "value": "USD 340 on average",
+      "source": "Northwind Tea Co. order history"
+    }
+  ],
+  "recommend": {
+    "value": "yes",
+    "because": "USD 30 is about 9% of a normal day's sales, and each ad has a cap of its own."
+  },
+  "effect": "Ads start tomorrow morning and stop for the day once USD 30 is spent. You can stop them at any time.",
+  "if_no": "No ads start. Chai keeps selling as it does today, and we ask you for a lower daily cap."
+}

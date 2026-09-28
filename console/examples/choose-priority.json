@@ -1,0 +1,48 @@
+{
+  "id": "priority-spring-push",
+  "step": "choose",
+  "kind": "priority",
+  "group": "Priorities",
+  "title": "Which tea should we push first this spring?",
+  "why": "We can run one push at a time and measure it, and each needs about two weeks before the numbers mean anything. Orders rose sharply in April last year, and April is about four weeks away.",
+  "evidence": [
+    {
+      "table": {
+        "caption": "Last 8 weeks, per tea. Source: Northwind Tea Co. order history",
+        "columns": ["Tea", "Orders a week", "Stock left"],
+        "rows": [
+          ["Sencha green", "38", "9 weeks"],
+          ["Masala chai", "24", "14 weeks"],
+          ["Jasmine pearls", "11", "30 weeks"]
+        ]
+      }
+    },
+    {
+      "label": "Peak last year",
+      "value": "orders doubled between March and April",
+      "source": "Northwind Tea Co. order history"
+    }
+  ],
+  "options": [
+    {
+      "value": "sencha",
+      "label": "Sencha green",
+      "note": "Sells the most, but the stock lasts only 9 more weeks."
+    },
+    {
+      "value": "chai",
+      "label": "Masala chai",
+      "note": "A steady seller with plenty of stock."
+    },
+    {
+      "value": "jasmine",
+      "label": "Jasmine pearls",
+      "note": "Sells little today, so it would be the slowest to pay off."
+    }
+  ],
+  "recommend": {
+    "value": "chai",
+    "because": "It sells steadily and has 14 weeks of stock, so a push cannot empty the shelf before the peak."
+  },
+  "if_no": "If none of these fits, name the tea in the comment. We start no push until you do."
+}

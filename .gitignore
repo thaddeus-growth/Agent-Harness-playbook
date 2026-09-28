@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.DS_Store
+
+# a console's data folder holds answers and the signing secret: never in a checkout
+events.jsonl
+secret

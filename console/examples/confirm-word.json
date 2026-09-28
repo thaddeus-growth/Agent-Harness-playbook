@@ -1,0 +1,24 @@
+{
+  "id": "word-sampler",
+  "step": "confirm",
+  "kind": "word",
+  "group": "Words we use",
+  "title": "Is \"sampler\" your word for the 50 g pouches?",
+  "why": "This week we name the product groups that every report and ad will use. You said the word once in passing, and a wrong word would be repeated everywhere.",
+  "evidence": [
+    {
+      "quote": "The little 50 gram pouches, we call those samplers. The 250 gram tins are what people come back for.",
+      "source": "meeting 2026-03-02, 12:31"
+    },
+    {
+      "label": "Products in this group",
+      "value": "6 flavours, all sold as 50 g pouches",
+      "source": "Northwind Tea Co. product list"
+    }
+  ],
+  "recommend": {
+    "value": "yes",
+    "because": "It is your own word from your own meeting, and it keeps them apart from the 250 g tins."
+  },
+  "if_no": "We keep calling them \"50 g pouches\" and ask you which word you would rather use."
+}

@@ -177,10 +177,32 @@ The owner decides less, but every decision is real.
 4. **One gate for every channel**, bound to exactly what was shown, single use, logged, no bypass flag.
 5. **Approve is the last human act before money moves.** A second confirm at execute only trains rubber-stamping.
 6. **Business "not yet" beats technically ready.** Client writes and paid calls stay off until the owner says so in writing, with a cap.
-7. **Budget the owner's attention:** at most 10 asks, each with evidence, a recommendation and what "no" means. Inputs are picked from a list, never typed.
+7. **Budget the owner's attention:** at most 10 asks, each with evidence, a recommendation and what "no" means. Inputs are picked from a list; the one thing typed is a value the harness validates.
 8. **Agree in advance which channel counts.** Widening what may be written counts only when typed in chat, not clicked on a page.
 9. **Remote agents never act for the owner.** They install only on the owner's own "confirm vX" and end with a checklist report.
 10. **Measure whether the gate is real.** Track how often the owner overrides each kind of ask; an eval counts only if it fails when its rule is removed.
+
+---
+
+## The owner console: where the asks go
+
+Rule 7 needs a place to live. [`console/`](console/) is that place: the agent posts asks, the owner answers on one page, the answers come back as JSON.
+
+```mermaid
+flowchart LR
+    A["Agent posts at most 10 asks<br/>evidence · recommendation · what no means"] --> C["Console<br/>one column, top down"]
+    C --> O["Owner clicks<br/>the suggestion is pre-picked"]:::owner
+    O --> S["Signed answer<br/>in one log file"]
+    S --> P["Agent applies it<br/>and records where"]
+    P -. "next ask" .-> A
+    classDef owner fill:#e8f0fe,stroke:#1a73e8,stroke-width:2px
+```
+
+- One append-only file is the whole store; the agent side and the human side meet only there. Stdlib-only Python, no database, no chat app.
+- An ask missing evidence, what "no" means or a recommendation (a typed value may go without one) is refused, and an eleventh open ask too.
+- Every answer records whether the owner took the suggestion: the override log proposed under "The hardest open problem", for free.
+- A click can pass through a harness's own gate, so the proof stays where the rules live. It never widens what may be written: an ask that would widen an allowlist, a cap or a write switch is answered in chat (rule 8), not clicked. The agent's side is [`console/AGENT.md`](console/AGENT.md).
+- No login of its own: by default whoever can reach the port answers as one named user, so it binds to loopback and refuses the network unless a login proxy names the user. macOS or Linux only.
 
 ---
 
@@ -196,6 +218,7 @@ Install these before the first feature; each costs an hour now and saved days in
 - [ ] Human tables apart from the cache: triggers, a backup before rebuilds, refusal of lossy rebuilds, a version stamp
 - [ ] The `--json` contract from the first report: `meta`, one error document, message codes, tested both ways
 - [ ] Boundary and layering tests before the first adapter or console exists
+- [ ] The owner's inbox before the first ask: one log, at most 10 open asks, answers signed ([`console/`](console/))
 - [ ] Writes and paid calls off: dry run, allowlist, kill switch, no retries, caps
 - [ ] Git rules: never squash, one "Fixes #N" per line, every commit names its story, protected paths for the risky list ([template](templates/CODEOWNERS)), one release owner, the CI home chosen on day 1
 - [ ] Releases are a `git archive` of the tag with an archive test; every story proof is a runnable check ([install checklist](templates/install-checklist.md))
@@ -239,4 +262,5 @@ This turns human-in-the-loop from reading more into signing less, each item back
 | [`templates/AGENT_INSTRUCTIONS.md`](templates/AGENT_INSTRUCTIONS.md) | 3 | Invariants-only instructions for the coding agent (a `CLAUDE.md`) |
 | [`templates/CODEOWNERS`](templates/CODEOWNERS) | 1, 10 | Protected paths for the risky list |
 | [`templates/owner-queue-item.md`](templates/owner-queue-item.md) | 10 | The shape of one owner ask |
+| [`console/`](console/) | 10 | A module, not a template: the agent's ask CLI and the owner's one-page console |
 | [`templates/install-checklist.md`](templates/install-checklist.md) | 9 | What the host agent reports after every install |

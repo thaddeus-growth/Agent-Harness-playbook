@@ -1,0 +1,36 @@
+{
+  "id": "cost-sencha-tin",
+  "step": "provide",
+  "kind": "value",
+  "group": "Numbers we need",
+  "title": "What does one 250 g tin of Sencha cost you, delivered to your warehouse?",
+  "why": "Every profit figure we show you starts from this cost. We can only estimate it from the three documents below, and a wrong cost makes good teas look bad and bad ones look good.",
+  "evidence": [
+    {
+      "label": "Supplier price per tin",
+      "value": "USD 3.10",
+      "source": "supplier invoice, February"
+    },
+    {
+      "label": "Shipping to the warehouse",
+      "value": "USD 0.85 per tin",
+      "source": "freight bill, last shipment"
+    },
+    {
+      "label": "Box and label",
+      "value": "USD 0.25 per tin",
+      "source": "packaging quote"
+    }
+  ],
+  "input": {"type": "number", "min": 0, "max": 50, "unit": "USD"},
+  "recommend": {
+    "value": "4.20",
+    "because": "The three costs above add up to 4.20. It leaves out storage and your own time."
+  },
+  "if_no": "If 4.20 is not right, type the real cost. Until you confirm one, every profit figure is marked as an estimate.",
+  "gate": {
+    "verb": ["facts", "confirm", "unit_cost"],
+    "value_arg": true,
+    "expect": {"items": {"unit_cost": "$value"}}
+  }
+}
