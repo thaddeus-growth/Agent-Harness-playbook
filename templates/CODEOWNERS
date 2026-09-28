@@ -1,22 +1,35 @@
-# Protected paths for the risky list: changes here wait for the owner's merge.
-# Replace @owner with the owner's handle. On GitLab Free this file documents
-# ownership; approval enforcement needs a paid tier or a protected-branch rule.
+# Protected paths for the risky list (templates/decision-rights.md): a change
+# here waits for the owner's merge. Put this file at .gitlab/CODEOWNERS (GitLab)
+# or .github/CODEOWNERS (GitHub). {{owner}} is the owner's handle. On GitLab Free
+# this names the owner on the merge request; the owner merging is the approval.
+# Every path below exists in a freshly scaffolded harness.
 
-# the human gate
-/src/lib/human.py                 @owner
+# the shared kit: the human gate, the write guard, human tables (vendored, never
+# edited here; tests/test_kit_drift.py fails on a local edit)
+/scripts/kit/                     {{owner}}
 
-# the write path
-/src/api/writer.py                @owner
-/src/execute.py                   @owner
+# the owner console: it relays the human gate (vendored the same way)
+/console/                         {{owner}}
+
+# the write path: the one writer and its allowlist, execute and --apply
+/scripts/_lib/writer.py           {{owner}}
+/scripts/execute_actions.py       {{owner}}
+
+# human-data table schema and its protections
+/scripts/_lib/schema.py           {{owner}}
 
 # owner files and threshold values
-/ssot/user-stories.tsv            @owner
-/ssot/policies.tsv                @owner
-/ssot/glossary.tsv                @owner
-/ssot/constants.tsv               @owner
+/ssot/glossary.tsv                {{owner}}
+/ssot/user-stories.tsv            {{owner}}
+/ssot/policies.tsv                {{owner}}
+/ssot/constants.tsv               {{owner}}
 
-# human-data table schema and protections
-/src/lib/db_human.py              @owner
+# which facts and decisions exist, and which keys need a human to confirm
+/ssot/fact_keys.tsv               {{owner}}
+/ssot/decision_keys.tsv           {{owner}}
+
+# the layers (which module is the writer, who may import it) and what a release ships
+/harness.toml                     {{owner}}
 
 # the agent instructions themselves
-/CLAUDE.md                        @owner
+/CLAUDE.md                        {{owner}}

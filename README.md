@@ -203,6 +203,7 @@ flowchart LR
 - Every answer records whether the owner took the suggestion: the override log proposed under "The hardest open problem", for free.
 - A click can pass through a harness's own gate, so the proof stays where the rules live. It never widens what may be written: an ask that would widen an allowlist, a cap or a write switch is answered in chat (rule 8), not clicked. The agent's side is [`console/AGENT.md`](console/AGENT.md).
 - No login of its own: by default whoever can reach the port answers as one named user, so it binds to loopback and refuses the network unless a login proxy names the user. macOS or Linux only.
+- Team review: behind the proxy, `--deciders` names who answers. The others who were in the meeting see every answer and say whether they agree, with a reason to disagree; a disagreement reaches the owner as a Reopen offer or a new ask, never as a changed answer. `ask.py digest` is the decision record to forward.
 
 ---
 

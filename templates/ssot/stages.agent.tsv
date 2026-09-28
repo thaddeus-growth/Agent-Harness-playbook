@@ -1,0 +1,14 @@
+stage	step	after	signer	status	source	ask	decided	notes
+B0	intake		machine: check_intake	todo				one intake.json per meeting, in the client's data folder
+B0.5	prior-art scan	B0	builder owner	todo				again before B3 and B4, and before B7 or B9 when they add a write path or a paid call
+B0.6	build-time asks and team review	B0 B0.5	each decider	todo				one console folder per decider; the round's digest is the shared record
+B1	scaffold	B0.6	ci	todo				the generated suite is green before the first feature
+B2	words and stories	B1	client owner + ci	todo				every owner row names its decided answer
+B3	registries	B2	client owner + ci	todo				each rule and number approved by the owner
+B4	data chain	B1	ci	todo				one worker per data source
+B5	human data	B3 B4	client owner + ci	todo				numbers from meetings load as pending; the owner confirms them through the gate
+B6	reports	B4 B5	ci	todo				one worker per story: the report and its check row
+B7	gate and money path	B6	owner merge + ci	todo				writes stay off: empty allowlist, no write switch
+B8	agent docs and evals	B6	builder owner + ci	todo				SKILL.md, README.md, references/workflows.md, evals
+B9	release	B7 B8	client owner types confirm vX	todo				one release owner at a time
+B10	operate	B9	ci + owner merge for the risky list	todo				a new meeting goes back to B0

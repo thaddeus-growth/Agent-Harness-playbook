@@ -1,0 +1,33 @@
+{
+  "meeting": {
+    "date": "2026-03-16",
+    "participants": ["client: Mara (owner, Northwind Tea Co., a fictional shop)", "us: the builder"],
+    "consent": "given by Mara at 00:00:08"
+  },
+  "goals": [
+    {"iid": "g3", "audience": "client", "text": "Spend less of Monday on the numbers",
+     "quote": "I lose half of Monday to spreadsheets.", "source": "2026-03-16 00:01:30"}
+  ],
+  "words": [],
+  "stories": [
+    {"iid": "s3", "audience": "client",
+     "want": "to see which tins are close to their reorder point",
+     "so_that": "I order before a push empties the shelf",
+     "done_when": ["every tin shows the weeks of stock left",
+                   "a tin at or below its reorder point is marked"],
+     "human_step": "none",
+     "quote": "Show me which tins are getting low before I push them.",
+     "source": "2026-03-16 00:05:10"}
+  ],
+  "numbers": [
+    {"iid": "n5", "audience": "client", "key": "daily_ad_cap", "value": 25, "unit": "USD per day",
+     "applies_to": "the most ads may spend in one day during a push",
+     "quote": "Let's say twenty-five a day, not thirty.", "source": "2026-03-16 00:02:14"}
+  ],
+  "questions": [
+    {"iid": "q6", "audience": "client", "text": "Is the daily cap for a push 25 USD, or 20 to 30 USD?",
+     "source": "2026-03-16 00:02:14; 2026-03-02 00:26:10", "about": ["n2", "n5"],
+     "options": ["25 USD", "20 to 30 USD"],
+     "suggest": {"value": "25 USD", "because": "It is the newer figure, said on 16 March."}}
+  ]
+}

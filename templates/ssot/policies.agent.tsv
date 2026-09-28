@@ -1,0 +1,2 @@
+id	status	source	ask	decided	implemented_in	notes	proposed
+P01	accepted	doc:playbook-README#human-in-the-loop-rule-5	rule-p01	console:rule-p01@21	scripts/kit/queue.py (expiry at approve and at execute)		

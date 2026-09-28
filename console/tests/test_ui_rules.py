@@ -25,7 +25,7 @@ import _t  # noqa: E402
 import core  # noqa: E402
 import i18n  # noqa: E402
 import pages  # noqa: E402
-from test_pages import Doc, Log, Node, T, ask_raw, ctx, full_log, history_log  # noqa: E402
+from test_pages import Doc, Log, Node, T, adviser, advised_log, ask_raw, ctx, decider, full_log, history_log  # noqa: E402
 
 LANGS = i18n.LANGS
 
@@ -130,6 +130,10 @@ def every_page(lang):
                                         {"ok": False, "id": "b", "title": RES_TITLE, "value": None, "code": "gate_refused", "message": RES_MESSAGE}]),
         pages.render_error(ctx(lang), "corrupt_log", ERR_DETAIL),
         pages.render_error(ctx(lang), "gate_timeout", RES_MESSAGE),
+        pages.render_inbox(advised_log().state(), decider(lang)),            # team review, both sides
+        pages.render_inbox(advised_log().state(), adviser(lang)),
+        pages.render_history(advised_log().state(), decider(lang)),
+        pages.render_history(advised_log().state(), adviser(lang)),
     ]
 
 
@@ -158,7 +162,7 @@ def rules():
 def test_the_rules_file_is_the_checklist_and_each_rule_has_a_check_named_after_it():
     head, rows = rules()
     assert head == ["id", "when", "do", "example"]
-    assert [r[0] for r in rows] == [f"U{n:02d}" for n in range(1, 17)]
+    assert [r[0] for r in rows] == [f"U{n:02d}" for n in range(1, 19)]
     for r in rows:
         assert len(r) == 4 and all(c.strip() and c == c.strip() for c in r), r
     mine = {n for n in globals() if re.fullmatch(r"test_u\d\d_\w+", n)}
@@ -399,7 +403,7 @@ def test_u09_the_consoles_words_come_only_from_the_dictionary_the_agents_are_sho
         elif isinstance(x, list):
             for v in x:
                 strings(v, agents)
-    for log in (L, over_log(), numbers_log(), problem_log()):
+    for log in (L, over_log(), numbers_log(), problem_log(), advised_log()):
         for e in log.events:
             strings({k: v for k, v in e.items() if k in fields})
     agent |= {"Northwind Console", "alice", "Done", RES_TITLE, RES_VALUE, RES_MESSAGE, ERR_DETAIL}
@@ -481,12 +485,12 @@ def test_u10_the_script_writes_no_words_and_reloads_only_behind_a_check_that_not
     assert b["data-poll"] == "poll" and b["data-new"] == T("banner.new") and b["data-lost"] == T("banner.lost")
     assert b["data-seq"] and b["data-open"]
     js, code = script_code()
-    assert len(js.splitlines()) <= 100, len(js.splitlines())                     # a script this small can be read whole
+    assert len(js.splitlines()) <= 170, len(js.splitlines())                     # a script this small can be read whole
     for bad in ("innerHTML", "outerHTML", "insertAdjacentHTML", "eval(", "document.write", "new Function"):
         assert bad not in js, bad
     assert "try" in code and "catch" in code                                    # it degrades to nothing
     assert re.search(r"untouched\(\)\)\s*location\.reload\(\);\s*else\s", code), "the poll's reload must sit behind the untouched check"
-    assert code.count("location.reload") == 2                                   # that one, and a page restored from the back button
+    assert code.count("location.reload") == 3       # that one, a page restored from the back button, and a reply that cannot be swapped in
     assert "dataset.new" in code and "dataset.lost" in code and "dataset.busy" in code
     for check in ("window.scrollY", "forms.some(edited)", "shape() === was"):    # what "untouched" is made of
         assert check in re.search(r"function untouched\(\)[^\n]*", code).group(0), check
@@ -535,15 +539,52 @@ def test_u15_an_answer_on_its_way_cannot_go_twice_be_reloaded_away_or_changed_by
     if got is None:
         return
     s = got["submit"]
-    assert s["first_prevented"] is False and s["sent_disabled"] is True            # the first click still sends
-    assert s["second_prevented"] is True and s["other_first_prevented"] is False     # a second one does not; another form still can
+    assert s["first_prevented"] is True and s["sent_disabled"] is True              # the script sends it, and the button goes dead
+    assert s["second_prevented"] is True and s["other_first_prevented"] is True     # a second click of it does nothing; another form still goes
     assert s["others_disabled"] == [False, False]
-    assert s["after"] == {"fetches": 0, "reloads": 0}                                # nothing polls or reloads once an answer is sent
+    assert s["while_sending"] == {"posts": 2, "polls": 0, "reloads": 0, "bars": []}   # two forms, once each; nothing polls or reloads meanwhile
+    assert s["after"] == {"polls": 1, "reloads": 0, "bars": [], "toasts": 1}        # the reply is in: polling goes on, the page is current
     assert s["in_flight"] == {"reloads": 0, "title": "(2) Waiting · X", "bars": []}    # a poll already on its way changes nothing either
-    assert got["note_submit"] == {"fetches": 0, "reloads": 0}                        # any form, not only an answer
+    n = got["native"]                     # where the script does not send it, the browser does, and a second click is still stopped
+    assert n == {"no_poll_prevented": False, "no_poll_disabled": True, "posts": 0,
+                 "no_fetch": {"prevented": False, "disabled": True, "posts": 0, "twice": True}}, n
     w = got["wheel"]
     assert w == {"blurred": True, "prevented": False, "elsewhere_keeps_focus": True, "text_keeps_focus": True}, w
     assert got["pageshow"] == {"plain": 0, "restored": 1}     # the back button must not bring back a page with dead buttons
+
+
+def test_u18_a_form_is_sent_without_leaving_the_page_and_the_page_keeps_what_the_person_had():
+    for lang in LANGS:                    # what the script shows is what the console drew: a result line, or the notice a redirect ends on
+        d = Doc(pages.render_result(ctx(lang), [{"ok": True, "id": "p1", "title": "P", "value": "y", "code": None, "message": ""}]))
+        assert d.find("li", "res") is not None
+        n = Doc(pages.render_inbox(full_log().state(), {**ctx(lang), "flash": {"kind": "ok", "text": "x"}}))
+        assert n.find("p", "flash") is not None
+    got = script_run()
+    if got is None:
+        return
+    p = got["place"]
+    assert p["prevented"] is True and p["posts"] == [["answer", "token=t&id=1&value=yes&comment=typed+then+sent"]]   # the form as it was, by fetch
+    assert p["pages"] == 1 and p["reloads"] == 0                                       # then the current page once, and never a reload
+    assert p["toasts"] == [{"cls": "toast ok", "lines": ["SAVED"]}]                    # the console's own line, copied
+    assert p["swapped"] and p["header"] == "BAR-2" and p["title"] == "(2) Waiting · X" and p["seq"] == "8"   # rows, bar, count and seq are the current ones
+    assert p["draft_kept"] and p["opened_kept"] and p["sent_form_gone"]                # what was typed elsewhere and the row opened stay; what was sent goes
+    assert p["all"] == {"disabled": True, "hints": 1}                                  # the group button still waits for the draft
+    assert p["timeouts"] == [7000] and p["after_seconds"] == []                        # a saved answer's notice goes by itself
+    assert p["next_poll"] == {"reloads": 0, "bars": [], "polls": 1}                    # the swap took the page's seq: no news to report
+    assert p["bar_gone"] == {"before": 1, "after": 0, "seq": "8"}                      # a "page changed" bar is answered by the swap
+    r = got["refused"]
+    assert r == {"toasts": [{"cls": "toast bad", "lines": ["REFUSED"]}], "timeouts": 0, "pages": 1, "reloads": 0,
+                 "clicked_away": []}, r                                                  # a refusal stays until it is clicked away, and the page is still made current
+    assert got["noted"] == {"toasts": [{"cls": "toast ok", "lines": ["NOTED"]}], "posts": ["note"], "pages": 1}   # a redirect's notice is the same
+    u = got["unreachable"]
+    assert u["sent"] is True and u["disabled"] is False and u["pages"] == 0 and u["reloads"] == 0   # nothing was saved: the form is as it was
+    assert u["toasts"] == [{"cls": "toast bad", "text": "LOST", "lines": []}]         # in the page's own words for it
+    assert u["again"] == {"prevented": True, "posts": 2, "toasts": ["toast ok"]} and u["polls_again"] == 1   # and it can be sent again
+    assert got["broken_reply"] == {"reloads": 1, "toasts": ["toast ok"]}              # a reply that cannot be swapped in: the ordinary page
+    tray, toast = decls(".toasts"), decls(".toast")
+    assert tray["position"] == "fixed" and tray["pointer-events"] == "none" and toast["pointer-events"] == "auto"
+    assert px(decls(".toasts", "(max-width: 480px)")["top"]) > px(tray["top"])           # under the taller bar of a phone
+    assert "toast-in" in toast["animation"]
 
 
 def test_u16_when_the_console_cannot_be_reached_a_bar_says_so_and_goes_when_it_can_again():
@@ -579,65 +620,107 @@ class El {
   add(...els) { for (const e of els) { e.parent = this; this.kids.push(e); } return this; }
   appendChild(e) { this.add(e); }
   remove() { this.parent.kids.splice(this.parent.kids.indexOf(this), 1); this.parent = null; }
+  replaceWith(e) { this.parent.kids[this.parent.kids.indexOf(this)] = e; e.parent = this.parent; this.parent = null; }
   setAttribute(k, v) { this[k] = v; }
+  getAttribute(k) { return this[k]; }
   addEventListener(type, fn) { (this.on[type] = this.on[type] || []).push(fn); }
   *walk() { for (const k of this.kids) { yield k; yield* k.walk(); } }
   is(sel) {
     const [, tag, cls] = /^([a-z]*)(?:\.([\w-]+))?$/.exec(sel);
     return (!tag || this.tag === tag) && (!cls || this.className.split(" ").includes(cls));
   }
-  querySelectorAll(sel) { return [...this.walk()].filter((e) => e.is(sel)); }
+  querySelectorAll(sel) { return [...this.walk()].filter((e) => sel.split(",").some((s) => e.is(s.trim()))); }
   querySelector(sel) { return this.querySelectorAll(sel)[0] || null; }
   closest(sel) { let e = this.parent; while (e && !e.is(sel)) e = e.parent; return e; }
 }
 
 // One inbox: two asks in a group with their forms, the group's answer-all form,
 // the note form, a number box and a text box. Time is the test's: the poll's
-// timer runs when `tick()` says so, and a reply is what `reply()` last set.
+// timer runs when `tick()` says so, and a reply is what `reply()` last set. A
+// form is sent with fetch: what the console answers to a POST is the text of
+// `postReply` and to the page itself `nextText`, and DOMParser turns each
+// into the page it names (SAVED, REFUSED and NOTED are what a result line, a
+// refusal and a redirect's notice look like; NEXT is the inbox with the first
+// ask answered; BROKEN has no main).
 function page(opts = {}) {
   const doc = new El("#document"), win = new El("#window", "", { scrollY: 0 });
   const body = new El("body", "", { dataset: opts.noPoll ? {} : { poll: "poll", seq: "5", open: "3", new: "CHANGED", lost: "LOST" } });
-  const answer = () => new El("form", "answer", { values: { token: "t", value: "yes", comment: "" } });
-  const a1 = answer(), a2 = answer(), b1 = new El("button"), b2 = new El("button");
+  const answer = (id) => new El("form", "answer", { action: "answer", values: { token: "t", id, value: "yes", comment: "" } });
+  const a1 = answer("1"), a2 = answer("2"), b1 = new El("button"), b2 = new El("button");
   a1.add(new El("details", "more"), b1);
   a2.add(new El("details", "more"), b2);
   const allForm = new El("form", "all", { values: { token: "t" }, dataset: { busy: "BUSY" } });
   const allButton = new El("button");
   allForm.add(allButton);
-  const ask1 = new El("details", "ask", { open: true }).add(a1), ask2 = new El("details", "ask").add(a2);
-  const note = new El("form", "noteform", { values: { token: "t", text: "" } }), noteButton = new El("button");
+  const ttl = (t) => new El("span", "ttl", { textContent: t });
+  const ask1 = new El("details", "ask", { open: true }).add(ttl("T1"), a1), ask2 = new El("details", "ask").add(ttl("T2"), a2);
+  const note = new El("form", "noteform", { action: "note", values: { token: "t", text: "" } }), noteButton = new El("button");
   note.add(noteButton);
   const num = new El("input", "", { type: "number" }), text = new El("input", "", { type: "text" });
+  const header = new El("header", "bar", { textContent: "BAR-1" });
   const main = new El("main").add(new El("section", "group").add(ask1, ask2, allForm), note, num, text);
-  doc.add(body.add(main));
+  doc.add(body.add(header, main));
   Object.assign(doc, { body, title: "Waiting · X", hidden: !!opts.hidden, activeElement: null,
-                       createElement: (tag) => new El(tag) });
+                       createElement: (tag) => new El(tag),
+                       importNode: (n) => new El(n.tag, n.className, { textContent: n.textContent }) });
   for (const e of [num, text]) e.blur = () => { if (doc.activeElement === e) doc.activeElement = null; };
   const location = { href: "http://x/inbox", reloads: 0, reload() { this.reloads++; } };
-  const timers = [];
-  let fetches = 0, reply = { seq: 5, open: 3 }, held = null;
+  const timers = [], timeouts = [], posts = [];
+  let fetches = 0, polls = 0, pages = 0, reply = { seq: 5, open: 3 }, held = null, heldPost = null;
+  let postText = "SAVED", nextText = "NEXT";
   const answered = (r) => ({ ok: true, json: () => Promise.resolve(r) });
-  const fetch = () => {
+  const texted = (t) => ({ ok: true, text: () => Promise.resolve(t) });
+  const fetch = (u, o = {}) => {
     fetches++;
+    if (o.method === "POST") {
+      posts.push({ u, body: String(o.body) });
+      if (heldPost) return heldPost.promise;
+      return postText.fail ? Promise.reject(new Error("unreachable")) : Promise.resolve(texted(postText));
+    }
+    if (u === location.href) { pages++; return Promise.resolve(texted(nextText)); }
+    polls++;
     if (held) return held.promise;
     if (reply.fail) return Promise.reject(new Error("unreachable"));
     if (reply.status) return Promise.resolve({ ok: false, status: reply.status, json: () => Promise.resolve({ error: "bad gateway" }) });
     return Promise.resolve(answered(reply));
   };
+  const line = (cls, text) => new El("li", cls, { textContent: text });
+  const result = (...els) => { const d = new El("#document", "", { title: "R · X" }); d.body = new El("body"); d.add(d.body.add(new El("main").add(...els))); return d; };
+  const inbox = () => {
+    const d = new El("#document", "", { title: "Waiting · X" });
+    d.body = new El("body", "", { dataset: { seq: "8", open: "2" } });
+    const f2 = answer("2"), a = new El("details", "ask").add(ttl("T2"), f2), all = new El("form", "all", { values: { token: "t" }, dataset: { busy: "BUSY" } });
+    d.add(d.body.add(new El("header", "bar", { textContent: "BAR-2" }),
+                     new El("main").add(new El("section", "group").add(a, all.add(new El("button"))),
+                                        new El("form", "noteform", { action: "note", values: { token: "t", text: "" } }))));
+    return d;
+  };
+  const parsed = {
+    SAVED: () => result(line("res ok", "SAVED")), REFUSED: () => result(line("res bad", "REFUSED")),
+    NOTED: () => result(new El("p", "flash ok", { textContent: "NOTED" })), NEXT: inbox,
+    BROKEN: () => { const d = new El("#document", "", { title: "B" }); d.body = new El("body"); return d.add(d.body); },
+  };
   const sandbox = {
     document: opts.broken ? { get body() { throw new Error("no body"); } } : doc,
-    window: win, location, fetch, URLSearchParams, String,
+    window: win, location, fetch: opts.noFetch ? undefined : fetch, URLSearchParams, String,
+    DOMParser: opts.noFetch ? undefined : class { parseFromString(t) { return parsed[t](); } },
     setInterval: (fn, ms) => { timers.push({ fn, ms }); return timers.length; },
+    setTimeout: (fn, ms) => { timeouts.push({ fn, ms }); return timeouts.length; },
     FormData: class { constructor(f) { this.e = Object.entries(f.values); } [Symbol.iterator]() { return this.e[Symbol.iterator](); } },
   };
   vm.runInNewContext(code, sandbox);
   const bars = () => body.kids.filter((k) => k.className.startsWith("banner"))
     .map((k) => ({ cls: k.className, text: k.textContent, role: k.role, href: k.href === undefined ? null : k.href }));
+  const tray = () => body.kids.find((k) => k.className === "toasts");
+  const toasts = () => (tray() ? tray().kids.map((t) => ({ cls: t.className, role: t.role, text: t.textContent, lines: t.kids.map((k) => k.textContent) })) : []);
   return {
-    doc, win, body, main, location, timers, a1, a2, b1, b2, ask1, ask2, allForm, allButton, note, noteButton, num, text, bars,
-    fetches: () => fetches, reply: (r) => { reply = r; },
+    doc, win, body, main, location, timers, timeouts, posts, a1, a2, b1, b2, ask1, ask2, allForm, allButton, note, noteButton, num, text, bars,
+    toasts, tray, fetches: () => fetches, polls: () => polls, pages: () => pages, reply: (r) => { reply = r; },
+    postReply: (t) => { postText = t; }, nextText: (t) => { nextText = t; },
     hold: () => { let done; held = { promise: new Promise((r) => { done = r; }), done }; },
     release: (r) => { const h = held; held = null; h.done(answered(r)); },
+    holdPost: () => { let done; heldPost = { promise: new Promise((r) => { done = r; }), done }; },
+    releasePost: () => { const h = heldPost; heldPost = null; h.done(texted(postText)); },
     fire(target, type, extra = {}) {
       const ev = { type, target, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, ...extra };
       for (let n = target; n; n = n.parent) for (const fn of n.on[type] || []) fn(ev);
@@ -703,17 +786,23 @@ function page(opts = {}) {
   p.edit(p.a1, "comment", "");
   out.group.reverted = { disabled: p.allButton.disabled, hints: hints().length };
 
-  // an answer on its way: the first send goes, a second does not, nothing polls or reloads
+  // an answer on its way: the script sends it, once, and nothing polls or reloads until the reply is in
   p = page();
+  p.holdPost();
   const first = p.fire(p.a1, "submit");
   out.submit = { first_prevented: first.defaultPrevented, sent_disabled: p.b1.disabled,
                  others_disabled: [p.b2.disabled, p.allButton.disabled] };
   out.submit.second_prevented = p.fire(p.a1, "submit").defaultPrevented;
-  out.submit.other_first_prevented = p.fire(p.a2, "submit").defaultPrevented;
+  out.submit.other_first_prevented = p.fire(p.a2, "submit").defaultPrevented;      // another form still goes
   p.reply({ seq: 9, open: 1 });
-  const before = p.fetches();
   await p.tick();
-  out.submit.after = { fetches: p.fetches() - before, reloads: p.location.reloads };
+  await settle();
+  out.submit.while_sending = { posts: p.posts.length, polls: p.polls(), reloads: p.location.reloads, bars: p.bars() };
+  p.releasePost();
+  await settle();
+  p.reply({ seq: 8, open: 2 });
+  await p.tick();
+  out.submit.after = { polls: p.polls(), reloads: p.location.reloads, bars: p.bars(), toasts: p.toasts().length };   // the poll goes on, page current
   p = page();
   p.hold();
   const pending = p.tick();
@@ -721,13 +810,82 @@ function page(opts = {}) {
   p.release({ seq: 9, open: 2 });
   await pending;
   await settle();
-  out.submit.in_flight = seen(p);
+  out.submit.in_flight = seen(p);                                                   // a poll already on its way changes nothing either
+  p = page({ noPoll: true });
+  const quiet = p.fire(p.a1, "submit");
+  out.native = { no_poll_prevented: quiet.defaultPrevented, no_poll_disabled: p.b1.disabled, posts: p.posts.length };
+  p = page({ noFetch: true });
+  const bare = p.fire(p.a1, "submit");
+  out.native.no_fetch = { prevented: bare.defaultPrevented, disabled: p.b1.disabled, posts: p.posts.length };
+  out.native.no_fetch.twice = p.fire(p.a1, "submit").defaultPrevented;
+
+  // a form is sent without leaving the page: what the console said shows over it, the rows are swapped for the
+  // current ones, and what was typed in another row and the rows the person opened stay
   p = page();
-  p.fire(p.note, "submit");
-  p.reply({ seq: 9, open: 1 });
-  const b4 = p.fetches();
+  p.edit(p.a2, "comment", "keep me");
+  p.ask2.open = true;
+  p.edit(p.a1, "comment", "typed then sent");
+  const sent = p.fire(p.a1, "submit");
+  await settle();
+  const main2 = p.doc.querySelector("main"), in2 = (e) => [...main2.walk()].includes(e);
+  const row2 = main2.querySelectorAll("details").find((d) => d.querySelector(".ttl").textContent === "T2");
+  out.place = {
+    prevented: sent.defaultPrevented, posts: p.posts.map((x) => [x.u, x.body]), pages: p.pages(), reloads: p.location.reloads,
+    toasts: p.toasts(), swapped: main2 !== p.main, header: p.doc.querySelector("header").textContent,
+    draft_kept: in2(p.a2) && p.a2.values.comment === "keep me", sent_form_gone: !in2(p.a1) && !in2(p.ask1),
+    opened_kept: row2.open, title: p.doc.title, seq: p.body.dataset.seq, timeouts: p.timeouts.map((t) => t.ms),
+    all: { disabled: main2.querySelector("form.all").querySelector("button").disabled, hints: main2.querySelectorAll(".busy").length },
+  };
+  p.timeouts[0].fn();
+  out.place.after_seconds = p.toasts();
+  p.reply({ seq: 8, open: 2 });
   await p.tick();
-  out.note_submit = { fetches: p.fetches() - b4, reloads: p.location.reloads };
+  out.place.next_poll = { reloads: p.location.reloads, bars: p.bars(), polls: p.polls() };   // its seq is the page's own: no news
+
+  // a page that had a bar offering the reload is current after the swap, and the bar goes
+  p = page();
+  p.edit(p.a2, "comment", "x");
+  await poll(p, { seq: 6, open: 4 });
+  const barred = p.bars().length;
+  p.fire(p.a1, "submit");
+  await settle();
+  out.place.bar_gone = { before: barred, after: p.bars().length, seq: p.body.dataset.seq };
+
+  // a refusal stays until it is clicked away; a redirect's notice is a result like any other
+  p = page();
+  p.postReply("REFUSED");
+  p.fire(p.a1, "submit");
+  await settle();
+  out.refused = { toasts: p.toasts(), timeouts: p.timeouts.length, pages: p.pages(), reloads: p.location.reloads };
+  p.fire(p.tray().kids[0], "click");
+  out.refused.clicked_away = p.toasts();
+  p = page();
+  p.postReply("NOTED");
+  p.fire(p.note, "submit");
+  await settle();
+  out.noted = { toasts: p.toasts(), posts: p.posts.map((x) => x.u), pages: p.pages() };
+
+  // the console cannot be reached: nothing was saved, the form is as it was and can be sent again
+  p = page();
+  p.postReply({ fail: true });
+  p.fire(p.a1, "submit");
+  await settle();
+  out.unreachable = { sent: p.a1.dataset.sent === undefined, disabled: p.b1.disabled, pages: p.pages(), reloads: p.location.reloads,
+                      toasts: p.toasts() };
+  p.postReply("SAVED");
+  const again = p.fire(p.a1, "submit");
+  await settle();
+  out.unreachable.again = { prevented: again.defaultPrevented, posts: p.posts.length, toasts: p.toasts().map((t) => t.cls) };
+  p.reply({ seq: 8, open: 2 });
+  await p.tick();
+  out.unreachable.polls_again = p.polls();
+
+  // a reply that cannot be swapped in: the ordinary page, reloaded
+  p = page();
+  p.nextText("BROKEN");
+  p.fire(p.a1, "submit");
+  await settle();
+  out.broken_reply = { reloads: p.location.reloads, toasts: p.toasts().map((t) => t.cls) };
 
   // the wheel over a focused number box blurs it; elsewhere and on text it does nothing
   p = page();
@@ -845,6 +1003,37 @@ def test_u14_an_answer_the_console_cannot_write_draws_no_form_and_says_so_before
             assert numbers.find("form", "all") is None                        # and no group button that would send it
         ok = Doc(pages.render_inbox(full_log().state(), ctx(lang, relay=[["facts", "confirm"]])))
         assert [a for a in ok.find_all("details", "ask") if "Title of p1" in a.text()][0].find("form", "answer")
+
+
+def test_u17_an_adviser_sees_everything_decides_nothing_and_a_disagreement_reaches_the_one_who_decides():
+    st = advised_log().state()
+    for lang in LANGS:
+        for page in (pages.render_inbox(st, adviser(lang)), pages.render_history(st, adviser(lang))):
+            d = Doc(page)
+            forms = d.find_all("form")
+            assert forms and all(f.attrs["class"] == "adviceform" for f in forms)    # nothing that answers, reopens or notes
+            for f in forms:
+                radios = f.find_all("input", type="radio")
+                assert [r.attrs["value"] for r in radios] == ["agree", "disagree"] and not [r for r in radios if "checked" in r.attrs]
+                assert "required" not in f.find("textarea").attrs                    # agreeing needs no reason; the console asks one to disagree
+            assert len(d.find_all("details", "ask")) == len(forms)                  # every ask or answer has its own
+        inbox = Doc(pages.render_inbox(st, decider(lang)))
+        assert inbox.main.find("p", "dissent").text().startswith(T("dissent.inbox", lang, n=3))
+        for a in inbox.find_all("details", "ask"):
+            views, form = a.find("div", "advice"), a.find("form", "answer")
+            if views:
+                walk = list(a.walk())
+                assert walk.index(views) < walk.index(form)                         # read before the answer controls
+        hist = Doc(pages.render_history(st, decider(lang)))
+        opened = [r for r in hist.find_all("details", "ask") if "open" in r.attrs]
+        assert [r.find("span", "ttl").text() for r in opened] == ["Gated with a disagreement", "Waiting with a disagreement"]
+        waiting = opened[1]
+        kids = [k for k in waiting.find("div", "inner").kids if isinstance(k, Node)]
+        assert "dissent" in kids[0].classes and kids[0].find("form", "reopen")       # Reopen at the top, the reasons below
+        assert waiting.find("div", "advice").find("span", "chip").text() == T("advice.disagree", lang)
+    d = decls(".dissent")
+    assert d["background"] == "var(--bad-bg)" and "var(--bad)" in d["border-left"]
+    assert decls(".adviceform")["display"] == "grid" and "grid-template-columns" in decls(".adviceform")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,173 @@
+{
+  "$comment": "JSON Schema (draft 2020-12 keywords only: type, properties, required, additionalProperties, items, enum, pattern, minLength, maxLength, minItems, maxItems, $ref, $defs). x-code and x-missing are ours: the problem code build/check_intake.py reports when that part has the wrong type, pattern or value (x-code) or is missing or empty (x-missing). Every length limit is what the owner console shows without cutting, so what the owner accepts is what gets written.",
+  "$id": "intake.schema.json",
+  "title": "Meeting intake",
+  "description": "The organizer's output for one client meeting (templates/meeting-intake.md). Five buckets; every item has a stable iid, an audience, a source and, where it can be asked, a quote.",
+  "type": "object",
+  "required": ["meeting", "goals", "words", "stories", "numbers", "questions"],
+  "additionalProperties": false,
+  "properties": {
+    "meeting": {
+      "type": "object",
+      "required": ["date", "participants", "consent"],
+      "additionalProperties": false,
+      "properties": {
+        "date": {"$ref": "#/$defs/date"},
+        "participants": {
+          "type": "array", "minItems": 1, "maxItems": 20,
+          "items": {"type": "string", "minLength": 1, "maxLength": 120}
+        },
+        "consent": {
+          "description": "Who gave consent to record, and when. If it was not given, say so: the owner is asked.",
+          "type": "string", "minLength": 1, "maxLength": 200, "x-missing": "no_consent"
+        }
+      }
+    },
+    "goals": {"type": "array", "items": {"$ref": "#/$defs/goal"}},
+    "words": {"type": "array", "items": {"$ref": "#/$defs/word"}},
+    "stories": {"type": "array", "items": {"$ref": "#/$defs/story"}},
+    "numbers": {"type": "array", "items": {"$ref": "#/$defs/number"}},
+    "questions": {"type": "array", "items": {"$ref": "#/$defs/question"}}
+  },
+  "$defs": {
+    "date": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+      "x-code": "bad_date"
+    },
+    "iid": {
+      "description": "Any item's iid: a bucket letter (g w s n q) and a number. Unique across every intake file of the client; never reused.",
+      "type": "string", "pattern": "^[gwsnq][1-9][0-9]{0,4}$", "x-code": "bad_iid"
+    },
+    "audience": {
+      "description": "Who signs it: client (meaning, stories, numbers) or builder (the harness's shape). Each has a console of their own.",
+      "enum": ["client", "builder"]
+    },
+    "source": {
+      "description": "Where it was said: 'YYYY-MM-DD hh:mm:ss' (meeting date and the timestamp of the quote) or 'doc:<name>[#<place>]' (a document). Several are joined by '; '.",
+      "type": "string", "minLength": 1, "maxLength": 100,
+      "pattern": "^(?:[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-5][0-9]:[0-5][0-9]|doc:[^;\\s][^;]*)(?:; (?:[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-5][0-9]:[0-5][0-9]|doc:[^;\\s][^;]*))*$",
+      "x-code": "bad_source", "x-missing": "no_source"
+    },
+    "quote": {
+      "description": "The client's exact words, in their language. Never translated, never shortened into our words.",
+      "type": "string", "minLength": 1, "maxLength": 300, "x-missing": "no_quote"
+    },
+    "unsure": {"description": "The organizer is not sure it heard or understood this.", "type": "boolean"},
+    "note": {"description": "The organizer's one-line note: what it is unsure about, or what it inferred.", "type": "string", "minLength": 1, "maxLength": 120},
+    "goal": {
+      "description": "Not asked on its own: it is the why of the stories it explains.",
+      "type": "object",
+      "required": ["iid", "audience", "text", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "iid": {"type": "string", "pattern": "^g[1-9][0-9]{0,4}$", "x-code": "bad_iid"},
+        "audience": {"$ref": "#/$defs/audience"},
+        "text": {"type": "string", "minLength": 1, "maxLength": 400},
+        "quote": {"$ref": "#/$defs/quote"},
+        "source": {"$ref": "#/$defs/source"},
+        "unsure": {"$ref": "#/$defs/unsure"},
+        "note": {"$ref": "#/$defs/note"}
+      }
+    },
+    "word": {
+      "description": "The client's own name for a thing. Becomes a glossary row once the owner says yes.",
+      "type": "object",
+      "required": ["iid", "audience", "word", "meaning", "quote", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "iid": {"type": "string", "pattern": "^w[1-9][0-9]{0,4}$", "x-code": "bad_iid"},
+        "audience": {"$ref": "#/$defs/audience"},
+        "word": {"type": "string", "minLength": 1, "maxLength": 60},
+        "meaning": {"description": "One sentence.", "type": "string", "minLength": 1, "maxLength": 200},
+        "quote": {"$ref": "#/$defs/quote"},
+        "source": {"$ref": "#/$defs/source"},
+        "unsure": {"$ref": "#/$defs/unsure"},
+        "note": {"$ref": "#/$defs/note"}
+      }
+    },
+    "story": {
+      "description": "Only for a need the client stated. Becomes a user-stories row once the owner says yes.",
+      "type": "object",
+      "required": ["iid", "audience", "want", "so_that", "done_when", "human_step", "quote", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "iid": {"type": "string", "pattern": "^s[1-9][0-9]{0,4}$", "x-code": "bad_iid"},
+        "audience": {"$ref": "#/$defs/audience"},
+        "want": {"type": "string", "minLength": 1, "maxLength": 180},
+        "so_that": {"type": "string", "minLength": 1, "maxLength": 180},
+        "done_when": {
+          "type": "array", "minItems": 1, "maxItems": 6,
+          "items": {"type": "string", "minLength": 1, "maxLength": 120}
+        },
+        "human_step": {"enum": ["none", "confirm", "approve"]},
+        "quote": {"$ref": "#/$defs/quote"},
+        "source": {"$ref": "#/$defs/source"},
+        "unsure": {"$ref": "#/$defs/unsure"},
+        "note": {"$ref": "#/$defs/note"}
+      }
+    },
+    "number": {
+      "description": "A number the client stated. Waits as a pending value in the client's data folder; drives nothing until a human confirms it.",
+      "type": "object",
+      "required": ["iid", "audience", "key", "value", "unit", "applies_to", "quote", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "iid": {"type": "string", "pattern": "^n[1-9][0-9]{0,4}$", "x-code": "bad_iid"},
+        "audience": {"$ref": "#/$defs/audience"},
+        "key": {
+          "description": "One key per idea: two numbers with the same key and different values are a contradiction and must be a question.",
+          "type": "string", "pattern": "^[a-z][a-z0-9_]{0,59}$"
+        },
+        "value": {
+          "description": "The number as digits ('45', '0.5'), or the range the client gave ('20-30' or '20–30'). The client's own words stay in the quote.",
+          "type": ["number", "string"],
+          "pattern": "^(?:-?[0-9]+(?:\\.[0-9]+)?|[0-9]+(?:\\.[0-9]+)? ?[-–] ?[0-9]+(?:\\.[0-9]+)?)$",
+          "maxLength": 40,
+          "x-code": "value_not_number"
+        },
+        "unit": {"type": "string", "minLength": 1, "maxLength": 40, "x-missing": "no_unit"},
+        "applies_to": {"type": "string", "minLength": 1, "maxLength": 120},
+        "quote": {"$ref": "#/$defs/quote"},
+        "source": {"$ref": "#/$defs/source"},
+        "unsure": {"$ref": "#/$defs/unsure"},
+        "note": {"$ref": "#/$defs/note"}
+      }
+    },
+    "question": {
+      "description": "What was unclear, contradictory or left for later. A contradiction lists every item it is about.",
+      "type": "object",
+      "required": ["iid", "audience", "text", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "iid": {"type": "string", "pattern": "^q[1-9][0-9]{0,4}$", "x-code": "bad_iid"},
+        "audience": {"$ref": "#/$defs/audience"},
+        "text": {"type": "string", "minLength": 1, "maxLength": 360},
+        "quote": {"$ref": "#/$defs/quote"},
+        "source": {"$ref": "#/$defs/source"},
+        "about": {
+          "description": "The iids this question is about; both sides of a contradiction.",
+          "type": "array", "minItems": 1, "maxItems": 6,
+          "items": {"$ref": "#/$defs/iid"}
+        },
+        "options": {
+          "description": "The answers, when they can be listed: the owner picks one.",
+          "type": "array", "minItems": 2, "maxItems": 8,
+          "items": {"type": "string", "minLength": 1, "maxLength": 60}
+        },
+        "suggest": {
+          "description": "The organizer's best answer and why; one of options when there are options.",
+          "type": "object",
+          "required": ["value", "because"],
+          "additionalProperties": false,
+          "properties": {
+            "value": {"type": "string", "minLength": 1, "maxLength": 300},
+            "because": {"type": "string", "minLength": 1, "maxLength": 200}
+          }
+        },
+        "unsure": {"$ref": "#/$defs/unsure"},
+        "note": {"$ref": "#/$defs/note"}
+      }
+    }
+  }
+}

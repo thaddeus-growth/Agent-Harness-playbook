@@ -1,2 +1,2 @@
-term	where_in_data	where_in_code	proposed
-product family	catalog.parent_id	src/lib/families.py	
+term	status	source	ask	decided	where_in_data	where_in_code	notes	proposed
+product family	accepted	meeting:2026-09-27 00:07:12	intake-w1	console:intake-w1@9	catalog.parent_id	scripts/_lib/families.py		

@@ -1,0 +1,2 @@
+entity_type	key	domain	confirm	label_en	label_zh	story	why
+product	hands_off	yes|no	human	keep the harness's hands off this product	此商品不自动调整	S01	a product the owner manages by hand gets no proposals; only a human turns this on or off

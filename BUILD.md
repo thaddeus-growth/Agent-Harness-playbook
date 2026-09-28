@@ -1,0 +1,155 @@
+# Build a harness
+
+The step-by-step workflow for building the next harness from this playbook. Any agent can follow it from the files alone: each step says what it produces, whether it can fan out to parallel agents, and who signs its gate with which test. The owner signs only **meaning, stories, numbers, money and release**: in the console, or in chat for the contract and a release. A machine signs everything else.
+
+An agent loads [skills/build-harness/SKILL.md](skills/build-harness/SKILL.md) to follow it. The stages it maps to are in [README.md](README.md); every template is listed in [templates/README.md](templates/README.md).
+
+`$DATA_DIR` below is the client's data folder: recordings, transcripts, intakes, numbers, digests and the build state live there, never in a code repository. After B1 the harness calls it `<PREFIX>_DATA_DIR`. `<cli>` is the harness's CLI word.
+
+## The steps
+
+| Step | Produces | After | Fan out | Gate: who signs · which test |
+| --- | --- | --- | --- | --- |
+| B0 Intake | A consent note; transcripts in `$DATA_DIR`; one `intake.json` per meeting | — | yes: one agent per meeting or document | machine · `build/check_intake.py`: no quote, no item; no consent, no meeting |
+| B0.5 Prior-art scan | A dated verdict: what to borrow, what to avoid | B0 | yes: one agent per lens | builder owner reads the verdict · every claim carries its link and date |
+| B0.6 Build-time asks, team review | At most 10 asks per decider; their answers; the round's digest | B0, B0.5 | no: the integrator | each decider, in their console · the console refuses an 11th open ask (console/tests/test_core.py) |
+| B1 Scaffold | The harness tree: templates rendered, kit and console vendored; the first push | B0.6 | no | CI · the generated suite prints `RESULT: N passed` (tests/test_run_tests.py, tests/test_kit_drift.py) |
+| B2 Words and stories | Glossary and story rows from the answers; deciders named | B1 | no: the integrator gives ids | client owner (meaning, stories) · tests/test_ssot.py |
+| B3 Registries | Rules, thresholds, fact keys, decision keys, message codes | B2 | yes: one agent per registry | client owner approves each rule and number · tests/test_ssot.py, tests/test_json_contract.py |
+| B4 Data chain | Per source: puller, raw fixtures, ingest, cache tables, tests | B1 | yes: one agent per data source | CI · rows in = rows out, ingest twice = same rows; tests/test_layering.py |
+| B5 Human data | The scope declared; stated numbers loaded pending, then confirmed | B3, B4 | no: the integrator | client owner confirms each number through the gate · tests/test_human_tables.py, tests/test_gate.py |
+| B6 Reports | Per story: one read-only report and its check row | B4, B5 | yes: one agent per story | CI · tests/test_json_contract.py; the story's check green on fixtures |
+| B7 Gate and money path | Queue, approve, execute as a dry run; an empty allowlist; writes off | B6 | no: the risky list | owner merges (CODEOWNERS) · tests/test_gate.py, tests/test_layering.py |
+| B8 Agent docs and evals | SKILL.md, README.md, references/workflows.md, evals | B6 | yes: one agent per doc | builder owner reads the scope · each eval fails when its rule is removed |
+| B9 Release | A tag, its archive, a host install and the host's report | B7, B8 | no: one release owner | client owner types "confirm vX" in chat · tests/test_release.py; the host checklist |
+| B10 Operate | Scheduled pulls, nightly story checks, the owner queue, triaged issues | B9 | yes: one agent per issue | CI signs lane 3; the owner merges the risky list · the full suite, every merge |
+
+The same rows, with their status and the reference that signed each, are the harness's `ssot/stages.agent.tsv` ([template](templates/ssot/stages.agent.tsv)).
+
+## B0 · Intake
+
+1. Ask for consent to record. Note who gave it and when.
+2. Put recordings, transcripts and briefs in `$DATA_DIR/meetings/<date>/`.
+3. One agent per meeting or document organizes it with [templates/meeting-intake.md](templates/meeting-intake.md) into `$DATA_DIR/intake/<date>.json`, in the shape of [templates/intake.schema.json](templates/intake.schema.json): every item has an `iid` that is never reused, an `audience` (`client` or `builder`) and a `source`.
+4. `python3 build/check_intake.py $DATA_DIR/intake/*.json` checks all intakes together. It refuses an item with no source, a number with no quote or unit, a rounded or estimated number, a contradiction that is not asked as a question, and a meeting with no consent line.
+5. Numbers never enter a repository. After the owner answers, they wait as pending rows in `$DATA_DIR/intake/numbers.tsv` until B5.
+
+## B0.5 · Prior-art scan
+
+Follow [templates/prior-art-scan.md](templates/prior-art-scan.md): one agent per lens, each claim with its link and date. The first scan comes after the first intake, before any story is accepted. It is repeated at fixed points: before B3 and B4, before B7 or B9 when they add a write path or a paid call, and whenever the client names a tool. Until the repository exists the scan waits in `$DATA_DIR/build/prior-art/`; at B1 it moves to `docs/prior-art/`. A borrowed idea that changes meaning or a number becomes an ask in B0.6.
+
+## B0.6 · Build-time asks and team review
+
+1. **Name the deciders and advisers** first, per kind of ask ([templates/decision-rights.md](templates/decision-rights.md), "Deciders and advisers"). Each decider gets a console folder of their own (`CONSOLE_DIR`). Serve it with `serve.py --deciders NAME`; behind a login proxy that names each person, everyone else is an adviser ([console/README.md](console/README.md)).
+2. **Pick at most 10 items per decider**, minus the asks still open. For the client owner, in this order: numbers a story needs, word clashes, stories whose human step is approve, other stories, questions that block a story, the remaining words. A goal is never asked: it is the why of its stories. An item that would widen writes, a cap, an allowlist or paid calls is never an ask: raise it in chat.
+3. **The builder owner's round** asks the harness's shape, which B1 needs: v1 scope, the first scope (market), the host, the CI home and repository, the kit version, how data gets in, and where the team reads the digest. They are intake questions with audience `builder`, the playbook's default as the suggestion.
+4. **Make the asks** with `python3 build/intake_to_asks.py --intake FILE… --pick IID,… --audience client --console-dir DIR` (`builder` for the builder's round). Each ask's id is `intake-<iid>`, and an item already answered or withdrawn is refused.
+5. **Post and wait** with [console/ask.py](console/ask.py): `add`, then `wait --since SEQ` ([console/AGENT.md](console/AGENT.md)).
+6. **Apply** with `python3 build/apply_answers.py --answers FILE --intake FILE… --ssot DIR --data-dir $DATA_DIR`. It acts only on verified answers the owner saw unchanged. A yes writes the owner row and its sibling with `decided` = `console:ID@SEQ`; a no marks the sibling `dropped`; a number goes to `$DATA_DIR/intake/numbers.tsv`, pending. It prints the `ask.py applied` commands; run them. Owner rows need the ssot folder, so answers given before B1 are applied at B2 and B3.
+7. **Team review**: advisers agree or disagree in the console, and `ask.py answers` lists their views under `advice`. Each disagreement becomes one new ask to the decider, with both views. Advice never answers. Forward the round's digest (`ask.py digest`) where the team reads it ([templates/team-review.md](templates/team-review.md)).
+
+## B1 · Scaffold
+
+The intended command (its flags may still change; its `--help` wins):
+
+```
+python3 scaffold/new_harness.py ../acme-harness \
+  --name acme-harness --cli acme --prefix ACME --langs en,zh \
+  --ci gitlab --owner @handle --repo-home <where the repository lives>
+```
+
+- It renders every template that has a target ([templates/README.md](templates/README.md)) and fills the placeholders from the builder owner's answers.
+- It vendors the kit (`kit/`) into `scripts/kit/` and the console into `console/`, each with its `VERSION` and `MANIFEST.sha256`, through `python3 kit/tools/vendor.py --harness ../acme-harness`. Without the scaffolder, run that yourself after rendering the templates.
+- It refuses a folder that is not empty or sits inside this checkout, takes no data path, and leaves no `{{` behind. `--dry-run` prints the file list and writes nothing. `--update-kit` vendors the kit and console again and touches nothing else.
+- The generated suite is green before the first feature. Push the skeleton as the first commit: the first pipeline proves the push rights and the CI home at once.
+
+## B2 · Words and stories
+
+- The integrator applies the client owner's answers: glossary rows, story rows with ids it gives (S01, S02 …), and each sibling row with `status`, `ask` and `decided`.
+- One name per idea. A clash is an ask, never a silent pick.
+- Each story names its human step. Anything that can spend money is never "none".
+- Fill the names in the harness's `docs/decision-rights.md`.
+
+## B3 · Registries
+
+- The integrator gives out ids and names first, then one agent per registry drafts: rules in `ssot/policies.agent.tsv` (owner rows only from answers), thresholds in `ssot/constants.tsv` with a default and its why, fact keys, decision keys (`confirm = human` for anything that can move money), message codes.
+- Round two asks the client owner each rule and number. Once reports exist, a what-if run (`--assume threshold_<name>=<value>`) is the evidence.
+
+## B4 · Data chain
+
+One agent per data source, after the prior-art scan's second fixed point:
+
+- `scripts/pull_<source>.py`: read-only; raw is write-once and only grows.
+- `scripts/ingest_<source>.py` and its cache tables in `scripts/_lib/schema_<source>.py`; the integrator adds the fragment to `scripts/_lib/schema.py`.
+- Fixtures copied from real responses, never invented, and the source's own tests: rows in = rows out, ingest twice = same rows, a shorter re-pull keeps the older days.
+
+## B5 · Human data
+
+- `<cli> facts init`: the human declares the scope; there is no default.
+- The client owner signs which fact and decision keys exist (asked in B3).
+- Each number in `$DATA_DIR/intake/numbers.tsv`: `<cli> facts set <key> <value> --source meeting_<date> --reason "<hh:mm:ss> <quote>"`. It stays pending.
+- `<cli> pending --json` gives ready console asks with a `gate`. With the console started with the harness command and those verbs allowed ([console/README.md](console/README.md)), the owner's click passes the harness's own gate, bound to the value shown.
+
+## B6 · Reports
+
+One agent per story, with the story id and its message-code prefix given:
+
+- One read-only `scripts/compute_<report>.py`. Its `--json` carries `meta`, and every message carries a code with the unit's prefix.
+- Its row in `ssot/story_checks.tsv`: the read verb, what its JSON must hold, the tables it needs.
+- `<cli> compute stories --json` passes on fixtures. On real data it runs at B9.
+
+## B7 · Gate and money path
+
+Only when a story's human step is approve. The integrator builds it; the owner merges it.
+
+- `<cli> queue add` snapshots a report's proposals; `queue approve` passes the gate; an approval expires after `approval_ttl_hours`.
+- `<cli> execute apply` is a dry run that prints the whole plan unless `--apply`.
+- `scripts/_lib/writer.py` ships with an empty allowlist, and `<PREFIX>_ALLOW_WRITES` stays unset: writes are off.
+- Writes turn on only when the client owner types it in chat, with a cap. The allowlist entry is its own merge request, merged by the owner.
+
+## B8 · Agent docs and evals
+
+- `SKILL.md` from [templates/SKILL.md](templates/SKILL.md): the description and the scope (read, pending writes, out of scope).
+- `README.md` from [templates/README-operator.md](templates/README-operator.md), and `references/workflows.md` from [templates/workflows.md](templates/workflows.md), plus the domain's own recipes.
+- Every `<<fill: …>>` is written.
+- One eval per rule in SKILL.md. An eval counts only if it fails when its rule is removed. Evals make live model calls, so they run by hand; the result is recorded with the release.
+
+## B9 · Release
+
+- One release owner at a time, named in the B9 row of `ssot/stages.agent.tsv`.
+- Tag `vX.Y.Z` on main (merges are never squashed). The release is `git archive` of the tag.
+- The client owner types "confirm vX" in chat. The host agent installs and reports with [templates/install-checklist.md](templates/install-checklist.md). Every story check runs green on real data.
+
+## B10 · Operate
+
+- Scheduled pulls with freshness checks. Each night `<cli> compute stories --json` becomes one line for the owner: "37 green, 1 red: S0x".
+- `<cli> pending --json` feeds the console, at most 10 open per decider.
+- Issues are triaged into the three lanes of decision rights. Lane 3 merges on green CI; the risky list waits for the owner.
+- A fix to the kit or the console goes to the playbook first, then `scaffold/new_harness.py --update-kit`.
+- Each new meeting goes back to B0.
+
+## Fan-out rules
+
+- **Disjoint files only.** The units are a meeting (B0), a lens (B0.5), a registry (B3), a data source (B4), a story (B6), a doc (B8) and an issue (B10). Never two agents on one file in one step; the one exception is appending message codes, below. A merge conflict is the signal to stop: the integrator merges.
+- **Integrator-only ids.** One integrator gives out every id and name before a fan-out: story (S..) and rule (P..) ids, threshold names, fact and decision keys, message-code prefixes. A worker never makes one. Two branches once reused story ids and a story was lost. *(tests/test_ssot.py: ids unique, never reused)*
+- **Owner files and the risky list are the integrator's.** A worker's new word, story idea or rule goes in its merge request description; the integrator copies it into the `.agent.tsv` sibling as `proposed`.
+- **Message codes: one fragment per unit.** The kit keeps its codes in fragments, `kit/message_codes.d/<module>.tsv`, one file per module, loaded after `kit/message_codes.tsv`: parallel builders never edit the same file. A harness has one registry file (`[ssot] message_codes` in `harness.toml`), so there the fragment is a prefix: the integrator gives each unit its own (`<unit>_`), a worker only appends rows with that prefix to `ssot/message_codes.tsv`, and the integrator keeps both sides when it merges two units. *(tests/test_json_contract.py: a code defined twice is refused at load)*
+- **Schema: one fragment per data source**, `scripts/_lib/schema_<source>.py`. Only the integrator edits `scripts/_lib/schema.py`.
+- **One worktree and branch per unit.** The merge request title names its story (the `story id` CI job). Never squash.
+- **Asks come from the integrator.** Only at a gate, only through the console, at most 10 open per decider. A worker hands the integrator what to ask.
+- **One release owner at a time.**
+
+## Resume from the files
+
+The build's state is two things, so any agent can pick it up:
+
+- `ssot/stages.agent.tsv`: each step's status and the reference that signed it (`console:ID@SEQ`, `ci:<pipeline>`, `merge:<sha>`, `chat:<date> <who>`, `check:<name> <date>`). Before B1 exists, B0 to B0.6 are noted in `$DATA_DIR/build/state.json`; the first commit after B1 fills their rows.
+- Each decider's console cursor, the last `seq` handled, in `$DATA_DIR/build/state.json`.
+
+To resume: read both, run `ask.py answers --since SEQ` for each decider, apply what is waiting, then continue at the first step that is not signed.
+
+## Still being built
+
+The one list of paths this workflow names that do not exist yet. [tests/test_docs_build.py](tests/test_docs_build.py) fails on any other path that is missing, and says when a path below has landed.
+
+- `scaffold/new_harness.py`: renders the templates into a new harness and vendors the kit and the console. Until it lands, B1 is done by hand: render each template to its target ([templates/README.md](templates/README.md)), then run `kit/tools/vendor.py`.

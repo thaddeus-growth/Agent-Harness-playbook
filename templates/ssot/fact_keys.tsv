@@ -1,0 +1,2 @@
+key	group	type	unit	min	max	label_en	label_zh	why
+monthly_spend_cap	required	number	currency	0		monthly spend cap	每月花费上限	the budget report reads it; init asks for it; a client's number, stated in a meeting and confirmed through the gate
