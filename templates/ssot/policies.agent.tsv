@@ -1,0 +1,2 @@
+id	implementation	notes	proposed
+P01	src/rules/negatives.py negate_candidates() → compute actions, rule add_negative	the owner has not approved it yet; the code may propose, never execute	

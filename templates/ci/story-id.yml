@@ -1,0 +1,21 @@
+# Every merge request names the story (S..) or policy (P..) it serves, or is
+# a release ("release X.Y.Z"). Written only in the agent instructions, this
+# rule was skipped by 17 of the first 105 MRs (15 of them refactors); as this
+# job, by none of the next 77.
+# GitLab CI job, merge request pipelines only (GitLab supplies the title).
+# It uses the default `test` stage; with your own `stages:` list, pick one in it.
+# On GitHub Actions: pass the title through env, never into the script text:
+#   env: { TITLE: "${{ github.event.pull_request.title }}" }  then grep "$TITLE".
+story id:
+  stage: test
+  image: alpine:3.20
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  script:
+    - |
+      if printf '%s\n' "$CI_MERGE_REQUEST_TITLE" | grep -Eq '(^|[^A-Za-z0-9])[SP][0-9]{2,}([^0-9]|$)|^release [0-9]'; then
+        echo "OK: the title names a story or policy (or is a release)."
+      else
+        echo "Name the story (S..) or policy (P..) this serves, or start the title with 'release X.Y.Z'."
+        exit 1
+      fi

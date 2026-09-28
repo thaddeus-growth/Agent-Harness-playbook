@@ -1,0 +1,2 @@
+id	when	do	params	why	stories	status
+P01	a keyword has at least min_clicks_to_judge clicks in one ad group and no order there	propose an exact negative in that ad group, unless the term has orders anywhere else	min_clicks_to_judge	clicks that never sell in one place are waste there; a term that sells elsewhere still earns its traffic	S02	proposed

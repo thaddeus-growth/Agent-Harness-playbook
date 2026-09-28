@@ -1,6 +1,10 @@
 # Protected paths for the risky list: changes here wait for the owner's merge.
 # Replace @owner with the owner's handle. On GitLab Free this file documents
 # ownership; approval enforcement needs a paid tier or a protected-branch rule.
+# Without either, nothing blocks the merge: the agent reads this list before
+# setting auto-merge and leaves a matching MR for the owner.
+# A refactor that moves code out of a path below adds its new file here in
+# the same MR; otherwise the moved code quietly starts auto-merging.
 
 # the human gate
 /src/lib/human.py                 @owner
@@ -14,6 +18,7 @@
 /ssot/policies.tsv                @owner
 /ssot/glossary.tsv                @owner
 /ssot/constants.tsv               @owner
+/console/ui_rules.tsv             @owner
 
 # human-data table schema and protections
 /src/lib/db_human.py              @owner

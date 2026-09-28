@@ -1,7 +1,14 @@
 file	owner	reader	test	id_column	purpose
 ssot/index.tsv	registry	—	tests/test_ssot_index.py	file	Every registry and owner file: who owns it, which code reads it, which test guards it. Agents read this first.
 ssot/user-stories.tsv	owner	—	tests/test_ssot.py	id	User stories: what the owner wants, why, and when it counts as done.
-ssot/user-stories.agent.tsv	agent	—	tests/test_ssot.py	id	Same ids: status, blocking issue, proof command, data dependencies, proposed rewording.
+ssot/user-stories.agent.tsv	agent	—	tests/test_ssot.py	id	Same ids: status, blocking issue, notes, proposed rewording.
 ssot/glossary.tsv	owner	—	tests/test_ssot.py	term	One name and one definition per business idea, in the client's words.
 ssot/glossary.agent.tsv	agent	—	tests/test_ssot.py	term	Where each term lives in data and code; proposed new terms.
 ssot/constants.tsv	registry	src/lib/constants.py	tests/test_constants.py	parameter	Threshold defaults: the only place a number lives.
+ssot/policies.tsv	owner	—	tests/test_ssot.py	id	Business rules: when X, do Y; thresholds named, never numbered; the stories each rule serves.
+ssot/policies.agent.tsv	agent	—	tests/test_ssot.py	id	Same ids: the implementing function, notes, proposed rewording.
+ssot/message_codes.tsv	registry	src/lib/messages.py	tests/test_contract.py	code	Every message a --json document can carry: wording per language and its params, checked both ways.
+ssot/fact_keys.tsv	registry	src/lib/facts.py	tests/test_facts.py	key	Every business fact a human can set: unit, bounds, required or not.
+ssot/decision_keys.tsv	registry	src/lib/decisions.py	tests/test_decisions.py	key	Every per-entity decision: its value domain and whether a human must confirm it.
+ssot/alert_rules.tsv	registry	src/compute_alerts.py	tests/test_alerts.py	name	Alert rules as rows: grain, metric, comparison, threshold, cooldown.
+ssot/story_checks.tsv	registry	src/compute_stories.py	tests/test_compute_stories.py	story	One read-only check per done story: the verb, what its JSON must hold, the tables it needs.

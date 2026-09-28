@@ -1,0 +1,11 @@
+id	when	do	example
+U01	any text on a page	speak the client's words: no commands, flags, exit codes, table or field names	not "source: <tool> compute kpi (exit 0)"; instead "ads data up to Mar 14"
+U02	showing how fresh data is	one line per data group with its as-of date and status	"Sales data up to Mar 13 (4 days behind): stale"
+U03	writing any explanation	only facts that help me decide; no metaphors or reasoning	"Ads figures: Feb 13 to Mar 14." not "ads are like a shop door…"
+U04	a page has something waiting for my decision	put it first	the competitors page starts with "waiting for your score"
+U05	editing a list or making a choice	lists as chips (× to remove, add only from the suggested list); choices as buttons or selects	never "word1|word2|word3" in a text box
+U06	naming the core concept	use the client's own word for it, everywhere	the word the client used in the first meeting
+U07	confirming or approving	the reason is optional; left empty, it is filled with a default	"confirmed on the web"
+U08	every page	the same top navigation, current page marked; usable on a phone	—
+U09	language	the client's language by default, with a switch the browser remembers	—
+U10	naming a page, column, button or status	use the name similar tools use most; one name per thing across the site; names the owner set change only by the owner	—
