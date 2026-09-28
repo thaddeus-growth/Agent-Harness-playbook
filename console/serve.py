@@ -53,7 +53,9 @@ typed comment back. One click per ask at a time (`Console.claim`), so a second c
 never runs the harness twice; the lock is held only for the write, never while the
 harness runs. A saved note or reopen answers 303 to the waiting page, which says so
 (`?done=`: only the two known words are shown, nothing else), so a reload cannot
-write twice; the answer and answer-all results are pages of their own. The language
+write twice; the answer and answer-all results are pages of their own. console.js sends
+the forms itself and shows those same lines over the page it is on, so the person never
+leaves it; the server has one way to answer and does not know which it is talking to. The language
 a person picks with ?lang= is kept in the cookie `console_lang_<port>` (no Path, so
 it stays with the console's own prefix; the port, so two consoles on one host keep
 their own), because the pages' internal links carry none.

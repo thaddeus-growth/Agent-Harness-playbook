@@ -202,7 +202,7 @@ A file passes only if it exits 0 and prints `RESULT: N passed`; a test file that
 1. One column, no sideways scroll, the first ask open; dark mode and `?lang=zh` both read well.
 2. `add` another ask: an untouched page reloads itself within 4 s and the tab title counts the open asks.
 3. Type a comment, then `add` one more: a banner offers the reload and the text stays.
-4. Double-click an answer button: one answer, one result page.
+4. Double-click an answer button: one answer, a notice over the page, and the page stays where it was: the row is gone, and a comment typed in another row is still there.
 5. Stop the console for 12 s: a bar says it cannot be reached. Start it: the bar goes and a page opened before still answers.
 6. Change one of the two rows: **Answer all 2 as suggested** turns off and says why.
 
