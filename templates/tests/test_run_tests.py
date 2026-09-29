@@ -36,13 +36,16 @@ ENV_PROBE = ("import os, sys, tempfile\n"
              "ok = ('SECRET_TOKEN' not in os.environ and 'PATH' in os.environ\n"
              "      and os.path.basename(os.path.dirname(tempfile.gettempdir())).startswith('tests-')\n"
              "      and 'SECRET_TOKEN' not in c and c['TMPDIR'] == tempfile.gettempdir()\n"
-             "      and c['DATA_DIR'] == '/sandbox')\n"
+             "      and c['DATA_DIR'] == '/sandbox'\n"
+             "      and not os.path.exists(os.path.expanduser('~/operator.env'))\n"
+             "      and not os.path.exists(os.path.join(c['HOME'], 'operator.env')))\n"
              "print('RESULT: 1 passed' if ok else 'env leaked'); sys.exit(0 if ok else 1)\n")
 
 
-def gate(files: dict[str, str], *args: str) -> tuple[int, str, list[str]]:
-    """Run a sandbox copy of the gate over {name: source}. Returns (exit code,
-    output, what the run left in the TMPDIR it was given)."""
+def gate(files: dict[str, str], *args: str, **env: str) -> tuple[int, str, list[str]]:
+    """Run a sandbox copy of the gate over {name: source}, `env` added to its
+    environment. Returns (exit code, output, what the run left in the TMPDIR
+    it was given)."""
     d = tmp_dir(prefix="gate-")
     tests = os.path.join(d, "tests")
     os.makedirs(tests)
@@ -55,7 +58,7 @@ def gate(files: dict[str, str], *args: str) -> tuple[int, str, list[str]]:
     os.mkdir(tmp)
     p = subprocess.run([sys.executable, os.path.join(tests, "run.py"), *args],
                        capture_output=True, text=True, timeout=90,
-                       env=child_env(TMPDIR=tmp, SECRET_TOKEN="x" * 20))
+                       env=child_env(TMPDIR=tmp, SECRET_TOKEN="x" * 20, **env))
     return p.returncode, p.stdout + p.stderr, sorted(os.listdir(tmp))
 
 
@@ -99,9 +102,12 @@ def main() -> int:
           code == 0 and left == [], (out, left))
 
     print("each file runs on the environment allowlist")
-    code, out, _ = gate({"test_env.py": ENV_PROBE})
-    check("a variable off the allowlist never reaches a test or its child; "
-          "PATH and the file's own TMPDIR do", code == 0, out)
+    operator = tmp_dir(prefix="operator-home-")
+    with open(os.path.join(operator, "operator.env"), "w", encoding="utf-8") as fh:
+        fh.write("SECRET_TOKEN=" + "x" * 20 + "\n")
+    code, out, _ = gate({"test_env.py": ENV_PROBE}, HOME=operator)
+    check("a variable off the allowlist never reaches a test or its child, nor a "
+          "file under the operator's HOME; PATH and the file's own TMPDIR do", code == 0, out)
 
     print("patterns, parallel runs and the time limit")
     code, out, _ = gate({"test_alpha.py": PASS, "test_beta.py": "print('no')\n",

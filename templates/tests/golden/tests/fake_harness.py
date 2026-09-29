@@ -236,7 +236,8 @@ if __name__ == "__main__":
     if "--apply" in sys.argv:
         store.save("APPLIED", plan)
     print(json.dumps({"meta": store.meta(), "dry_run": "--apply" not in sys.argv,
-                      "key_loaded": bool(os.environ.get("FAKE_API_KEY")),
+                      "key_loaded": bool(os.environ.get("FAKE_API_KEY")) or os.path.exists(
+                          os.path.join(os.path.expanduser("~"), ".fake-harness", "credentials")),
                       "would_write": plan, "child_today": doc["meta"]["today"]}))
 ''',
     "console.py": '''\

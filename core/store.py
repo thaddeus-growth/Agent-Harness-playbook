@@ -70,6 +70,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterator
 
+from . import dates
+
 KEEP = 30                                   # human-table snapshots kept per database
 OPS = ("UPDATE", "DELETE")                  # what a trigger may refuse on a human table
 NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -473,7 +475,9 @@ def _backups(path: str) -> tuple[Path, str]:
 
 def snapshot_human(path: str, schema: Schema, keep: int = KEEP) -> str | None:
     """Copy every human table the file holds into
-    `<db dir>/backups/<stem>-human-<UTC>.db` and keep the newest `keep`.
+    `<db dir>/backups/<stem>-human-<UTC>.db` and keep the newest `keep`. The
+    name reads `dates.now()`; under a pinned clock the next snapshot takes the
+    next free microsecond, so none replaces another.
     The live file is attached read-only; the copy is written to `.tmp` and
     then renamed, so a snapshot on disk is always whole. Returns its path, or
     None (nothing written) when the file or its human rows do not exist yet."""
@@ -492,7 +496,11 @@ def snapshot_human(path: str, schema: Schema, keep: int = KEEP) -> str | None:
         src.close()
     out, prefix = _backups(path)
     out.mkdir(exist_ok=True)
-    dst = out / f"{prefix}{datetime.datetime.now(datetime.timezone.utc):%Y%m%dT%H%M%S%fZ}.db"
+    at = dates.now()
+    dst = out / f"{prefix}{at:%Y%m%dT%H%M%S%fZ}.db"
+    while dst.exists():                     # a pinned clock: the next free microsecond, still in order
+        at += datetime.timedelta(microseconds=1)
+        dst = out / f"{prefix}{at:%Y%m%dT%H%M%S%fZ}.db"
     tmp = Path(f"{dst}.tmp")
     tmp.unlink(missing_ok=True)
     try:

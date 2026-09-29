@@ -34,10 +34,10 @@ from _check import check, finish
 
 ROOT = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 # for the people changing the code and its CI; the index's reader-less files join these
-INTERNAL = (".gitattributes", "CLAUDE.md", ".claude", "tests", "evals",
+INTERNAL = (".gitattributes", "CLAUDE.md", ".claude", "tests", "core/tests", "evals",
             ".github", ".gitlab-ci.yml", "ssot/README.md")
-MUST_SHIP = ("README.md", "src/harness.py")
-RUNTIME = ("src",)                       # code whose literal `x.tsv` names must ship
+MUST_SHIP = ("README.md", "src/harness.py", "core/gate.py")
+RUNTIME = ("src", "core")                # code whose literal `x.tsv` names must ship
 INDEX, READER, NO_READER = "ssot/index.tsv", "reader", "—"
 OPENED = re.compile(r"""["']([\w.-]+\.tsv)["']""")
 
@@ -116,7 +116,7 @@ def main() -> int:
           OPENED.findall('open(ROOT / "ssot" / "constants.tsv")') == ["constants.tsv"])
     opened = set()
     for f in tracked:
-        if under(f, RUNTIME) and f.endswith(".py"):
+        if under(f, RUNTIME) and f.endswith(".py") and f not in internal:
             with open(os.path.join(ROOT, f), encoding="utf-8") as fh:
                 opened |= set(OPENED.findall(fh.read()))
     unshipped = sorted(n for n in opened

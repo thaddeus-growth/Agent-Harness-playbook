@@ -22,11 +22,13 @@ import os
 import sqlite3
 import subprocess
 import sys
+from datetime import datetime, timezone
+from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import _safety  # noqa: E402  (puts the folder that holds core/ on sys.path)
-from core import store  # noqa: E402
+from core import dates, store  # noqa: E402
 from _safety import raises, schema, seed, stderr, tmpdir  # noqa: E402
 
 DAYS = {"2026-01-01", "2026-01-02", "2026-01-03"}
@@ -240,6 +242,18 @@ def test_only_the_newest_snapshots_are_kept():
         assert not [s for s in os.listdir(os.path.join(d, "backups")) if s.endswith(".tmp")]
         with raises(ValueError):
             store.snapshot_human(path, schema(), keep=0)
+
+
+def test_a_snapshot_is_named_by_the_one_clock_and_a_pinned_clock_replaces_none():
+    """A snapshot named off `dates.now` escaped the pinned clock; pinned, two
+    snapshots of one run must still both be kept, in the order they were made."""
+    at = datetime(2030, 5, 6, 7, 8, 9, tzinfo=timezone.utc)
+    with tmpdir() as d, mock.patch.object(dates, "now", return_value=at):
+        path, _ = seeded(d)
+        made = [store.snapshot_human(path, schema(), keep=3) for _ in range(3)]
+        names = snapshots(d)
+        assert [os.path.join(d, "backups", s) for s in names] == made and len(set(made)) == 3
+        assert all(s.startswith("store-human-20300506T070809") for s in names), names
 
 
 def test_a_snapshot_killed_before_it_is_whole_is_never_taken_for_one():

@@ -52,10 +52,14 @@ def test_the_registry_files_are_well_formed():
     assert contract.lint_registry(REGISTRIES) == []
 
 
-def test_the_playbook_registry_template_is_read_as_a_harness_file():
-    """templates/ssot/message_codes.tsv is the harness's file a new harness starts
-    from: the same reader takes it, and it lints clean beside core's own file."""
-    template = os.path.join(_t.ROOT, "templates", "ssot", "message_codes.tsv")
+def test_the_harness_registry_is_read_and_owns_no_core_code():
+    """The harness's own registry: `templates/ssot/message_codes.tsv` in the
+    playbook, `ssot/message_codes.tsv` once core/ is copied into a harness. The
+    same reader takes it, and it lints clean beside core's own file."""
+    found = [p for p in (os.path.join(_t.ROOT, "templates", "ssot", "message_codes.tsv"),
+                         os.path.join(_t.ROOT, "ssot", "message_codes.tsv")) if os.path.isfile(p)]
+    assert found, "no ssot/message_codes.tsv beside core/: start it from the playbook's template"
+    template = found[0]
     rows = messages.read_tsv(template)
     assert rows and all(r["code"] for r in rows)
     assert contract.lint_registry([template]) == []

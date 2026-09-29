@@ -3,7 +3,7 @@ tree give 0 differences with the hash seed unpinned, and a set-order bug
 does not; a commit that changes no document gives 0 even strict; a changed
 registry default is caught; a page that raises fails the run; a fixture edit
 alone gives 0, because both sides read BASE's fixtures; every clock, the child verbs' too, reads the pin; a case
-sees no credential and no write switch. The engine runs as a harness runs
+sees no credential, no write switch and not the operator's HOME. The engine runs as a harness runs
 it: its own copy, committed in the repo it compares."""
 
 from __future__ import annotations
@@ -128,6 +128,22 @@ def test_a_case_sees_no_credential_and_no_write_switch():
         assert dry["key_loaded"] is False and dry["meta"]["writes_enabled"] is False
         assert dry["dry_run"] is True and dry["would_write"]
         assert not any("k-not-for-cases" in f.read_text(encoding="utf-8") for f in snap.iterdir())
+
+
+def test_a_case_never_reads_the_operators_home():
+    """A home-level env file or credential store is read by any tool that looks
+    under HOME: a case must see an empty HOME of its own."""
+    with _t.tmpdir() as d:
+        repo, tmp = fh.build(d), d / "tmp"
+        tmp.mkdir()
+        operator = d / "operator-home"
+        (operator / ".fake-harness").mkdir(parents=True)
+        (operator / ".fake-harness" / "credentials").write_text("k-home-not-for-cases\n")
+        snap = d / "snap"
+        p = fh.engine(repo, "snapshot", str(snap), tmp=tmp, HOME=str(operator))
+        assert p.returncode == 0, p.stdout + p.stderr
+        assert doc(snap, "execute_dry_run")["key_loaded"] is False
+        assert not any(str(operator) in f.read_text(encoding="utf-8") for f in snap.iterdir())
 
 
 if __name__ == "__main__":

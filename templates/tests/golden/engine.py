@@ -34,8 +34,9 @@ it started when it ends or the run stops. The child (`_run`) puts the tree on
 sys.path, patches every clock seam (cases.SEAMS) to one instant and the
 runner seam (cases.RUNNER) so a verb's own child scripts run the same way
 under the same instant, then runs the script with runpy. Its env is an
-allowlist (cases.ENV_KEEP, ENV_PREFIXES, ENV_SET, plus cases.DATA_ENV): no
-credential, no write switch, no confirm secret, and never PYTHONHASHSEED, so
+allowlist (cases.ENV_KEEP, ENV_PREFIXES, ENV_SET, plus cases.DATA_ENV) and
+HOME is an empty folder of the side's own: no credential, no write switch, no
+confirm secret, nothing under the operator's HOME, and never PYTHONHASHSEED, so
 a report that depends on set order differs between two runs of one tree. A
 case carrying one of cases.REFUSE_ARGS is refused before anything runs.
 Pages (cases.pages) render in one more child, under the same pin.
@@ -232,14 +233,17 @@ def checked(cases: dict) -> dict:
     return cases
 
 
-def case_env(data: Path) -> dict:
+def case_env(data: Path, home: Path) -> dict:
     """The only env a case sees: the allowlist, the fixed values, the data
-    folder. Never PYTHONHASHSEED: an unpinned seed is what makes a set-order
+    folder, and `home` as HOME (this side's own empty folder, never the
+    operator's: a home-level env file or credential store would reach every
+    case). Never PYTHONHASHSEED: an unpinned seed is what makes a set-order
     bug show as a diff between two runs of the same tree."""
     env = {k: v for k, v in os.environ.items()
            if k in C.ENV_KEEP or k.startswith(tuple(C.ENV_PREFIXES))}
     env.update(C.ENV_SET)
     env[C.DATA_ENV] = str(data)
+    env["HOME"] = str(home)
     env.pop("PYTHONHASHSEED", None)
     return env
 
@@ -320,8 +324,9 @@ def snapshot(tree: Path, out: Path, work: Path, pin: dt.datetime,
     <page>.html. `work` is this side's scratch folder (the caller deletes
     it); with `data_src` the caller put its copy at work/data, else it is
     seeded from `fixtures`. 1 when a case printed no JSON or a page raised."""
-    data = work / "data"
-    env = case_env(data)
+    data, home = work / "data", work / "home"
+    home.mkdir(parents=True, exist_ok=True)
+    env = case_env(data, home)
     at = pin.isoformat()
 
     def run(argv, stdin=None):

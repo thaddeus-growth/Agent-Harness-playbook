@@ -1,6 +1,6 @@
 # Golden diff
 
-A refactor must leave every `--json` document and every page exactly as it was. This tool proves it: it runs every case of your harness on BASE and on HEAD, on the same data under the same clock, and diffs the two. Two files you copy into your harness: `engine.py` (generic, you do not edit it) and `cases.py` (the hook you fill once). Stdlib-only Python 3.11+ on macOS or Linux, plus git.
+A refactor must leave every `--json` document and every page exactly as it was. This tool proves it: it runs every case of your harness on BASE and on HEAD, on the same data under the same clock, and diffs the two. Two files you copy into your harness: `engine.py` (generic, you do not edit it) and `cases.py` (the hook you fill once). Stdlib-only Python 3.11+ on macOS or Linux, plus git. *(untried as copied here: the rules and their tests come from the source project, where the original code ran on real data; these files have run only against their own tests and a toy harness)*
 
 ```mermaid
 flowchart LR
@@ -54,7 +54,7 @@ A diff tool that says `0` proves nothing until it has said `1` when it should.
 | Set order shows | the same, with `PYTHONHASHSEED` unset (the engine never passes it on) | a report whose order comes from a set differs |
 | It can see | commit a throwaway change to one registry default; compare | a diff; then drop the commit |
 | Pinned | `snapshot OUT --today` another day | every `today` in the documents, child verbs' too, is that day |
-| Sealed | run with a credential and the write switch in your env | no case sees either |
+| Sealed | run with a credential and the write switch in your env, and a credential file under your HOME | no case sees any of them: HOME is each side's own empty folder |
 
 *Paid for:* the first golden scripts lived in a session's scratch folder and were lost with it. Once committed, a HEAD-vs-HEAD run on a copy of real data found a report that differed between two runs of the same code: its order came from a set.
 
@@ -67,7 +67,7 @@ A diff tool that says `0` proves nothing until it has said `1` when it should.
 | `--data`: one copy taken while sizes and mtimes stood still (retried, then refused), link targets copied, never links; the folder only read, never named | a pull writing meanwhile tears the copy; a case writes through a link into live data | `test_engine.py`, `test_cleanup.py` |
 | Both sides seeded from BASE's fixtures | a fixture edit would hide a behaviour change | `test_compare.py` |
 | Every clock seam and the runner seam patched in the child, so a verb's own child scripts run pinned | a child verb reads the real day and both sides drift | `test_compare.py` |
-| Env from an allowlist: no credential, no write switch, no confirm secret, never `PYTHONHASHSEED` | a case calls a live API, or a pinned seed hides set-order bugs | `test_engine.py`, `test_compare.py` |
+| Env from an allowlist: no credential, no write switch, no confirm secret, never `PYTHONHASHSEED`; HOME an empty folder per side | a case calls a live API, reads a home-level env file into another client's data, or a pinned seed hides set-order bugs | `test_engine.py`, `test_compare.py` |
 | A plan carrying a write switch (`REFUSE_ARGS`) refused before any case runs | a golden run writes to a live system | `test_engine.py`, `test_cleanup.py` |
 | Only temp paths and timestamps inside the run's own wall-clock span masked | masking more hides real changes | `test_engine.py` |
 | Verbs read from the dispatcher with `ast`, never imported | importing it may load the operator's env files and credentials | `test_engine.py` |

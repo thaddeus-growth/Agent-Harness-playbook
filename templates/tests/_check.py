@@ -10,8 +10,9 @@ A file that forgets the `sys.exit` still fails, on its own RESULT line.
 when the file exits, whatever happened in between: run.py fails a file that
 leaves anything in its temp dir. `child_env()` is the environment for a child
 process a test starts: run.py's allowlist plus the test's own values, never the
-operator's credentials or data folder. It keeps TMPDIR, so the child's temp
-files land where the leak check sees them.
+operator's credentials, data folder or HOME. It keeps TMPDIR, so the child's
+temp files land where the leak check sees them, and gives HOME an empty
+sandbox of this file's (a child with no HOME at all would find the real one).
 """
 
 from __future__ import annotations
@@ -50,10 +51,16 @@ def tmp_dir(prefix: str | None = None) -> str:
     return path
 
 
+_HOME: list[str] = []
+
+
 def child_env(**extra: str) -> dict:
-    """run.py's environment allowlist, this process's TMPDIR, no bytecode
-    written into the checkout, and `extra` (which may override any of them)."""
+    """run.py's environment allowlist, this process's TMPDIR, a sandbox HOME
+    (one per test file), no bytecode written into the checkout, and `extra`
+    (which may override any of them)."""
     from run import allowed_env    # tests/run.py: the allowlist lives there once
-    return allowed_env(**{"TMPDIR": tempfile.gettempdir(),
+    if not _HOME:
+        _HOME.append(tmp_dir(prefix="home-"))
+    return allowed_env(**{"TMPDIR": tempfile.gettempdir(), "HOME": _HOME[0],
                           "PYTHONDONTWRITEBYTECODE": "1", **extra})
 

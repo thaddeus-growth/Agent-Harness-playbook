@@ -16,11 +16,13 @@ import subprocess
 import sys
 import textwrap
 import urllib.error
+from datetime import datetime, timezone
+from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import _safety  # noqa: E402  (puts the folder that holds core/ on sys.path)
-from core import raw  # noqa: E402
+from core import dates, raw  # noqa: E402
 from _safety import raises, stderr, tmpdir  # noqa: E402
 
 KEY = ("day", "entity")
@@ -384,6 +386,18 @@ def test_an_edited_ledger_refuses():
         with raises(ValueError) as c:
             raw.open_gaps(led)
         assert "gaps.jsonl:2" in str(c.err)
+
+
+def test_every_stamp_follows_the_one_clock():
+    """Stamps made off `dates.now` escaped the patch that pins a test or the
+    golden diff to one instant."""
+    at = datetime(2030, 5, 6, 7, 8, 9, tzinfo=timezone.utc)
+    with tmpdir() as d, mock.patch.object(dates, "now", return_value=at):
+        led = os.path.join(d, "gaps.jsonl")
+        gap = raw.record_gap(led, endpoint="e", days=["2026-01-01"], reason="HTTP 429")
+        filled = raw.record_filled(led, endpoint="e", days=["2026-01-01"])
+        assert gap["seen_at"] == filled["seen_at"] == "2030-05-06T07:08:09Z"
+        assert not hasattr(raw, "utc_stamp")                      # no second stamp to drift from dates'
 
 
 if __name__ == "__main__":

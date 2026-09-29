@@ -11,6 +11,11 @@ rebuild refills from, so it only grows.
     record_gap, record_filled,       what could not be pulled and why, in an
     open_gaps                        append-only ledger
 
+Every stamp this module makes (a gap's `seen_at`, the `pulledAt` of an old
+row read from the file's mtime) is `dates.utc_stamp()`, and so is the
+caller's `pulled_at` below: one format that compares as a string, one clock
+a test or the golden diff pins by patching `dates.now`.
+
 The rules, each learned from a bug in the source project:
 
   - A raw file is written to `<path>.tmp`, flushed to disk, then renamed over
@@ -48,7 +53,7 @@ The rules, each learned from a bug in the source project:
             print("skipped: another run holds the lock")
             sys.exit(0)
         rows = pull(...)
-        accumulate(raw_path, rows, key=("day", "entity_id"), pulled_at=utc_stamp())
+        accumulate(raw_path, rows, key=("day", "entity_id"), pulled_at=dates.utc_stamp())
 """
 
 from __future__ import annotations
@@ -63,11 +68,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any, Callable, Iterator, Mapping, TextIO
 
-
-def utc_stamp(t: float | None = None) -> str:
-    """`2026-01-31T09:00:00Z`: UTC in one format, so stamps compare as strings."""
-    when = time.time() if t is None else t
-    return datetime.datetime.fromtimestamp(when, datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+from . import dates
 
 
 def _log(line: str) -> None:
@@ -163,7 +164,8 @@ def accumulate(path: str, rows: list[dict], key: tuple[str, ...], pulled_at: str
             _move_aside(path, pulled_at, repr(e))
             old = []
         else:
-            was = payload.get("pulledOn") or utc_stamp(os.path.getmtime(path))
+            mtime = datetime.datetime.fromtimestamp(os.path.getmtime(path), datetime.timezone.utc)
+            was = payload.get("pulledOn") or dates.utc_stamp(mtime)
             old = [r if r.get("pulledAt") else {**r, "pulledAt": was} for r in old]
     merged = merge_rows(old, rows, key, pulled_at)
     write_json_atomic(path, {**meta, "pulledOn": pulled_at, "rowCount": len(merged), list_key: merged})
@@ -373,13 +375,13 @@ def record_gap(path: str, *, endpoint: str, days: list[str], reason: str,
     "HTTP 403: no access"). `fatal`: the whole layer came back empty, so the
     run must exit non-zero rather than let an ingest treat it as complete."""
     return _append(path, {"event": "gap", "endpoint": endpoint, "days": sorted(days),
-                          "reason": reason, "fatal": fatal, "seen_at": seen_at or utc_stamp()})
+                          "reason": reason, "fatal": fatal, "seen_at": seen_at or dates.utc_stamp()})
 
 
 def record_filled(path: str, *, endpoint: str, days: list[str], seen_at: str | None = None) -> dict:
     """Append that a later pull of `endpoint` got `days` after all."""
     return _append(path, {"event": "filled", "endpoint": endpoint, "days": sorted(days),
-                          "seen_at": seen_at or utc_stamp()})
+                          "seen_at": seen_at or dates.utc_stamp()})
 
 
 def read_ledger(path: str) -> list[dict]:

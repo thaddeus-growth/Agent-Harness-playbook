@@ -166,7 +166,10 @@ def test_a_case_sees_the_allowlist_and_never_a_hash_seed():
         os.environ.update(FAKE_API_KEY="k", FAKE_ALLOW_WRITES="1", CONFIRM_SECRET="s",
                           PYTHONHASHSEED="0", LC_ALL="C", PATH=saved[0].get("PATH", ""))
         engine.C.ENV_KEEP = (*saved[1], "PYTHONHASHSEED")                  # even when a hook lists it
-        env = engine.case_env(Path("data"))
+        os.environ["HOME"] = "/operator/home"
+        engine.C.ENV_KEEP = (*engine.C.ENV_KEEP, "HOME")                   # even when a hook lists it
+        env = engine.case_env(Path("data"), Path("side/home"))
+        assert env["HOME"] == "side/home"
         allowed = set(engine.C.ENV_KEEP) | set(engine.C.ENV_SET) | {engine.C.DATA_ENV}
         assert set(env) <= allowed | {k for k in env if k.startswith(tuple(engine.C.ENV_PREFIXES))}
         assert not {"FAKE_API_KEY", "FAKE_ALLOW_WRITES", "CONFIRM_SECRET", "PYTHONHASHSEED"} & set(env)

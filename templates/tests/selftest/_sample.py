@@ -1,5 +1,5 @@
 """A sample harness with the test kit installed the way templates/tests/README.md
-says: the kit's tests/*.py in tests/, core/dates.py as src/lib/dates.py,
+says: the kit's tests/*.py in tests/, the playbook's core/ at the root,
 templates/gitattributes as .gitattributes, templates/ssot/ as ssot/, plus a
 few lines of code in the example layout. `build()` writes it, applies the
 changes a test asks for and stages it all in a fresh git repository.
@@ -33,15 +33,15 @@ CODE = {
     "src/api/client.py": ("import json\n\n\nclass Client:\n    def get(self, path):\n"
                           "        return json.dumps({'path': path})\n"),
     "src/api/writer.py": "from .client import Client\n\n\ndef write(change):\n    return Client().get(change)\n",
-    "src/pull_ads.py": ("from api import Client\nfrom lib import dates\n\n\ndef main():\n"
+    "src/pull_ads.py": ("from api import Client\nfrom core import dates\n\n\ndef main():\n"
                         "    return Client().get('report'), dates.today()\n"),
-    "src/ingest_ads.py": ("from lib import db, dates\n\n\ndef main(path):\n"
+    "src/ingest_ads.py": ("from core import dates\nfrom lib import db\n\n\ndef main(path):\n"
                           "    return db.connect(path), dates.utc_stamp()\n"),
-    "src/compute_kpi.py": ("from lib import db, dates, rules\n\n\ndef main(path):\n"
+    "src/compute_kpi.py": ("from core import dates\nfrom lib import db, rules\n\n\ndef main(path):\n"
                            "    return db.connect(path), dates.today(), rules.over_cap(1, 2)\n"),
     "src/compute_stories.py": ("import subprocess\nimport sys\n\n\ndef run(verb):\n"
                                "    return subprocess.run([sys.executable, 'src/harness.py', *verb])\n"),
-    "src/facts.py": ("from lib import db, dates\n\n\ndef set_pending(path, key, value):\n"
+    "src/facts.py": ("from core import dates\nfrom lib import db\n\n\ndef set_pending(path, key, value):\n"
                      "    return db.connect(path), key, value, dates.now()\n"),
     "src/execute.py": ("from api import writer\nfrom lib import db, rules\n\n\ndef main(path, apply=False):\n"
                        "    return writer.write('x') if apply and rules.over_cap(2, 1) else db.connect(path)\n"),
@@ -63,7 +63,9 @@ def build(root: str, changes: dict[str, str | None] | None = None) -> str:
         files[f"tests/{os.path.basename(p)}"] = read(p)
     for p in glob.glob(os.path.join(TEMPLATES, "ssot", "*")):
         files[f"ssot/{os.path.basename(p)}"] = read(p)
-    files["src/lib/dates.py"] = read(os.path.join(REPO, "core", "dates.py"))
+    for p in glob.glob(os.path.join(REPO, "core", "**", "*"), recursive=True):
+        if os.path.isfile(p) and "__pycache__" not in p:
+            files[os.path.relpath(p, REPO)] = read(p)
     files[".gitattributes"] = read(os.path.join(TEMPLATES, "gitattributes"))
     for path, text in (changes or {}).items():
         if text is None:

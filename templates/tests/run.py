@@ -16,9 +16,13 @@ own process, 4 at a time, 120 s each. A file passes only when all of these hold:
      a leak is named on the file that made it, then removes it. uv's own
      `uv-*.lock` files are not a leak. Only writes that honour TMPDIR are seen.
 
-Each file runs on an environment allowlist (ENV_KEEP, ENV_PREFIXES): no
-credential, data folder or setting of the operator reaches a test by accident.
-A test that starts a child hands it `_check.child_env()`, the same allowlist.
+Each file runs on an environment allowlist (ENV_KEEP, ENV_PREFIXES), and its
+HOME is an empty folder of its own, removed afterwards: no credential, data
+folder or setting of the operator reaches a test by accident, including a
+home-level env file or a credential store under the real HOME. A tool that
+caches under HOME caches there; point it elsewhere with its own variable
+(UV_* passes). A test that starts a child hands it `_check.child_env()`, the
+same allowlist and a sandbox HOME.
 
     python3 tests/run.py                  all files
     python3 tests/run.py core             files with "core" in the name
@@ -44,7 +48,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 RESULT_RE = re.compile(r"^RESULT: (\d+) passed(?:, (\d+) failed)?$", re.M)
 TIMEOUT = 120
 WORKERS = 4
-ENV_KEEP = ("PATH", "HOME", "LANG", "TZ")
+ENV_KEEP = ("PATH", "LANG", "TZ")          # never HOME: each file gets its own
 ENV_PREFIXES = ("LC_", "UV_")
 UV_LOCK = "uv-*.lock"
 
@@ -76,7 +80,8 @@ def run_one(path: str, tmp_root: str | None = None) -> dict:
     name = os.path.basename(path)
     t0 = time.monotonic()
     tmp = tempfile.mkdtemp(prefix=name.removesuffix(".py") + "-", dir=tmp_root)
-    env = allowed_env(TMPDIR=tmp, PYTHONDONTWRITEBYTECODE="1")
+    home = tempfile.mkdtemp(prefix=name.removesuffix(".py") + "-home-", dir=tmp_root)
+    env = allowed_env(TMPDIR=tmp, HOME=home, PYTHONDONTWRITEBYTECODE="1")
     try:
         p = subprocess.run([sys.executable, path], capture_output=True,
                            text=True, errors="replace", timeout=TIMEOUT,
@@ -89,6 +94,7 @@ def run_one(path: str, tmp_root: str | None = None) -> dict:
     finally:
         left = sweep(tmp)
         shutil.rmtree(tmp, ignore_errors=True)
+        shutil.rmtree(home, ignore_errors=True)
     found = list(RESULT_RE.finditer(out))
     m = found[-1] if found else None
     count = int(m.group(1)) if m else 0

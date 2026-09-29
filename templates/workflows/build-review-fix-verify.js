@@ -33,7 +33,7 @@ const CFG = {
   scratch: '/abs/path/to/session/scratch',    // TMPDIR, reviewer worktrees, briefs; never the repo
   base: '0000000',                            // pinned base SHA, never a moving branch name
   test: 'python3 tests/run.py',               // the full suite; every file prints its RESULT line
-  golden: 'python3 tests/golden.py compare {base} HEAD',   // '' if the repo has no golden tool yet
+  golden: 'uv run tests/golden/engine.py compare {base} HEAD',   // --strict is added for a refactor; '' if the repo has no golden tool yet
   commit: 'git -c user.name="Build Agent" -c user.email=agent@example.com commit',
   trailer: '',                                // a line every commit message ends with, if any
   in_flight: 'none',                          // other branches and sessions, and the files they own

@@ -38,7 +38,11 @@ DATA_ENV = "DATA_DIR"               # the env variable naming the data folder
 
 # The whole env of a case. Nothing else passes: no credential, no write
 # switch, no confirm secret. PYTHONHASHSEED never passes, whatever is here.
-ENV_KEEP = ("PATH", "HOME", "TMPDIR", "LANG")
+# HOME is never the operator's, whatever is here: each side gets an empty
+# folder of its own, so a home-level env file, a tool's config or a credential
+# store under HOME never reaches a case. A tool that caches under HOME caches
+# there; point it elsewhere with its own variable if the run gets slow.
+ENV_KEEP = ("PATH", "TMPDIR", "LANG")
 ENV_PREFIXES = ("LC_",)
 ENV_SET = {"TZ": "UTC", "PYTHONDONTWRITEBYTECODE": "1"}
 REFUSE_ARGS = ("--apply",)          # a case carrying one is refused

@@ -8,10 +8,13 @@ holds the mechanics). Edit the two tables to your layout. A rule whose layer
 matches no module fails, so a rename cannot switch a rule off; a text rule's
 pattern is tried on its samples before it reads a file.
 
-The example layout is the playbook's: runtime code in src/ (on sys.path),
-shared helpers in lib/, the platform client in api/ with api/writer.py the one
-code that writes to the platform, verb scripts pull_*, ingest_*, compute_* and
-the write verbs; a client console in webconsole/, the host glue in adapter/.
+The example layout is the playbook's: the playbook's core/ at the root
+(`core.store` guards the database, `core.raw` the raw files), runtime code in
+src/ (on sys.path), shared helpers in lib/, the platform client in api/ with
+api/writer.py the one code that writes to the platform, verb scripts pull_*,
+ingest_*, compute_* and the write verbs; a client console in webconsole/, the
+host glue in adapter/. src/ and core/ are one import graph; core/tests is not
+in it.
 """
 
 import re
@@ -32,7 +35,7 @@ RULES = [
     R("a", "only the executor imports the one writer",
       layer=("api.writer",), importers=frozenset({"execute"})),
     R("b", "pull reaches no database, ingest, compute, write verb or writer",
-      layer=("pull_*",), bad=("lib.db", "ingest_*", "compute_*", *WRITE_VERBS, "api.writer")),
+      layer=("pull_*",), bad=("lib.db", "core.store", "ingest_*", "compute_*", *WRITE_VERBS, "api.writer")),
     R("c", "ingest reaches no platform client, pull or compute",
       layer=("ingest_*",), bad=(*API, "pull_*", "compute_*")),
     R("d", "compute reaches no platform client, pull, ingest or write verb",
@@ -43,13 +46,15 @@ RULES = [
       layer=WRITE_VERBS, bad=("compute_*",)),
     R("g", "lib imports no verb script and not the writer",
       layer=("lib", "lib.*"), bad=(*VERBS, "api.writer")),
+    R("h", "core imports nothing of the harness: it names no channel",
+      layer=("core", "core.*"), bad=(*VERBS, "lib", "lib.*", *API, "harness")),
 ]
 
 S = archtest.Scan
 WRITE_VERB = archtest.verbs(TOOL, "facts set|unconfirm|init;decisions set|withdraw;queue add|reject",
                             "pull|ingest|execute")
 SCANS = [
-    S("i", "the core never names the console or the host adapter", ("src", "ssot"),
+    S("i", "the core never names the console or the host adapter", ("src", "core", "ssot"),
       re.compile(r"\bwebconsole\b|\badapter/", re.I),
       hits=("open('webconsole/pages.py')", "see adapter/hooks.py"),
       misses=("print to the console", "an adapter pattern")),
@@ -67,7 +72,9 @@ SCANS = [
 
 
 def main() -> int:
-    graph = archtest.Graph(archtest.modules_in(ROOT / "src"))
+    core = {m: p for m, p in archtest.modules_in(ROOT / "core", "core").items()
+            if not m.startswith("core.tests")}
+    graph = archtest.Graph({**archtest.modules_in(ROOT / "src"), **core})
     print("import rules")
     for label, problems in archtest.evaluate(graph, RULES):
         check(label, not problems, problems)

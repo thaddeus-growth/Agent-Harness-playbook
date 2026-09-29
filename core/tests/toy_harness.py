@@ -35,12 +35,11 @@ import json
 import os
 import re
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parents[1]))                 # the folder that holds core/
-from core import gate, messages  # noqa: E402
+from core import dates, gate, messages  # noqa: E402
 from core.messages import coded, msg  # noqa: E402
 
 messages.use_registry(HERE / "toy_codes.tsv")
@@ -107,7 +106,7 @@ def opened():
 
 def _row(item, kind, value, changed_by, reason) -> dict:
     return {"item": item, "kind": kind, "value": value, "changed_by": changed_by, "reason": reason,
-            "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+            "at": dates.utc_stamp()}
 
 
 def cmd_init(a) -> dict:

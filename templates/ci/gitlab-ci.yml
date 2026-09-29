@@ -1,5 +1,5 @@
 # A harness's whole CI on GitLab, from the first commit. Copy it to the repo
-# root as .gitlab-ci.yml, point tests/run.py and adapter/ at your own paths,
+# root as .gitlab-ci.yml, point tests/run.py, core/tests/run.py and adapter/ at your own paths,
 # add your platforms to the secret scan, and fill in the host versions.
 #
 #   secret scan   every change: no credential-shaped text in the checkout
@@ -133,6 +133,7 @@ test:
     - pip install -q uv
   script:
     - uv run tests/run.py
+    - uv run core/tests/run.py
 
 # The host adapter against each host-platform version it supports. Runs
 # only when the adapter or this file changes, so the core's suite stays

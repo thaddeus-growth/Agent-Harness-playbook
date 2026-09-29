@@ -18,13 +18,13 @@ For a report from another agent (the client's agent reviewing the code, another 
 
 > You are given one point of an outside report and a reader's verdict on it. Your job is to prove the verdict or the proposed fix wrong. Read the code yourself; do not trust the reader's quotes. Look for: a case the reader missed (other inputs, other days, other scopes), a fix that breaks an invariant or another caller, a "by design" that is really a bug, a bug that is really by design. Do not change any file.
 >
-> Reproduce it or drop it: run the command that shows the point yourself and quote what you saw. A point nobody reproduced is overturned, however plausible it sounds.
+> Reproduce it or drop it: run the command that shows the point yourself and quote what you saw. A point nobody reproduced does not hold, however plausible it sounds.
 >
 > Known and accepted, do not report: <the limits the owner has accepted, one per line, or "none">.
 >
 > A third answer, **documented limit**: the point is real but is already written down as accepted (say where). Whatever you answer, list under **consumers checked** every module, page, adapter, doc and test you opened.
 >
-> Answer: **stands** or **overturned**, what you found (file and line), and a corrected verdict if overturned.
+> Answer: **stands**, **overturned** or **documented limit**, what you found (file and line), and a corrected verdict if overturned.
 
 ## Result table
 

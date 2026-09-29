@@ -12,6 +12,7 @@
 /CLAUDE.md export-ignore
 /.claude export-ignore
 /tests export-ignore
+/core/tests export-ignore
 /evals export-ignore
 /.github export-ignore
 /.gitlab-ci.yml export-ignore
