@@ -5,6 +5,9 @@
 
   1. A dry run (the default) writes nothing and calls nothing: no writer
      is built, no effect row, no status change; --json is the full plan.
+     Its wording never implies --apply works when writes are off or the
+     harness's allowlist is empty (execute_dry_run_by_hand: an approved
+     item is an instruction for a person).
   2. --apply with writes off (and with the kill switch / STOP file) is
      refused by the write guard before anything is written or sent.
   3. --apply with writes on: pending -> sent -> confirmed effect rows, the
@@ -212,6 +215,33 @@ def test_dry_run() -> None:
     check("--dry-run (text): the plan printed, still nothing written",
           rc == 0 and "DRY RUN" in out and "SKU-1" in out
           and all_effects() == 0 and CALLS == [], out)
+    check("writes on and a non-empty allowlist: --apply could send, so the "
+          "dry run says so (apply_possible, no apply_blocked)",
+          d["apply_possible"] is True and "apply_blocked" not in d, d)
+    rc, out, _ = run(["apply", "--json"])
+    d = one_doc(out)
+    check("writes off (opt-in unset): the dry run says --apply would send "
+          "nothing and an approved item is an instruction for a person",
+          rc == 0 and d["message_code"]["code"] == "execute_dry_run_by_hand"
+          and d["apply_possible"] is False
+          and d["apply_blocked_code"]["code"] == "write_off"
+          and "--apply sends them" not in d["message"]
+          and "instruction for a person" in d["message"]
+          and d["go"] == 1 and CALLS == [], out)
+    rc, out, _ = capture(lambda a: execute.main(
+        a, spec=SPEC, writer_factory=writer_factory, plan_item=plan_item,
+        apply_item=apply_item, read_back=read_back, allowlist={}),
+        ["apply", "--json"], env=env(**ON))
+    d = one_doc(out)
+    check("writes on but the harness's allowlist is empty: "
+          "execute_dry_run_by_hand, apply_blocked execute_allowlist_empty",
+          rc == 0 and d["message_code"]["code"] == "execute_dry_run_by_hand"
+          and d["apply_blocked_code"]["code"] == "execute_allowlist_empty"
+          and d["apply_possible"] is False and STATE["built"] == 0, out)
+    rc, out, _ = run(["apply", "--json"], **{**ON, CFG.env("KILL"): "1"})
+    d = one_doc(out)
+    check("the kill switch on: the dry run names it as the reason",
+          d["apply_blocked_code"]["code"] == "write_killed", out)
 
 
 # ---- 2 ---------------------------------------------------------------------

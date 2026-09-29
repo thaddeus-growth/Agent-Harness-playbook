@@ -6,8 +6,10 @@ proposals are generic {kind, market, target_ref, payload, basis}.
   1. add: the same action twice is one row; --json is one document; the
      proposal document's shape and markets are checked before any write.
   2. supersede: a newer snapshot proposing something else for a target
-     supersedes its live (pending AND approved) rows; other targets stay;
-     an identical proposal re-opens a superseded row.
+     supersedes its PENDING row, only after the new proposal passed
+     validation (a refused one displaces nothing); an APPROVED row is
+     never superseded and keeps decided_by/decided_at; other targets
+     stay; an identical proposal re-opens a superseded row.
   3. validate: a refused proposal is recorded `rejected` with the
      refusal's code as reason_code (decided_by validate), rejected()
      reads it, and it is never proposed again unchanged.
@@ -269,20 +271,27 @@ def test_supersede() -> None:
     rc, out, _ = add(prop(target="SKU-4", units=5, basis="b1"),
                      prop(target="SKU-5", units=5, basis="b1"))
     ids = one_doc(out)["queued"]
+    approved_at = human.now()
     with closing(sqlite3.connect(DB)) as c:      # SKU-5's row is approved
         c.execute("UPDATE action_queue SET status='approved', decided_by="
-                  "'t@tty', decided_at=? WHERE id=?", (human.now(), ids[1]))
+                  "'t@tty', decided_at=? WHERE id=?", (approved_at, ids[1]))
         c.commit()
     other = [r["id"] for r in rows() if r["target_ref"] == "SKU-2"]
     rc, out, _ = add(prop(target="SKU-4", units=6, basis="b2"),
                      prop(target="SKU-5", units=6, basis="b2"))
     d = one_doc(out)
     check("a newer snapshot with other proposals for SKU-4 (pending) and "
-          "SKU-5 (approved): both superseded, the new ones queued",
-          rc == 0 and d["superseded"] == ids and len(d["queued"]) == 2
-          and all(row(i)["status"] == "superseded" for i in ids)
+          "SKU-5 (approved): only the pending one is superseded, the new "
+          "ones queued",
+          rc == 0 and d["superseded"] == [ids[0]] and len(d["queued"]) == 2
+          and row(ids[0])["status"] == "superseded"
           and row(ids[0])["reason_code"] == "queue_superseded"
           and row(ids[0])["decided_by"] == "snapshot", (out, rows()))
+    check("the approved row stays approved and keeps who approved it and "
+          "when",
+          row(ids[1])["status"] == "approved"
+          and row(ids[1])["decided_by"] == "t@tty"
+          and row(ids[1])["decided_at"] == approved_at, row(ids[1]))
     check("rows for a target the snapshot does not mention stay",
           all(row(i)["status"] == "pending" for i in other), other)
     rc, out, _ = add(prop(target="SKU-4", units=5, basis="b1"))
@@ -292,6 +301,22 @@ def test_supersede() -> None:
           d["revived"] == [ids[0]] and row(ids[0])["status"] == "pending"
           and row(ids[0])["reason_code"] == "queue_revived"
           and row(d["superseded"][0])["target_ref"] == "SKU-4", out)
+    # validate before superseding: a refused proposal displaces nothing
+    rc, out, _ = add(prop(target="SKU-4", units=500, basis="b3"))
+    d = one_doc(out)
+    check("a proposal validation refuses (units > 100) is recorded "
+          "rejected and supersedes nothing: SKU-4's pending row stays",
+          rc == 0 and d["superseded"] == [] and len(d["rejected"]) == 1
+          and d["rejected"][0]["why_code"]["code"] == "shop_stock_low"
+          and row(ids[0])["status"] == "pending", (out, rows()))
+    rc, out, _ = add(prop(target="SKU-5", units=7, basis="b4"))
+    d = one_doc(out)
+    check("an approved row is never superseded, even by a valid newer "
+          "proposal for its target",
+          rc == 0 and len(d["queued"]) == 1
+          and ids[1] not in d["superseded"]
+          and row(ids[1])["status"] == "approved"
+          and row(ids[1])["decided_at"] == approved_at, (out, rows()))
 
 
 # ---- 5 ---------------------------------------------------------------------

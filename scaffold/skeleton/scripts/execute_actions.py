@@ -28,4 +28,5 @@ if __name__ == "__main__":
     raise SystemExit(execute.main(sys.argv[1:], spec=SPEC,
                                   writer_factory=writer.writer,
                                   plan_item=execute.unplanned,
-                                  apply_item=apply_item, read_back=read_back))
+                                  apply_item=apply_item, read_back=read_back,
+                                  allowlist=writer.ALLOWED))

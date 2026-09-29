@@ -376,10 +376,12 @@ def test_queue(srv: Console) -> None:
           and "go ahead" in q[0][2] and "relay user=web:alice" in q[0][2], q)
     rc, doc, err = shop("execute", "apply", "--json")
     items = doc.get("items", []) if doc else []
-    check("execute apply (a dry run) shows the approved item going out",
+    check("execute apply (a dry run) shows the approved item passing, and that --apply would send nothing while writes are off",
           rc == 0 and len(items) == 1 and items[0]["id"] == 1
           and items[0]["verdict_code"]["code"] == "execute_go"
-          and doc["message_code"]["code"] == "execute_dry_run",
+          and doc["message_code"]["code"] == "execute_dry_run_by_hand"
+          and doc["apply_possible"] is False
+          and doc["apply_blocked_code"]["code"] == "write_off",
           (doc, err[-300:]))
     rc, doc, err = shop("execute", "apply", "--apply", "--json")
     check("--apply is refused: writes are off (SHOP_ALLOW_WRITES unset)",

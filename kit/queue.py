@@ -15,13 +15,18 @@ document and writes only `action_queue`; it never calls an external API
     canonical {kind, market, target_ref, payload, basis}, so ANY change
     to what a proposal rests on (its basis: the rows its rule read plus
     the ingest version) is a different action, and the same action twice
-    is one row (UNIQUE in the file). A live (pending or approved) row for
-    a target the new snapshot proposes something else for is superseded.
-    Each new proposal passes the harness's `validate(con, proposal)` or is
-    recorded as `rejected` with the refusal's code in `reason_code`
-    (decided_by `validate`), so a later run can read why (`rejected()`).
-    A rejected proposal is never proposed again unchanged: the same
-    action_id stays one rejected row.
+    is one row (UNIQUE in the file). Each new proposal passes the
+    harness's `validate(con, proposal)` or is recorded as `rejected` with
+    the refusal's code in `reason_code` (decided_by `validate`), so a
+    later run can read why (`rejected()`). A rejected proposal is never
+    proposed again unchanged: the same action_id stays one rejected row.
+    Only then, and only for a target where the snapshot left a live
+    proposal (queued, re-opened, or already live), is a PENDING row for
+    that target that the snapshot no longer proposes superseded: a
+    refused proposal never displaces the one a person could still
+    approve. An APPROVED row is never superseded by `add`: it keeps its
+    approver (decided_by, decided_at) and stands until its approval
+    expires (`ttl_hours`) or execute finds its basis moved.
   * `approve ID… --reason R` is a human act through kit.human.confirm:
     retype `approve` at the terminal, or off a TTY a relayed one-time
     code bound to subject ("queue approve", markets, "action_queue",
@@ -42,11 +47,11 @@ file (kit.schema_base): only status, decided_by, decided_at, reason and
 reason_code move.
 
 Deviations (SPEC §queue):
-  * Supersede covers live rows (pending AND approved), as the reference
-    did: an approval of an older proposal for a target the new snapshot
-    proposes something else for must not be executed. Rows for targets
-    the snapshot does not mention are left alone (execute's basis check
-    refuses them if their data moved).
+  * Supersede covers pending rows only (the reference superseded approved
+    ones too, erasing who approved them and when): an approval is a
+    person's act, and what keeps a stale one from going out is execute's
+    basis check and the approval's ttl, not a snapshot. Rows for targets
+    the snapshot does not mention are left alone.
   * `add` re-opens (status back to pending, decided_by `snapshot`) a row
     whose identical proposal is proposed again after it was superseded
     or its approval expired: action_id is UNIQUE, so it cannot be queued
@@ -289,31 +294,20 @@ def add(spec: db.SchemaSpec, con: sqlite3.Connection, doc: dict,
         props.setdefault(action_id(n), n)
     for m in sorted({p["market"] for p in props.values()}):
         markets.require_declared(con, m)
-    targets = {(p["market"], p["target_ref"]) for p in props.values()}
     rep: dict[str, list] = {"queued": [], "known": [], "rejected": [],
                             "superseded": [], "revived": [], "refused": []}
     at = human.now()
     with db.keep_human_rows(spec, con):
-        live = _all(con, f"SELECT id, market, target_ref, action_id FROM "
-                         f"{TABLE} WHERE status IN (?, ?) ORDER BY id", LIVE)
-        for r in live:
-            if (r["market"], r["target_ref"]) not in targets \
-                    or r["action_id"] in props:
-                continue
-            why = msg("queue_superseded",
-                      f"superseded: a newer snapshot proposes something else "
-                      f"for {r['target_ref']}", target_ref=r["target_ref"])
-            con.execute(
-                f"UPDATE {TABLE} SET status='superseded', decided_by=?, "
-                f"decided_at=?, reason=?, reason_code=? WHERE id=?",
-                (SNAPSHOT, at, str(why), why.code, r["id"]))
-            rep["superseded"].append(r["id"])
+        # 1. every new proposal is validated (and recorded) first
+        kept: set[tuple[str, str]] = set()     # targets left with a live row
         for aid, p in props.items():
             row = _one(con, f"SELECT id, status FROM {TABLE} WHERE "
                             f"action_id=?", (aid,))
             if row is not None and row["status"] not in REVIVABLE:
                 rep["known"].append({"id": row["id"],
                                      "status": row["status"]})
+                if row["status"] in LIVE:
+                    kept.add((p["market"], p["target_ref"]))
                 continue
             why = validate(con, p)
             if why is not None:
@@ -331,6 +325,7 @@ def add(spec: db.SchemaSpec, con: sqlite3.Connection, doc: dict,
                     f"decided_at=?, reason=?, reason_code=? WHERE id=?",
                     (SNAPSHOT, at, str(again), again.code, row["id"]))
                 rep["revived"].append(row["id"])
+                kept.add((p["market"], p["target_ref"]))
                 continue
             cur = con.execute(
                 f"INSERT INTO {TABLE} (market, action_id, kind, target_ref, "
@@ -345,11 +340,27 @@ def add(spec: db.SchemaSpec, con: sqlite3.Connection, doc: dict,
                  str(why) if why else None, why.code if why else None))
             if why is None:
                 rep["queued"].append(cur.lastrowid)
+                kept.add((p["market"], p["target_ref"]))
             else:
                 rep["rejected"].append({"id": cur.lastrowid,
                                         "target_ref": p["target_ref"],
                                         "kind": p["kind"],
                                         **coded("why", why)})
+        # 2. then a pending row the snapshot replaced with a live proposal
+        #    is superseded; an approved row never is
+        for r in _all(con, f"SELECT id, market, target_ref, action_id FROM "
+                           f"{TABLE} WHERE status='pending' ORDER BY id"):
+            if (r["market"], r["target_ref"]) not in kept \
+                    or r["action_id"] in props:
+                continue
+            why = msg("queue_superseded",
+                      f"superseded: a newer snapshot proposes something else "
+                      f"for {r['target_ref']}", target_ref=r["target_ref"])
+            con.execute(
+                f"UPDATE {TABLE} SET status='superseded', decided_by=?, "
+                f"decided_at=?, reason=?, reason_code=? WHERE id=?",
+                (SNAPSHOT, at, str(why), why.code, r["id"]))
+            rep["superseded"].append(r["id"])
     warnings = []
     if meta.get("stale"):
         tables = [str(s.get("table")) for s in meta["stale"]

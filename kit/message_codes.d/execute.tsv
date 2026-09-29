@@ -9,6 +9,8 @@ execute_cap_delta_deferred	id,total,cap	#{id}: deferred, the run's total change 
 execute_item_changed	id	#{id} changed before it was sent; not sent	#{id} 在发送前被改动了，未发送
 execute_stopped	id,reason	#{id}: not sent, the run stopped: {reason}	#{id}：未发送，本次执行已停止：{reason}
 execute_dry_run	go,total	dry run: {go} of {total} approved item(s) would be sent; nothing was written or called. --apply sends them	试运行：{total} 个已批准项中有 {go} 个会被发送；未写入也未调用任何接口。加 --apply 才会发送
+execute_dry_run_by_hand	go,total,reason	dry run: {go} of {total} approved item(s) pass every check; nothing was written or called, and --apply would send nothing: {reason}. An approved item is an instruction for a person to carry out by hand	试运行：{total} 个已批准项中有 {go} 个通过所有检查；未写入也未调用任何接口，而且加 --apply 也不会发送：{reason}。已批准的项目是一条由人手动执行的指示
+execute_allowlist_empty		this harness's allowlist is empty: it may write nothing to the external system	这个工具的允许清单是空的：不能向外部系统写入任何内容
 execute_applied	total,confirmed,failed,unknown,skipped	sent the go items of {total} approved item(s): {confirmed} confirmed, {failed} failed, {unknown} unknown, {skipped} not sent	已处理 {total} 个已批准项：{confirmed} 个已确认，{failed} 个失败，{unknown} 个结果不明，{skipped} 个未发送
 execute_busy	lock	another execute run holds {lock}; nothing was written	另一个执行进程正在运行（{lock}）；未写入任何内容
 execute_item_not_found	id	no queue item #{id}	没有队列项 #{id}

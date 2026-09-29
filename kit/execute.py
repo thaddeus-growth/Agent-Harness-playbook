@@ -15,6 +15,14 @@ What it guards:
     is called: no writer is built, no effect row, no status change. The
     plan (`--json`: one document) shows per approved item its verdict,
     coded, and the numbers each cap was checked with.
+  * A dry run never implies that `--apply` would send what it cannot:
+    when the harness's allowlist (the `allowlist` it passes) is empty, or
+    the write switches are off (kit.write_guard: kill switch, STOP file,
+    opt-in unset), the plan says so (execute_dry_run_by_hand, with the
+    reason; `apply_possible` false, `apply_blocked` coded) and names what
+    an approved item is then: an instruction for a person to carry out
+    by hand. Only when writes could go out does it say `--apply` sends
+    them (execute_dry_run).
   * Only `approved` rows of the resolved market (kit.market: validated
     and declared) are candidates, in queue order.
   * An `unknown` effect blocks its target: while any effect for the same
@@ -68,7 +76,8 @@ Hooks (all harness code; the kit knows no API):
   * read_back(writer, row, response | None) -> True | False | None.
 
 Deviations (SPEC §execute): the extra keyword hooks ttl_hours, max_items
-and max_delta (the SPEC's "caps (thresholds)"); `--json` is allowed with
+and max_delta (the SPEC's "caps (thresholds)") and `allowlist` (the
+writer's allowed table, read only to word the dry run); `--json` is allowed with
 `--apply` (one document: the outcomes) where the reference refused it;
 a run with a failed or unknown item exits 1, as the reference did; an
 item superseded or expired by execute keeps its approver in
@@ -93,7 +102,7 @@ from kit.config import config
 from kit.contract import HarnessError
 from kit.messages import Msg, code, coded, failure, msg
 from kit.single_instance import hold
-from kit.write_guard import WriteRefused, Writer
+from kit.write_guard import Guard, WriteRefused, Writer
 
 EFFECTS = "action_effects"
 BLOCKING = ("sent", "unknown")          # latest effect states that block
@@ -340,23 +349,51 @@ def _send(spec: db.SchemaSpec, con: sqlite3.Connection, w: Writer,
     return stop
 
 
+def apply_blocked(allowlist: Any = None) -> Msg | None:
+    """Why `--apply` could send nothing right now, or None: an empty
+    allowlist (when the harness passed one), else the write guard's switch
+    refusal (kill switch, STOP file, opt-in unset). Reads env and the data
+    dir only; builds no writer."""
+    if allowlist is not None and len(allowlist) == 0:
+        return msg("execute_allowlist_empty",
+                   "this harness's allowlist is empty: it may write nothing "
+                   "to the external system")
+    return Guard({}).refusal()
+
+
 def apply(spec: db.SchemaSpec, con: sqlite3.Connection, market: str, *,
           send: bool, writer_factory: WriterFactory, plan_item: PlanItem,
           apply_item: ApplyItem, read_back: ReadBack,
           ttl_hours: Cap | None = None, max_items: Cap | None = None,
-          max_delta: Cap | None = None) -> tuple[dict, int]:
+          max_delta: Cap | None = None,
+          allowlist: Any = None) -> tuple[dict, int]:
     """The run: (its document, exit code). send=False is the dry run."""
     items = plan(con, market, plan_item=plan_item, ttl_hours=ttl_hours,
                  max_items=max_items, max_delta=max_delta)
     go = [i for i in items if i["verdict"].code == "execute_go"]
     if not send:
-        summary = msg("execute_dry_run",
-                      f"dry run: {len(go)} of {len(items)} approved item(s) "
-                      f"would be sent; nothing was written or called. "
-                      f"`--apply` sends them", go=len(go), total=len(items))
-        return ({"market": market, "mode": "dry_run",
-                 **coded("message", summary), "go": len(go),
-                 "items": [_item(i) for i in items]}, 0)
+        blocked = apply_blocked(allowlist)
+        if blocked is None:
+            summary = msg("execute_dry_run",
+                          f"dry run: {len(go)} of {len(items)} approved "
+                          f"item(s) would be sent; nothing was written or "
+                          f"called. `--apply` sends them", go=len(go),
+                          total=len(items))
+        else:
+            summary = msg("execute_dry_run_by_hand",
+                          f"dry run: {len(go)} of {len(items)} approved "
+                          f"item(s) pass every check; nothing was written or "
+                          f"called, and `--apply` would send nothing: "
+                          f"{blocked}. An approved item is an instruction "
+                          f"for a person to carry out by hand",
+                          go=len(go), total=len(items), reason=str(blocked))
+        doc = {"market": market, "mode": "dry_run",
+               **coded("message", summary), "go": len(go),
+               "apply_possible": blocked is None,
+               "items": [_item(i) for i in items]}
+        if blocked is not None:
+            doc.update(coded("apply_blocked", blocked))
+        return doc, 0
     lock = paths.data_dir() / LOCK_FILE
     with hold(lock) as mine:
         if not mine:
@@ -466,7 +503,7 @@ def main(argv: list[str] | None = None, *, spec: db.SchemaSpec,
          writer_factory: WriterFactory, plan_item: PlanItem,
          apply_item: ApplyItem, read_back: ReadBack,
          ttl_hours: Cap | None = None, max_items: Cap | None = None,
-         max_delta: Cap | None = None) -> int:
+         max_delta: Cap | None = None, allowlist: Any = None) -> int:
     """`<cli> execute apply|reconcile …`; the exit code."""
     argv = list(sys.argv[1:] if argv is None else argv)
     cfg = config()
@@ -492,7 +529,8 @@ def main(argv: list[str] | None = None, *, spec: db.SchemaSpec,
                             writer_factory=writer_factory,
                             plan_item=plan_item, apply_item=apply_item,
                             read_back=read_back, ttl_hours=ttl_hours,
-                            max_items=max_items, max_delta=max_delta)
+                            max_items=max_items, max_delta=max_delta,
+                            allowlist=allowlist)
         finally:
             con.close()
         if a.json:
