@@ -115,7 +115,8 @@ def test_the_rules_table_and_the_scripts_name_the_same_ids():
     assert rule_ids(extra) - table == {"R99"}
 
 
-PRIVATE = re.compile(r"/Users/|/home/[a-z]|/private/tmp|[A-Z]:\\\\Users|\bB0[0-9A-Z]{8}\b")
+# The patterns are split so that no file here, this one included, spells a private path or id.
+PRIVATE = re.compile(r"/Us" r"ers/|/home/[a-z]|/private/" r"tmp|[A-Z]:\\\\Us" r"ers|\bB" r"0[0-9A-Z]{8}\b")
 
 
 def test_no_file_names_a_private_path_or_a_product_id():
@@ -123,12 +124,9 @@ def test_no_file_names_a_private_path_or_a_product_id():
         if "__pycache__" in root:
             continue
         for name in files:
-            path = os.path.join(root, name)
-            if os.path.samefile(path, __file__):        # this file spells the patterns out
-                continue
-            text = read(path)
+            text = read(os.path.join(root, name))
             assert not PRIVATE.search(text), (name, PRIVATE.search(text).group(0))
-    assert PRIVATE.search("see /Users/someone/x") and PRIVATE.search("item B0ABCDEFGH")
+    assert PRIVATE.search("see /Us" "ers/someone/x") and PRIVATE.search("item B" "0ABCDEFGH")
 
 
 if __name__ == "__main__":

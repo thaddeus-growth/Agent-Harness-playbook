@@ -38,7 +38,7 @@ default:
 # rotate it first, then remove it from history.
 #
 # Placeholders that never trip it (tests, fixtures, docs, .env.example):
-#   - hosts and URLs under example.invalid (a reserved name);
+#   - hosts and URLs under example.com (a reserved name);
 #   - a key's prefix plus FAKE or PLACEHOLDER, shorter than the real shape;
 #   - docs name a shape in words ("the client-secret prefix"), never a
 #     literal prefix followed by a body.
@@ -66,7 +66,7 @@ secret scan:
       gh[pousr]_[0-9A-Za-z]{36}
       github_pat_[0-9A-Za-z_]{22,}
       # queue URLs: region, account and name disclose infrastructure even without a key
-      https://sqs\.[a-z0-9-]+\.amazonaws\.com/[0-9]+/[A-Za-z0-9_-]+
+      sqs\.[a-z0-9-]+\.amazonaws\.com/[0-9]+/[A-Za-z0-9_-]+
       # --- Channel slot: your platforms' credential shapes. Keep what you use, add yours ---
       # Google (Ads API, Search Console): OAuth client secret, refresh token, access token, API key
       GOCSPX-[0-9A-Za-z_-]{28}
@@ -147,7 +147,7 @@ adapter smoke:
         paths: ['adapter/**/*', '.gitlab-ci.yml']
         compare_to: refs/heads/main
   variables:
-    HOST_PLATFORM_REPO: https://example.invalid/host-platform.git
+    HOST_PLATFORM_REPO: https://host.example.com/host-platform.git
   parallel:
     matrix:
       # The one list of tested host versions. Each entry is the tag as a
