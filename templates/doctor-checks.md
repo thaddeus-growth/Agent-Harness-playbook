@@ -30,7 +30,7 @@ The doctor is the one command an operator, a host agent or an install runs befor
 | Required inputs | A declared scope lacks a key its rules need | Set the key (pending); a person confirms it | Every profit verdict rested on an assumed break-even until the client's unit cost was set |
 | Access gaps | The last pull recorded a named access gap (an optional report refused) | Information only: request the access if the client wants that report | None yet: a client without an optional access is a normal client, so this stays information and `--strict` passes |
 
-The database rows map to [`core/store.py`](../core/store.py): `SchemaTooNew`, `stale_tables()`, `unknown_tables()`, `shrunk_since_snapshot()`.
+The kit's `doctor` (`scripts/kit/doctor.py`) implements the setup, environment, database and writes rows; the database rows use `SchemaTooNew`, `stale_tables()` and `unknown_tables()` of `scripts/kit/db.py`. A row it lacks (the snapshot comparison, renamed keys, required inputs, access gaps) is the harness's own check to add.
 
 ## A warning line
 

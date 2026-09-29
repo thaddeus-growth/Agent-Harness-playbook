@@ -3,9 +3,11 @@
 A raw puller output IS the source of truth (ingest reads it back), so a
 half-written file must never be observable: a crash, a full disk or a
 SIGKILL mid-write would otherwise leave a truncated file that the next
-ingest reads as real data. Write a temp sibling, then `os.replace` it
-over the target (atomic on one filesystem). On any error the temp file
-is removed and the target is untouched.
+ingest reads as real data. Write a temp sibling, flush it to disk
+(fsync, so a power loss cannot leave a renamed-but-empty file), then
+`os.replace` it over the target (atomic on one filesystem). On any error
+the temp file is removed and the target is untouched; a temp left by a
+killed writer is never in the way of the next write.
 
 The temp name is unique per call (pid + random), so two writers of the
 same path never share a temp file; it is created with the process umask
@@ -38,6 +40,8 @@ def _open_tmp(path: str | os.PathLike, mode: str) -> Iterator[IO]:
         with (open(fd, mode, encoding="utf-8") if "b" not in mode
               else open(fd, mode)) as f:
             yield f
+            f.flush()
+            os.fsync(f.fileno())
     except BaseException:
         try:
             os.remove(tmp)

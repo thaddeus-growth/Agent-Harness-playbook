@@ -36,7 +36,7 @@ HARNESS_TEST = re.compile(r"(?<![\w/.-])tests/(test_\w+\.py)")
 PLACEHOLDER = re.compile(r"\{\{(\w+)\}\}")
 ACTIONS_EXPR = re.compile(r"\$\{\{[^}]*\}\}")     # a GitHub Actions expression, not a placeholder
 STEPS = ["B0", "B0.5", "B0.6", "B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "B10"]
-GENERATED = {"test_ssot.py", "test_layering.py", "test_json_contract.py", "test_release.py", "test_kit_drift.py",
+GENERATED = {"test_ssot.py", "test_layering.py", "test_clock.py", "test_json_contract.py", "test_release.py", "test_kit_drift.py",
              "test_human_tables.py", "test_gate.py", "test_boundary.py", "test_run_tests.py"}
 
 

@@ -17,10 +17,18 @@ is recorded).
   * the is_throttled / wait_hint hooks replace the defaults (an API that
     throttles with a 400 and an error code);
   * default throttled = 429 or 5xx; max_retries 0 = one call, < 0 refused;
-  * the module binds no harness (stdlib only, no kit import).
+  * the module binds no harness (stdlib only, no kit import);
+  * call(fn, RetryPolicy, endpoint=...): Retry-After as the server says;
+    a wait never shorter than the quota's refill (refill_s, or read from
+    the reply's headers), whatever cap_s says; the exponential guess
+    doubles up to the cap when there is no floor; a spent budget or a
+    run deadline raises GaveUp carrying the LAST reason ("HTTP 429");
+    each endpoint has its own budget; a non-retryable answer comes back
+    at once; transport errors and urllib's HTTPError are handled.
 """
 
 import ast
+import contextlib
 import email.message
 import http.client
 import io
@@ -33,7 +41,8 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from kit import retry as retry_mod  # noqa: E402
-from kit.retry import MAX_BACKOFF, rate_limit_hint, retry  # noqa: E402
+from kit.retry import (MAX_BACKOFF, GaveUp, RetryPolicy, call,  # noqa: E402
+                       rate_limit_hint, retry)
 from kit.testing.check import check, finish, raises  # noqa: E402
 
 
@@ -222,6 +231,129 @@ def main() -> int:
         for a in n.names if a.name.startswith("kit")]
     check("kit.retry imports nothing from the kit (stdlib only)",
           kit_imports == [], kit_imports)
+
+    print("\n[10] call(): a policy per endpoint, GaveUp with the last reason")
+
+    class Reply:
+        def __init__(self, status_code, headers=None):
+            self.status_code, self.headers = status_code, headers or {}
+
+    def run_call(fn, policy, **kw):
+        slept = []
+        try:
+            with contextlib.redirect_stderr(io.StringIO()):
+                out = call(fn, policy, endpoint="reports.create",
+                           sleep=slept.append, **kw)
+        except Exception as e:       # noqa: BLE001 — the test inspects it
+            out = e
+        return out, slept
+
+    out, slept = run_call(seq(Reply(429, {"retry-after": "7"}), Reply(200)),
+                          RetryPolicy(refill_s=30))
+    check("Retry-After is taken as the server says, below the refill",
+          out.status_code == 200 and slept == [7.0], slept)
+    out, slept = run_call(seq(Reply(429, {"Retry-After": "-5"}), Reply(200)),
+                          RetryPolicy(refill_s=30))
+    check("a negative Retry-After is not usable: the refill floor",
+          slept == [30], slept)
+    out, slept = run_call(seq(Reply(429), Reply(429), Reply(200)),
+                          RetryPolicy(refill_s=20, backoff_s=2))
+    check("a wait is never shorter than the quota refill (days were lost "
+          "as rate-limit gaps: the guess retried before the quota refilled)",
+          out.status_code == 200 and slept == [20, 20], slept)
+    out, slept = run_call(seq(Reply(503), Reply(200)),
+                          RetryPolicy(refill_s=120, cap_s=60))
+    check("the cap never cuts a wait below the refill", slept == [120], slept)
+    pol = RetryPolicy(refill_s=1,
+                      refill_from=lambda h: 1 / float(h["x-rate-limit"]))
+    out, slept = run_call(seq(Reply(429, {"x-rate-limit": "0.05"}),
+                              Reply(200)), pol)
+    check("a refill read from the reply's headers raises the floor",
+          slept == [20], slept)
+    out, slept = run_call(seq(Reply(429), Reply(200)), pol)
+    check("… and a reply without it: the larger of refill_s and the guess",
+          slept == [2], slept)
+    out, slept = run_call(seq(*[Reply(500)] * 4, Reply(200)),
+                          RetryPolicy(refill_s=0, backoff_s=2, cap_s=5))
+    check("without a floor the guess doubles up to the cap",
+          slept == [2, 4, 5, 5], slept)
+    fn = seq(*[Reply(429)] * 3)
+    out, slept = run_call(fn, RetryPolicy(refill_s=1, tries=2))
+    check("a spent budget raises GaveUp with the last HTTP reason (a "
+          "throttled day must become a recorded gap, never a day with no data)",
+          isinstance(out, GaveUp) and (out.endpoint, out.reason, out.tries,
+                                       fn.calls)
+          == ("reports.create", "HTTP 429", 3, 3), out)
+    out, slept = run_call(seq(Reply(429), Reply(503)),
+                          RetryPolicy(refill_s=1, tries=1))
+    check("… the LAST reason, not the first",
+          isinstance(out, GaveUp) and out.reason == "HTTP 503", out)
+    create = RetryPolicy(refill_s=60, tries=6)
+    short = RetryPolicy(refill_s=1, tries=1)
+    out, slept = run_call(seq(*[Reply(429)] * 5, Reply(200)), create)
+    check("each endpoint spends its own budget: 5 retries fit one policy",
+          out.status_code == 200 and slept == [60] * 5, slept)
+    out, _ = run_call(seq(Reply(429), Reply(429), Reply(200)), short)
+    check("… and not another", isinstance(out, GaveUp))
+    fn = seq(Reply(400), Reply(200))
+    out, slept = run_call(fn, RetryPolicy(refill_s=5))
+    check("an answer not in retry_on comes back at once",
+          out.status_code == 400 and slept == [] and fn.calls == 1)
+    out, slept = run_call(seq(Resp(429), Resp(200)), RetryPolicy(refill_s=4))
+    check("a reply with .status instead of .status_code works too",
+          out.status == 200 and slept == [4], slept)
+    out, slept = run_call(seq(TimeoutError("read timed out"), Reply(200)),
+                          RetryPolicy(refill_s=3))
+    check("a transport error is retried",
+          out.status_code == 200 and slept == [3], slept)
+    out, _ = run_call(seq(ConnectionResetError("reset"),
+                          ConnectionResetError("reset")),
+                      RetryPolicy(refill_s=3, tries=1))
+    check("… and named in GaveUp",
+          isinstance(out, GaveUp) and out.reason
+          == "ConnectionResetError: reset", out)
+    out, slept = run_call(seq(http_error(429, {"Retry-After": "3"}),
+                              Reply(200)), RetryPolicy(refill_s=1))
+    check("urllib's HTTPError 429 is an answer: Retry-After honoured",
+          out.status_code == 200 and slept == [3], slept)
+    out, _ = run_call(seq(http_error(404)), RetryPolicy(refill_s=1))
+    check("an HTTPError not in retry_on is raised again",
+          isinstance(out, urllib.error.HTTPError) and out.code == 404)
+    out, _ = run_call(seq(http_error(503), http_error(503)),
+                      RetryPolicy(refill_s=1, tries=1))
+    check("an HTTPError at exhaustion: GaveUp HTTP 503",
+          isinstance(out, GaveUp) and out.reason == "HTTP 503", out)
+    out, _ = run_call(seq(ValueError("a bug"), Reply(200)),
+                      RetryPolicy(refill_s=1))
+    check("any other exception propagates at once",
+          isinstance(out, ValueError))
+    out, slept = run_call(seq(Reply(429), Reply(200)),
+                          RetryPolicy(refill_s=20), deadline=110,
+                          clock=lambda: 100)
+    check("the run deadline stops before a wait that would pass it",
+          isinstance(out, GaveUp) and "deadline" in out.reason
+          and out.tries == 1 and slept == [], out)
+    out, slept = run_call(seq(Reply(429), Reply(200)),
+                          RetryPolicy(refill_s=20), deadline=120,
+                          clock=lambda: 100)
+    check("… and goes on when the wait fits", out.status_code == 200)
+    slept = []
+    with mock.patch.object(retry_mod.time, "sleep", slept.append), \
+            contextlib.redirect_stderr(io.StringIO()):
+        call(seq(Reply(429), Reply(200)), RetryPolicy(refill_s=2),
+             endpoint="x")
+    check("sleep=None uses time.sleep", slept == [2], slept)
+    err = io.StringIO()
+    with contextlib.redirect_stderr(err):
+        call(seq(Reply(429), Reply(200)), RetryPolicy(refill_s=2),
+             endpoint="x", sleep=lambda s: None)
+    check("each wait is said on stderr", "[wait] x HTTP 429" in err.getvalue(),
+          err.getvalue())
+    check("RetryPolicy is frozen and GaveUp reads well",
+          raises(lambda: setattr(RetryPolicy(refill_s=1), "tries", 9),
+                 Exception) is not None
+          and str(GaveUp("e", "HTTP 429", 1)) == "e: gave up after 1 try: "
+                                                 "HTTP 429")
     return finish()
 
 

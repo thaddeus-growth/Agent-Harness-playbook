@@ -17,6 +17,10 @@ vendored into scripts/kit, a git repository with a generated
   [3] layering: a pull importing the db, a compute importing the writer,
       an ingest importing the client, a compute spawning, a library
       importing a script; the engine's own planted self-test
+  [3b] clock: a script reading datetime.now(), a time.strftime with no
+      time, a name bound by `from kit.dates import now`, a stale allowed
+      row, an allowed read, a vendored clock that reads the calendar twice,
+      no code to read; the rule's own planted self-test
   [4] json contract: code_ok / uncoded / meta / failure units; then the
       read verbs through the CLI: an uncoded English message in a --json
       doc, an unclassified crash, a read verb that creates the DB
@@ -45,8 +49,8 @@ os.environ["GIT_CONFIG_NOSYSTEM"] = "1"
 
 import _shop  # noqa: E402
 from kit import config, contract, messages  # noqa: E402
-from kit.guards import (boundary, drift, json_contract, layering,  # noqa: E402
-                        release, ssot)
+from kit.guards import (boundary, clock, drift, json_contract,  # noqa: E402
+                        layering, release, ssot)
 from kit.messages import coded, msg  # noqa: E402
 from kit.testing.check import capture, check, finish, tmp_dir  # noqa: E402
 from kit.tools import manifest, vendor  # noqa: E402
@@ -345,6 +349,7 @@ def everything(root: Path, data: Path) -> dict[str, list[str]]:
     return {"ssot": ssot.check_index(root),
             "release": release.check_release(root),
             "layering": layering.check_layers(root),
+            "clock": clock.check_reads(root),
             "boundary": boundary.check_boundaries(root, verbs=VERBS),
             "drift": drift.check_harness(root),
             "json contract": json_contract.check_read_verbs(data,
@@ -548,6 +553,48 @@ def test_layering(root: Path) -> None:
     with planted(root, "scripts/_lib/helper.py", "import compute_sales\n"):
         caught("a library importing a script", layering.check_layers(root),
                "h: _lib.helper imports the script(s) ['compute_sales']")
+
+
+def test_clock(root: Path) -> None:
+    print("\n[3b] clock: one calendar read")
+    check("the rule's planted self-test: every forbidden form caught, the "
+          "allowed ones not", clock.self_test() == [], clock.self_test())
+    clean("the clean copy reads the calendar only through kit.dates",
+          clock.check_reads(root))
+    with planted(root, "scripts/compute_sales.py",
+                 append="import datetime\nT = datetime.datetime.now()\n"):
+        caught("a script reading datetime.datetime.now()",
+               clock.check_reads(root), "compute_sales.py:", "(<module>)",
+               "datetime.datetime.now")
+    with planted(root, "scripts/compute_sales.py",
+                 append="import time\n\ndef f():\n    return time.strftime"
+                        "('%Y')\n"):
+        caught("a time.strftime with no time value",
+               clock.check_reads(root), "(f) time.strftime('%Y')")
+    with planted(root, "scripts/_lib/helper.py",
+                 "from kit.dates import now\n"):
+        caught("a name bound at import", clock.check_reads(root),
+               "from kit.dates import now")
+    with planted(root, "scripts/kit/dates.py",
+                 append="\n\ndef stray():\n    import time\n    return "
+                        "time.ctime()\n"):
+        caught("a clock that reads the calendar twice",
+               clock.check_reads(root), "must read the stdlib clock once")
+    with planted(root, "scripts/compute_sales.py",
+                 append="import datetime\nT = datetime.date.today()\n"), \
+            planted(root, "harness.toml", append=(
+                '\n[guards.clock.allowed]\n"scripts/compute_sales.py::'
+                '<module>" = 1\n')):
+        clean("an allowed read (a late adopter's row) passes",
+              clock.check_reads(root))
+    with planted(root, "harness.toml", append=(
+            '\n[guards.clock.allowed]\n"scripts/compute_sales.py::f" = 2\n')):
+        caught("an allowed row for a read that has moved",
+               clock.check_reads(root), "lists 2, 0 left")
+    with planted(root, "harness.toml", append=(
+            '\n[guards.clock]\ncode = ["nowhere"]\n')):
+        caught("a code path that finds nothing is not a pass",
+               clock.check_reads(root), "no code to read")
 
 
 # ------------------------------------------------------- [4] json contract
@@ -829,6 +876,7 @@ def main() -> int:
     test_ssot(root)
     test_release(root)
     test_layering(root)
+    test_clock(root)
     test_json_units()
     test_json_verbs(root, data)
     test_boundary(root)

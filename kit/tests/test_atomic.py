@@ -3,6 +3,9 @@
 
   * a write that fails mid-way leaves the target untouched and no temp
     file; a write that succeeds replaces it whole; JSON keeps non-ASCII;
+  * the temp is fsynced before it replaces the target, and a writer
+    killed mid-write (SIGKILL) leaves the old file whole, its leftover
+    temp never in the way of the next write;
   * hold(): the first holder gets True, a second (another open file, or
     another process) gets False without waiting; the lock goes with its
     holder; the lock file stays.
@@ -13,6 +16,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from unittest import mock
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -54,6 +58,32 @@ def main() -> int:
     os.umask(umask)
     check("the file gets the umask's mode, like a plain open()",
           mode == 0o666 & ~umask, oct(mode))
+
+    synced = []
+    real_fsync = os.fsync
+    with mock.patch.object(os, "fsync",
+                           lambda fd: (synced.append(fd), real_fsync(fd))):
+        atomic.write_json_atomic(target, {"n": 1})
+        atomic.write_bytes_atomic(d / "b.bin", b"x")
+    check("the temp is flushed to disk (fsync) before the rename",
+          len(synced) == 2, synced)
+    atomic.write_json_atomic(target, {"rows": [1, 2, 3]})
+    k = subprocess.run(
+        [sys.executable, "-B", "-c",
+         "import sys, os, signal; sys.path.insert(0, %r)\n"
+         "from kit import atomic\n"
+         "with atomic.open_atomic(sys.argv[1]) as f:\n"
+         "    f.write('{\"rows\": [1'); f.flush()\n"
+         "    os.kill(os.getpid(), signal.SIGKILL)"
+         % str(_shop.PLAYBOOK), str(target)], capture_output=True, text=True)
+    check("a killed writer leaves the old file whole",
+          k.returncode == -9
+          and json.loads(target.read_text("utf-8")) == {"rows": [1, 2, 3]}, k)
+    atomic.write_json_atomic(target, {"rows": []})
+    check("… and the leftover temp does not block the next write",
+          json.loads(target.read_text("utf-8")) == {"rows": []}
+          and sorted(n for n in os.listdir(d) if not atomic.is_temp(n))
+          == ["b.bin", "raw.json", "t.txt"], os.listdir(d))
 
     print("\n[2] single_instance.hold")
     lock = d / "locks" / "run.lock"

@@ -9,8 +9,9 @@ by week, a stock snapshot):
       WAL; says on stderr when it created the file; a re-open changes no
       byte and takes no write lock
   [2] triggers refuse UPDATE/DELETE of history, DELETE of a fact, a
-      decision, a queued action, any change to an effect, and an UPDATE
-      of a frozen queue column, on a raw connection; the allowed writes
+      decision, a queued action, any change to an effect, an UPDATE
+      of a frozen queue column, and INSERT OR REPLACE over an existing
+      row (REPLACE fires no DELETE trigger), on a raw connection; the allowed writes
       pass; a dropped or changed trigger is put back by the next write open
   [3] keep_human_rows refuses and rolls back any shrink (every human
       table), commits a non-shrinking write, rolls back on an exception,
@@ -39,12 +40,16 @@ by week, a stock snapshot):
   [13] unknown_tables / human_row_counts
   [14] views: created, replaced when changed, TEMP on a read-only open
   [15] every db code is registered and emitted (closure, strict)
+  [16] shrunk_since_backup: human rows lost since the newest backup are
+      seen (a wiped or deleted file included); a killed backup is never
+      taken for one
 """
 
 import contextlib
 import datetime
 import io
 import sqlite3
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -267,6 +272,51 @@ def t2_triggers() -> None:
         check(f"raw `{sql[:44]}…` refused", got.startswith("refused"), got)
     check("… every human row unchanged, who/when included",
           {t: rows(path, t) for t in s.human_tables} == before)
+    replaced = [
+        "INSERT OR REPLACE INTO client_facts_history (id, market, key, "
+        "action, reason, changed_by, at) VALUES (1, 'US', 'x', 'set', "
+        "'rewritten', 'someone else', 't')",
+        "REPLACE INTO client_facts (market, key, value, is_assumption, "
+        "source, updated_at, changed_by) VALUES ('US', 'unit_cost', '99', "
+        "0, 'forged', 't', 'someone else')",
+        "INSERT OR REPLACE INTO decisions_history (id, market, entity_type, "
+        "entity_id, key, action, reason, changed_by, at) VALUES (1, 'US', "
+        "'sku', 'A1', 'tier', 'set', 'rewritten', 'someone else', 't')",
+        "INSERT OR REPLACE INTO action_effects (id, queue_id, market, "
+        "effect_id, state, at, changed_by) VALUES (1, 1, 'US', 'a1', "
+        "'confirmed', 't', 'someone else')",
+        "INSERT OR REPLACE INTO action_queue (id, market, action_id, kind, "
+        "target_ref, payload, basis, status, created_at) VALUES (1, 'US', "
+        "'a1', 'price_set', 'sku:A1', '{\"price\": 1}', 'b1', 'approved', "
+        "'t')",
+        "INSERT INTO client_facts_history (id, market, key, action, reason, "
+        "changed_by, at) VALUES (1, 'US', 'x', 'set', 'r', 'u', 't') "
+        "ON CONFLICT (id) DO UPDATE SET reason = 'rewritten'"]
+    for sql in replaced:
+        try:
+            c.execute(sql)
+            got = "no error"
+        except sqlite3.IntegrityError as e:
+            got = str(e)
+        check(f"raw `{sql[:44]}…` refused (REPLACE fires no DELETE "
+              f"trigger)", got.startswith("refused: INSERT over an "
+                                          "existing"), got)
+    check("… no row rewritten, and the row counts did not move either",
+          {t: rows(path, t) for t in s.human_tables} == before
+          and counts(path) == SEEDED)
+    c.execute("BEGIN")
+    n = c.execute("INSERT OR REPLACE INTO client_facts (market, key, value, "
+                  "source, updated_at, changed_by) VALUES ('US', 'new_key', "
+                  "'1', 'owner', 't', 'u')").rowcount
+    c.execute("UPDATE client_facts SET value = '4.5' WHERE key = "
+              "'unit_cost'")
+    check("a new key still inserts (OR REPLACE included); an existing fact "
+          "changes by UPDATE",
+          n == 1 and c.execute("SELECT count(*) FROM client_facts"
+                               ).fetchone()[0] == SEEDED["client_facts"] + 1
+          and c.execute("SELECT value FROM client_facts WHERE key = "
+                        "'unit_cost'").fetchone() == ("4.5",))
+    c.execute("ROLLBACK")
     c.execute("BEGIN")
     for sql in ("UPDATE client_facts SET value = '4.5', is_assumption = 1",
                 "INSERT INTO client_facts_history (market, key, action, "
@@ -285,10 +335,25 @@ def t2_triggers() -> None:
     check("UPDATE of a fact / decision / queue decision and INSERT of "
           "history still allowed", True)
     c.execute("DROP TRIGGER IF EXISTS client_facts_history_no_delete")
+    c.execute("DROP TRIGGER IF EXISTS client_facts_history_no_replace")
     c.close()
     quiet(lambda: db.connect(s, path).close())
     check("a dropped trigger is put back by the next write open",
-          "client_facts_history_no_delete" in objects(path, "trigger"))
+          {"client_facts_history_no_delete",
+           "client_facts_history_no_replace"} <= objects(path, "trigger"))
+
+    bare = fresh(s)
+    c = raw(bare)
+    c.execute("DROP TRIGGER client_facts_history_no_replace")
+    c.execute("INSERT OR REPLACE INTO client_facts_history (id, market, key, "
+              "action, reason, changed_by, at) VALUES (1, 'US', 'x', 'set', "
+              "'rewritten', 'someone else', 't')")
+    c.close()
+    check("without its trigger a REPLACE rewrites a history row and the "
+          "count still holds: the trigger is what guards it",
+          rows(bare, "client_facts_history")[0][8:10]
+          == ("rewritten", "someone else")
+          and counts(bare) == SEEDED, rows(bare, "client_facts_history")[0])
 
     notes = {"columns": {"market": "TEXT", "note_id": "TEXT",
                          "text": "TEXT"}, "pk": ("market", "note_id")}
@@ -416,6 +481,8 @@ def t4_lossy() -> None:
     quiet(lambda: db.connect(s2, path).close())
     check("a write open without rebuild leaves them (rows kept), stamps v2",
           len(rows(path, "orders_daily")) == 4 and stamp(path) == 2)
+    check("… and takes no backup (only a rebuild does)",
+          backups(path) == [], backups(path))
 
     e, code = refusal(lambda: quiet(lambda: db.connect(
         s2, path, rebuild=("orders_daily",))), db.LossyRebuild)
@@ -750,7 +817,7 @@ def t11_hash() -> None:
     base = db.schema_hash(db.with_human({}, version=1))
     check("the kit's human tables are pinned (a change here means every "
           "harness bumps its schema version; then re-pin)",
-          base == "c8fd01588bcb7e77", base)
+          base == "5c8623e090b32a33", base)
     h = db.schema_hash(spec())
     check("stable across calls and cache insertion order",
           h == db.schema_hash(spec())
@@ -883,12 +950,72 @@ def t15_codes() -> None:
           [w for w in words if w in text])
 
 
+KILL_CHILD = """
+import os, signal, sys
+sys.path[:0] = [sys.argv[1], sys.argv[2]]
+import test_db
+from kit import db
+db.os.replace = lambda *a: os.kill(os.getpid(), signal.SIGKILL)
+db.backup_human_tables(test_db.spec(), sys.argv[3])
+"""
+
+
+def t16_shrunk_since_backup() -> None:
+    print("\n[16] shrunk_since_backup sees human rows lost since the newest "
+          "backup")
+    s = spec()
+    path = fresh(s)
+    check("no backup yet: nothing to compare, {} (and nothing created)",
+          db.shrunk_since_backup(s, path) == {}
+          and not (path.parent / "backups").exists())
+    db.backup_human_tables(s, path)
+    check("a backup and nothing lost: {}",
+          db.shrunk_since_backup(s, path) == {})
+    con = quiet(lambda: db.connect(s, path))[0]
+    for name in db.triggers(s):
+        con.execute(f"DROP TRIGGER IF EXISTS {name}")
+    con.execute("DELETE FROM client_facts")
+    con.close()
+    check("after hand SQL emptied the facts: {table: [was, now]}",
+          db.shrunk_since_backup(s, path)
+          == {"client_facts": [SEEDED["client_facts"], 0]},
+          db.shrunk_since_backup(s, path))
+    before = path.read_bytes()
+    path.unlink()
+    check("a missing file counts as empty, and the check creates nothing",
+          db.shrunk_since_backup(s, path)
+          == {t: [n, 0] for t, n in SEEDED.items()}
+          and not path.exists(), db.shrunk_since_backup(s, path))
+    path.write_bytes(before)
+    check("… a database that only grew reports nothing",
+          db.shrunk_since_backup(spec(), fresh(spec(), orders=False)) == {})
+
+    print("      a backup killed before it is whole is never taken for one")
+    path = fresh(s)
+    src = subprocess.run(
+        [sys.executable, "-c", KILL_CHILD, str(Path(__file__).resolve()
+                                               .parents[2]),
+         str(Path(__file__).resolve().parent), str(path)],
+        capture_output=True, text=True, timeout=60)
+    left = sorted(p.name for p in (path.parent / "backups").iterdir())
+    check("the child was killed mid-copy (SIGKILL), a temp file is left",
+          src.returncode == -9 and len(left) == 1
+          and left[0].endswith(".tmp"), (src.returncode, left, src.stderr))
+    check("… it is no backup: newest_backup None, shrunk {} , none listed",
+          db.newest_backup(path) is None
+          and db.shrunk_since_backup(s, path) == {} and backups(path) == [])
+    made = db.backup_human_tables(s, path)
+    check("… and the next backup is whole",
+          made is not None and db.newest_backup(path) == made
+          and counts(made) == SEEDED, made)
+
+
 def main() -> int:
     _shop.use()
     for t in (t1_bootstrap, t2_triggers, t3_keep_human_rows, t4_lossy,
               t5_only_adds, t6_human_drift, t7_too_new, t8_no_db, t9_upsert,
               t10_backups, t11_hash, t12_validation, t13_listing, t14_views,
-              t15_codes):
+              t15_codes, t16_shrunk_since_backup):
         t()
     return finish()
 

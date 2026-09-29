@@ -16,7 +16,12 @@ What it guards:
   * triggers in the file itself, generated from spec.append_only and
     spec.frozen_columns, refuse what they forbid whatever code path
     writes (a raw sqlite3 connection included); a write-mode open
-    re-installs a missing or changed one;
+    re-installs a missing or changed one. A third one per such table,
+    <t>_no_replace, refuses an INSERT over an existing key: REPLACE
+    deletes the old row without firing a DELETE trigger and is no UPDATE,
+    so without it a history row is rewritten and the row count stays.
+    A human row changes only by UPDATE (so upsert() on a human table
+    refuses an existing key too);
   * keep_human_rows(): one transaction that rolls back any write leaving
     a human table with fewer rows than it had (human_rows_would_shrink),
     the second line, for what a trigger cannot see;
@@ -29,7 +34,10 @@ What it guards:
     and a table the caller gave no periods for can refill none. A new
     shape that only adds nullable columns carries every row over;
   * a write-mode open changes nothing when nothing differs (no DDL, no
-    user_version stamp), and says on stderr when it created the file.
+    user_version stamp), and says on stderr when it created the file;
+  * shrunk_since_backup() is the check for "this database held human data
+    and lost it": {table: [rows in the newest backup, rows now]} for each
+    human table with fewer rows now (a missing file counts as empty).
 
 Connections are in autocommit mode (isolation_level=None): every
 statement commits itself. Group writes with `transaction(con)`, or with
@@ -315,8 +323,20 @@ def table_sql(spec: SchemaSpec, table: str) -> str:
 def triggers(spec: SchemaSpec) -> dict[str, str]:
     """{trigger name: CREATE TRIGGER} from append_only (<t>_no_update,
     <t>_no_delete) and frozen_columns (<t>_frozen: BEFORE UPDATE OF every
-    column the table does not list as mutable)."""
+    column the table does not list as mutable), plus <t>_no_replace for
+    each table with either: BEFORE INSERT, aborting when the key exists
+    (INSERT OR REPLACE deletes the old row without firing DELETE triggers
+    and is no UPDATE)."""
     out = {}
+    for table in dict.fromkeys((*spec.append_only, *spec.frozen_columns)):
+        name, pk = f"{table}_no_replace", spec.pk(table)
+        out[name] = (f"CREATE TRIGGER {_q(name)} BEFORE INSERT ON "
+                     f"{_q(table)} WHEN EXISTS (SELECT 1 FROM {_q(table)} "
+                     f"WHERE ({', '.join(map(_q, pk))}) = "
+                     f"({', '.join('NEW.' + _q(c) for c in pk)})) BEGIN "
+                     f"SELECT RAISE(ABORT, 'refused: INSERT over an "
+                     f"existing {table} row: human rows change only by "
+                     f"UPDATE'); END")
     for table, ops in spec.append_only.items():
         for op in ops:
             name = f"{table}_no_{op.lower()}"
@@ -590,10 +610,11 @@ def _lossy(spec: SchemaSpec, con: sqlite3.Connection, tables: list[str],
 def _trigger_plan(spec: SchemaSpec, con: sqlite3.Connection) -> list[str]:
     """Statements that make the file's triggers the spec's: a missing or
     changed one (re)created, one of ours (a human table's <t>_no_update,
-    <t>_no_delete, <t>_frozen) the spec no longer has dropped."""
+    <t>_no_delete, <t>_frozen, <t>_no_replace) the spec no longer has
+    dropped."""
     want, have = triggers(spec), _objects(con, "trigger")
     ours = {f"{t}_{s}" for t in spec.human_tables
-            for s in ("no_update", "no_delete", "frozen")}
+            for s in ("no_update", "no_delete", "frozen", "no_replace")}
     out = [f"DROP TRIGGER {_q(n)}" for n in sorted(have)
            if n in ours and n not in want]
     for n, sql in want.items():
@@ -763,7 +784,9 @@ def upsert(spec: SchemaSpec, con: sqlite3.Connection, table: str,
     Returns the rows written. Keys that are not columns are dropped; a
     row missing a pk value is skipped (not counted: the caller sees the
     shortfall); on conflict only the columns a row carries are updated,
-    so a partial row never blanks the others. Idempotent."""
+    so a partial row never blanks the others. Idempotent. For cache
+    tables: on a human table an existing key is refused by its
+    <t>_no_replace trigger (a human row changes only by UPDATE)."""
     if table not in spec.tables:
         raise ValueError(f"upsert: {table!r} is not a table of the spec")
     cols, pk = spec.columns(table), spec.pk(table)
@@ -832,3 +855,37 @@ def backup_human_tables(spec: SchemaSpec, path: Path | str | None = None
     for old in sorted(out.glob("human-*.db"))[:-spec.backups_keep]:
         old.unlink()
     return dst
+
+
+def newest_backup(path: Path | str | None = None) -> Path | None:
+    """The newest `<db dir>/backups/human-*.db`, or None. A half-written
+    snapshot is a dot-file `.tmp` (renamed only when whole), never listed."""
+    path = Path(path) if path is not None else paths.db_path()
+    found = sorted((path.parent / BACKUPS_DIR).glob("human-*.db"))
+    return found[-1] if found else None
+
+
+def shrunk_since_backup(spec: SchemaSpec, path: Path | str | None = None
+                        ) -> dict[str, list[int]]:
+    """{human table: [rows in the newest backup, rows now]} for each one
+    with fewer rows now: the file lost human data since. Human rows only
+    grow, so any entry is a loss; "not set up yet" (no backup: {}) and
+    "set up, then wiped" look the same in the live tables, the backup tells
+    them apart. A missing file counts as empty. Read-only: creates nothing."""
+    path = Path(path) if path is not None else paths.db_path()
+    snap = newest_backup(path)
+    if snap is None:
+        return {}
+    con = sqlite3.connect(_ro_uri(snap), uri=True)
+    try:
+        then = human_row_counts(spec, con)
+    finally:
+        con.close()
+    now = dict.fromkeys(then, 0)
+    if path.exists():
+        con = sqlite3.connect(_ro_uri(path), uri=True)
+        try:
+            now = human_row_counts(spec, con)
+        finally:
+            con.close()
+    return {t: [then[t], now[t]] for t in then if now[t] < then[t]}

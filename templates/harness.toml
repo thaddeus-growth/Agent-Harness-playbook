@@ -38,3 +38,10 @@ writer = "_lib/writer"                 # the only module that may call the exter
 writer_importers = ["execute_actions"]
 clients = []                           # API client modules, for example ["_lib/api_client"]; they never import the database
 spawn_allowed = ["compute_stories"]    # the one compute that may run other read verbs
+
+# Optional, read by tests/test_clock.py: the code it lints defaults to the
+# scripts dir, minus the vendored kit. A harness that adopts the kit late lists
+# the calendar reads it has not moved to kit.dates yet, as "path::function" =
+# count; the list must match exactly and only shrinks. A new harness has none.
+# [guards.clock.allowed]
+# "scripts/pull_ads.py::window" = 1

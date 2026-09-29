@@ -12,7 +12,8 @@ What it writes (BUILD.md, B1):
     filled ({{name}}, {{cli}}, {{env_prefix}}, {{owner}}, {{repo_home}}):
     harness.toml, CLAUDE.md, SKILL.md, README.md, references/workflows.md,
     .gitignore, .gitlab-ci.yml, .gitlab/CODEOWNERS, docs/ (decision rights,
-    team review, the install and triage checklists), ssot/README.md.
+    team review, the install and triage checklists, the data bug classes,
+    the doctor's checks), ssot/README.md.
     `<<fill: …>>` stays only in the files the build fills later (FILLED);
   * ssot/: every registry and owner file as its header row, plus the
     constants row the kit's write path reads (approval_ttl_hours), the
@@ -21,7 +22,7 @@ What it writes (BUILD.md, B1):
     Dispatcher), scripts/verbs.py, the kit's facts, decisions, pending,
     compute stories, queue and execute verbs, scripts/_lib/ (the schema:
     human tables only; the one writer: an empty allowlist), .env.example,
-    evals/, .claude/, and exactly the nine tests templates/README.md
+    evals/, .claude/, and exactly the ten tests templates/README.md
     names, each a thin call into kit.testing.suites, plus tests/run.py;
   * the kit and the console vendored (kit/tools/vendor.py) into
     scripts/kit/ and console/, each with its VERSION and MANIFEST.sha256;
@@ -69,6 +70,8 @@ RENDERED = {
     "team-review.md": "docs/team-review.md",
     "install-checklist.md": "docs/install-checklist.md",
     "triage-checklist.md": "docs/triage-checklist.md",
+    "bug-classes.md": "docs/bug-classes.md",
+    "doctor-checks.md": "docs/doctor-checks.md",
     "ssot/README.md": "ssot/README.md",
 }
 # the files the build writes later (B2, B8): `<<fill: …>>` may stay there
@@ -87,7 +90,7 @@ SSOT_HEADERS = ["glossary.tsv", "glossary.agent.tsv", "user-stories.tsv",
                 "story_checks.tsv"]
 KEPT_CONSTANTS = ("approval_ttl_hours",)
 GENERATED_TESTS = ("test_run_tests.py", "test_ssot.py", "test_layering.py",
-                   "test_boundary.py", "test_json_contract.py",
+                   "test_clock.py", "test_boundary.py", "test_json_contract.py",
                    "test_human_tables.py", "test_gate.py", "test_release.py",
                    "test_kit_drift.py")
 
@@ -96,19 +99,25 @@ GENERATED_TESTS = ("test_run_tests.py", "test_ssot.py", "test_layering.py",
 # fails scaffold/tests/test_new_harness.py until it is mapped here.
 DAY_ONE = {
     "Meeting intake": ["ssot/stages.agent.tsv"],
-    "A test runner that fails": ["tests/run.py", "tests/test_run_tests.py",
-                                 "CLAUDE.md"],
+    "The test kit before the first feature": [
+        "tests/run.py", "tests/test_run_tests.py", "tests/test_clock.py",
+        "tests/test_layering.py", "tests/test_release.py", "CLAUDE.md"],
     "An empty registry index": ["ssot/index.tsv", "tests/test_ssot.py"],
-    "A CI check that every MR title": [".gitlab-ci.yml"],
+    "CI from the first commit": [".gitlab-ci.yml"],
     "A story-check registry": ["ssot/story_checks.tsv",
                                "scripts/compute_stories.py"],
     "\"Declare it or refuse\"": ["scripts/{cli}.py", "scripts/facts.py",
-                                 "tests/test_gate.py"],
+                                 "tests/test_gate.py",
+                                 "docs/doctor-checks.md"],
     "Raw that only grows": ["scripts/kit/raw.py"],
+    "One fixture test per data bug class": ["docs/bug-classes.md"],
     "Human tables apart from the cache": ["scripts/_lib/schema.py",
                                           "tests/test_human_tables.py"],
     "The `--json` contract": ["tests/test_json_contract.py",
                               "ssot/message_codes.tsv"],
+    "Vendor [`kit/`]": ["scripts/kit/human.py", "scripts/kit/messages.py",
+                       "scripts/kit/runner.py", "tests/test_gate.py",
+                       "tests/test_json_contract.py"],
     "Typed keys": ["ssot/fact_keys.tsv", "ssot/decision_keys.tsv"],
     "Boundary and layering tests": ["tests/test_boundary.py",
                                     "tests/test_layering.py",

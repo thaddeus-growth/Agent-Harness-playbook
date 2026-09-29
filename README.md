@@ -145,7 +145,7 @@ flowchart TB
 
 Cache tables can always be rebuilt from raw; human tables never can, so they are kept apart, backed up before each ingest and written by one verb each.
 
-The guards are code you copy: [`core/store.py`](core/store.py) (human tables, rebuilds, the version stamp) and [`core/raw.py`](core/raw.py) (raw that only grows, atomic writes, one run at a time, throttling recorded as gaps). Each of their tests was shown failing on a broken copy of its guard.
+The guards are code the kit holds: [`kit/db.py`](kit/db.py) (human tables, rebuilds, the version stamp) and [`kit/pull.py`](kit/pull.py), [`kit/atomic.py`](kit/atomic.py), [`kit/single_instance.py`](kit/single_instance.py), [`kit/retry.py`](kit/retry.py) (raw that only grows, atomic writes, one run at a time, throttling recorded as gaps). Each of their tests was shown failing on a broken copy of its guard.
 
 *Paid for:* a rolling window moved between a schema change and the ingest, so raw held as many days as the table, but later ones. The count matched and the rebuild dropped the oldest days. Compare the set of days, not the count.
 
@@ -178,7 +178,7 @@ The owner decides less, but every decision is real.
 1. **Decision rights live in the repo**, enforced by protected paths, not by an agent's memory.
 2. **Trust lives in the data.** Values are pending or confirmed with a source; anyone may lower trust, only a human raises it; every rule reads confirmed first.
 3. **Each story names its human step** (none / confirm / approve). Anything that can spend money is never "none".
-4. **One gate for every channel**, bound to exactly what was shown, single use, logged, no bypass flag ([code](core/gate.py)). *Paid for:* two rounds. The first guard only checked that stdin was a terminal, so an agent wrapped the call in a pseudo-terminal, confirmed live values and signed them as the owner with a free-text source; then a relayed code approved a different pair of items than the one shown, confirmed another entity's value, and worked twice inside its window.
+4. **One gate for every channel**, bound to exactly what was shown, single use, logged, no bypass flag ([code](kit/human.py)). *Paid for:* two rounds. The first guard only checked that stdin was a terminal, so an agent wrapped the call in a pseudo-terminal, confirmed live values and signed them as the owner with a free-text source; then a relayed code approved a different pair of items than the one shown, confirmed another entity's value, and worked twice inside its window.
 5. **Approve is the last human act before money moves.** A second confirm at execute only trains rubber-stamping.
 6. **Business "not yet" beats technically ready.** Client writes and paid calls stay off until the owner says so in writing, with a cap.
 7. **Budget the owner's attention:** at most 10 asks, each with evidence, a recommendation and what "no" means. Inputs are picked from a list; the one thing typed is a value the harness validates.
@@ -221,11 +221,11 @@ Install these before the first feature; each costs an hour now and saved days in
 - [ ] CI from the first commit: one pipeline per change with every job in the MR pipeline, the story-id check on every MR title, the offline suite, a secret scan ([template](templates/ci/gitlab-ci.yml)), plus a few guarantee stories for refactors to name
 - [ ] A story-check registry and a read-only runner: pass, fail, or skip when the data is missing ([template](templates/ssot/story_checks.tsv))
 - [ ] "Declare it or refuse": a required data root, one init command to declare scope, a doctor, no defaults ([doctor checks](templates/doctor-checks.md))
-- [ ] Raw that only grows, fixtures copied from real API responses, tests for ingesting twice and for row counts ([`core/raw.py`](core/raw.py))
+- [ ] Raw that only grows, fixtures copied from real API responses, tests for ingesting twice and for row counts ([`kit/pull.py`](kit/pull.py))
 - [ ] One fixture test per data bug class before the first report: zero vs missing, sparse days, matched windows, stable picks, validated raw, units and ids ([table](templates/bug-classes.md)); the triage line's `Class:` counts repeats
-- [ ] Human tables apart from the cache: triggers, a backup before rebuilds, refusal of lossy rebuilds, a version stamp ([`core/store.py`](core/store.py))
+- [ ] Human tables apart from the cache: triggers, a backup before rebuilds, refusal of lossy rebuilds, a version stamp ([`kit/db.py`](kit/db.py))
 - [ ] The `--json` contract from the first report: `meta`, one error document, message codes on every verb, tested both ways ([template](templates/ssot/message_codes.tsv))
-- [ ] Copy [`core/`](core/): the human gate, message codes with their contract test pointed at your own verb table, and the runner that starts a child verb in its own PEP 723 environment
+- [ ] Vendor [`kit/`](kit/) (`scaffold/new_harness.py` does it): the human gate, message codes with their contract test pointed at your own verb table, and the runner that starts a child verb in its own PEP 723 environment
 - [ ] Typed keys: every key a human or agent can set has a unit, bounds or a domain; a fact always needs a human confirm, a decision key says whether it does ([facts](templates/ssot/fact_keys.tsv), [decisions](templates/ssot/decision_keys.tsv))
 - [ ] Boundary and layering tests before the first adapter or console exists ([template](templates/tests/test_layering.py)); the console's UI rules as an owner file with its lint ([template](templates/console/ui_rules.tsv))
 - [ ] A golden-diff tool committed before the first refactor: every `--json` read and every page, BASE vs HEAD, its self-checks run once ([spec](templates/AGENT_INSTRUCTIONS.md#golden-diff), [engine](templates/tests/golden/))
@@ -324,7 +324,7 @@ flowchart TB
     classDef owner fill:#e8f0fe,stroke:#1a73e8,stroke-width:2px,color:#202124
 ```
 
-1. **Code every message and close the registry both ways, on every verb** ([how](templates/ssot/README.md#message-codes)). *Paid for:* the gate and write verbs sat outside the test, so their refusals reached the owner's page as "unclassified" until about 40 were coded. The reader and the checks are [`core/messages.py`](core/messages.py) and [`core/contract.py`](core/contract.py).
+1. **Code every message and close the registry both ways, on every verb** ([how](templates/ssot/README.md#message-codes)). *Paid for:* the gate and write verbs sat outside the test, so their refusals reached the owner's page as "unclassified" until about 40 were coded. The reader and the checks are [`kit/messages.py`](kit/messages.py) and `check_verbs` in [`kit/guards/json_contract.py`](kit/guards/json_contract.py).
 2. **A threshold enters only with a reader and is renamed only through a map** ([how](templates/ssot/README.md#thresholds)). *Paid for:* one owner audit merged 4 duplicates, dropped 3 that nothing read and renamed 3; no client folder needed a migration.
 3. **Type every key a human or agent can set** ([how](templates/ssot/README.md#facts-and-decisions)). *Paid for:* a percentage typed as 15, .15 or 150 silently changed every margin. Bounds now refuse 150 on a 0–100 percentage and 80 on a 0–1 ratio; 15 and .15 both still pass, so state the unit where it is typed.
 4. **`meta` is the truth label, scoped to exactly what the report covers:** window asked vs found, missing days per source, stale sources, what-if values in effect. Queue and execute read it to refuse.
@@ -474,7 +474,7 @@ flowchart TB
 
 | Part | Paid ads: Google · Meta · TikTok | SEO · GEO · KOL |
 | --- | --- | --- |
-| Gate, message codes, test runner, release archive, human-table and raw guards (`core/store.py`, `core/raw.py`), one clock ([`core/`](core/), [`templates/tests/`](templates/tests/)) | Reuse | Reuse |
+| Gate, message codes, test runner, release archive, human-table and raw guards (`kit/db.py`, `kit/pull.py`), one clock ([`kit/`](kit/), [`templates/tests/`](templates/tests/)) | Reuse | Reuse |
 | Registries, `--json` and `meta`, the harness's own tables and schema, queue, story checks, console, host adapter | Port | Port |
 | Process: stories and policies, owner queue, triage, golden diff, install flow | Reuse | Reuse |
 | Meeting intake *(untried)* | Reuse | Reuse |
@@ -488,7 +488,7 @@ flowchart TB
 
 Proven here: the core's rules and the process; the paid-ads rules on one marketplace platform with 7- and 14-day attribution windows; the writer tested and dry-run on real data, never used on a live account. Untried anywhere: the transfer itself, and goals other than sales (leads, app installs, awareness).
 
-1. **Copy the channel-free modules; port the rest of the core.** The gate, message codes, clock, data guards, test runner and release archive name no channel. The queue, `meta`, console pages and adapter prompts name markets, campaigns, keywords and product groups: expect to rewrite them with the pack. [`core/`](core/) ships seven modules: the human gate (`gate.py`), coded messages (`messages.py`) and their contract test (`contract.py`), the child-verb runner (`runner.py`), one clock (`dates.py`), and the database and raw guards (`store.py`, `raw.py`); [`templates/tests/`](templates/tests/) ships the test runner and the release-archive test. The gate's subject says `scope` where the source project said `market`. *(untried as copied here: the rules and their tests come from the source project, where the original code ran on real data; these files have run only against their own tests and a toy harness)*
+1. **Vendor the channel-free modules; port the rest.** The gate, message codes, clock, data guards, test runner and release archive name no channel. The queue, `meta`, console pages and adapter prompts name markets, campaigns, keywords and product groups: expect to rewrite them with the pack. A new harness runs `scaffold/new_harness.py`, which vendors [`kit/`](kit/): the human gate (`human.py`), coded messages (`messages.py`) and their contract test (`guards/json_contract.py`), the child-verb runner (`runner.py`), one clock (`dates.py`), and the database and raw guards (`db.py`, `pull.py`, `atomic.py`, `retry.py`, `single_instance.py`); [`templates/tests/`](templates/tests/) is the same test rules as a standalone copy for a repository that does not vendor the kit. The gate's subject says `scope` where the source project said `market`. *(untried as copied here: the rules and their tests come from the source project, where the original code ran on real data; these files have run only against their own tests and a toy harness)*
 2. **Put every number an agent will be asked for in the harness.** *Paid for:* asked for the top actions by money per day, the host agent found no such number and invented its own formula; the formula moved into the harness so every agent returns the same number.
 3. **Verify each platform's facts before trusting a number:**
    - the attribution window per ad type
@@ -515,7 +515,7 @@ Proven here: the core's rules and the process; the paid-ads rules on one marketp
 | [`templates/ci/story-id.yml`](templates/ci/story-id.yml) | 2, 10 | The story-id job on its own (folded into `gitlab-ci.yml`); a note for GitHub Actions |
 | [`templates/ci/gitlab-ci.yml`](templates/ci/gitlab-ci.yml) | 2–3, 10 | Full CI from the first commit: one pipeline per change, story id, offline tests with a cache, adapter smoke, secret scan with a placeholder convention |
 | [`templates/AGENT_INSTRUCTIONS.md`](templates/AGENT_INSTRUCTIONS.md) | 3 | Invariants-only instructions for the coding agent (a `CLAUDE.md`) |
-| [`core/`](core/) | 3, 6, 8 | A module, not a template: the human gate, message codes with their contract test, the child-verb runner, one clock, and the raw and database guards, copied as is *(untried as copied here: the rules and their tests come from the source project, where the original code ran on real data; these files have run only against their own tests and a toy harness)* |
+| [`kit/`](kit/) | 3, 6, 8 | A module, not a template: the human gate, message codes with their contract test, the child-verb runner, one clock, and the raw and database guards, vendored into a harness by `scaffold/new_harness.py` *(untried as copied here: the rules and their tests come from the source project, where the original code ran on real data; these files have run only against their own tests and a toy harness)* |
 | [`templates/tests/`](templates/tests/) | 3, 9 | The test kit: a runner with a temp-leak gate, a one-clock lint, an import-graph layering engine with rules in a table, and a release-archive test; `selftest/` breaks each gate on the case it exists to catch *(untried as copied here)* |
 | [`templates/tests/golden/`](templates/tests/golden/) | 3, 10 | A module to copy: the golden-diff engine, the cases hook your harness fills from its verb table, and the tests that prove it can say 1 *(untried as copied here)* |
 | [`templates/workflows/`](templates/workflows/) | 3–10 | Workflow scripts for building with many agents (build → review → fix → verify; sweep → skeptic → plan), the ref check to run before any push, and the prompt rules with what each one prevented |

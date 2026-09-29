@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""kit.testing.suites: the nine day-one suites, on a harness the playbook's
+"""kit.testing.suites: the ten day-one suites, on a harness the playbook's
 scaffolder generates (scaffold/new_harness.py, run as a subprocess), and
 each on a planted violation, so no suite can pass by looking at nothing.
 
@@ -8,6 +8,8 @@ each on a planted violation, so no suite can pass by looking at nothing.
   [3] ssot: an owner row with no agent sibling; a stage signed before the
       step it comes after
   [4] layering: a compute importing the writer
+  [4b] clock: a script that reads datetime.now(), one that binds
+      `from kit.dates import now`, a vendored clock that reads it twice
   [5] boundary: a consumer that runs a human write verb
   [6] json_contract: a read verb that prints an uncoded English sentence
   [7] human_tables: a SPEC without one of the kit's human tables
@@ -106,7 +108,7 @@ def spec_of(root: Path):
     return mod.SPEC
 
 
-ALL = ("run_tests", "ssot", "layering", "boundary", "json_contract",
+ALL = ("run_tests", "ssot", "layering", "clock", "boundary", "json_contract",
        "human_tables", "gate", "release", "kit_drift")
 
 
@@ -165,6 +167,23 @@ def main() -> int:
     undo = planted(root, "scripts/compute_x.py", "from _lib import writer\n")
     caught("a compute importing the writer", suites.layering(root),
            "the layering rules of harness.toml hold")
+    undo()
+
+    print("\n[4b] clock")
+    undo = planted(root, "scripts/compute_x.py",
+                   "import datetime\nT = datetime.datetime.now()\n")
+    caught("a script that reads the calendar itself", suites.clock(root),
+           "reads the calendar only through kit.dates")
+    undo()
+    undo = planted(root, "scripts/compute_x.py",
+                   "from kit.dates import now\n")
+    caught("a name bound at import", suites.clock(root),
+           "reads the calendar only through kit.dates")
+    undo()
+    undo = planted(root, "scripts/kit/dates.py", append=(
+        "\n\ndef stray():\n    import time\n    return time.localtime()\n"))
+    caught("a clock that reads the calendar twice", suites.clock(root),
+           "reads the calendar only through kit.dates")
     undo()
 
     print("\n[5] boundary")

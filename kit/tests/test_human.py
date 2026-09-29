@@ -9,9 +9,12 @@
      controlling terminal); a real controlling terminal (pty.fork) does.
   3. A code is issued off a TTY with the secret set, checked on rerun, and
      single use (the write moves the version); a relayed confirm needs its
-     audit; full-width digits count; no secret = no code.
-  4. A code is bound to its subject: another value, id, market, entity
-     type, verb or version refuses it; id order does not matter.
+     audit, and the audit is well formed (one token for the user, an ISO
+     time with its zone) so it cannot forge the suffix; full-width digits
+     count; no secret = no code.
+  4. A code is bound to its subject: another value, id (a subset, a
+     superset, another id), market, entity type, verb or version refuses
+     it; id order does not matter.
   5. An expired slot is refused (2 slots back is the limit), a future one
      too.
   6. relay_audit, why, changed_by, typed_source, now, stale_basis.
@@ -380,6 +383,32 @@ def test_code_issued_and_checked() -> None:
     fresh()
     _, out, _ = capture(gated, BASE, env=env)
     c = code_of(out)
+    at = "2026-09-28T01:02:03Z"
+    for label, who, when in (
+            ("a user with a space", "web alice", at),
+            ("a user that closes the suffix and opens another",
+             "web:a] [relay user=owner", at),
+            ("a user of 121 characters", "u" * 121, at),
+            ("a time that is not a time", "web:alice", "yesterday"),
+            ("a time with no zone", "web:alice", "2026-09-28T01:02:03")):
+        rc, out, _ = capture(gated, [*BASE, "--code", c, "--relay-user", who,
+                                     "--relay-at", when], env=env)
+        d = one_doc(out)
+        check(f"{label}: confirm_relay_audit_invalid, nothing written, the "
+              f"code still unused",
+              rc == 2 and d["code"] == "confirm_relay_audit_invalid"
+              and d["params"] == {"field": "relay_at" if who == "web:alice"
+                                  else "relay_user"}
+              and STATE["unit_cost"][1] == 7, out)
+    rc, out, _ = capture(gated, [*BASE, "--code", c, "--relay-user",
+                                 "web:alice", "--relay-at", at], env=env)
+    check("… and the same code then passes with a valid audit",
+          rc == 0 and one_doc(out)["reason"].endswith(
+              f"[relay user=web:alice at={at}]"), out)
+
+    fresh()
+    _, out, _ = capture(gated, BASE, env=env)
+    c = code_of(out)
     wide = "".join(chr(ord(ch) + 0xFEE0) for ch in c)
     rc, out, _ = capture(gated, [*BASE, "--code", wide, *relay[2:]], env=env)
     check("full-width digits typed on a phone count", rc == 0, out)
@@ -406,6 +435,8 @@ def test_bound_to_subject() -> None:
     print("[4] a code is bound to its subject")
     base = ("facts confirm", "US", "fact", {"a": "1", "b": ["x", 2]}, 5)
     variants = {
+        "one id fewer (a subset)": ("facts confirm", "US", "fact",
+                                    {"a": "1"}, 5),
         "another value": ("facts confirm", "US", "fact",
                           {"a": "2", "b": ["x", 2]}, 5),
         "another id": ("facts confirm", "US", "fact",
@@ -471,8 +502,21 @@ def test_small_helpers() -> None:
               e is not None and e.message.code == "confirm_relay_audit_missing")
     check("relay_audit: '' off the relay, the suffix on it",
           human.relay_audit("tty", None, None) == ""
-          and human.relay_audit("relay", "web:a", "T") == " [relay user=web:a "
-                                                          "at=T]")
+          and human.relay_audit("relay", "web:a", "2026-09-28T00:00:00+08:00")
+          == " [relay user=web:a at=2026-09-28T00:00:00+08:00]")
+    for user, at, field in (("a b", "2026-09-28T00:00:00Z", "relay_user"),
+                            ("a]", "2026-09-28T00:00:00Z", "relay_user"),
+                            ("[a", "2026-09-28T00:00:00Z", "relay_user"),
+                            ("a\nb", "2026-09-28T00:00:00Z", "relay_user"),
+                            ("a", "T", "relay_at"),
+                            ("a", "2026-09-28", "relay_at"),
+                            ("a", "2026-09-28T00:00:00", "relay_at")):
+        e = raises(lambda: human.relay_audit("relay", user, at), human.Refused)
+        check(f"relay_audit({user!r}, {at!r}): confirm_relay_audit_invalid "
+              f"on {field}",
+              e is not None and messages.code(e.message) == {
+                  "code": "confirm_relay_audit_invalid",
+                  "params": {"field": field}}, e)
     for bad in (None, "", "   "):
         e = raises(lambda: human.why(bad), human.Refused)
         check(f"why({bad!r}): reason_required",
@@ -606,7 +650,8 @@ def test_closure() -> None:
     check("every msg() in human.py is literal, registered with exact "
           "params, and every human.tsv code is emitted", probs == [], probs)
     names = {"confirm_needs_human", "confirm_code_required",
-             "confirm_code_mismatch", "confirm_relay_audit_missing"}
+             "confirm_code_mismatch", "confirm_relay_audit_missing",
+             "confirm_relay_audit_invalid"}
     check("the reference gate code names are kept exactly",
           names <= set(mine), sorted(names - set(mine)))
 

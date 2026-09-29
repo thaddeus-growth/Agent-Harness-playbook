@@ -1,4 +1,4 @@
-"""The day-one guards of a harness, as library calls: the nine tests a new
+"""The day-one guards of a harness, as library calls: the ten tests a new
 harness is generated with (templates/README.md, "The tests a new harness
 starts with") are each one thin call into this module.
 
@@ -19,6 +19,11 @@ reports them through kit.testing.check. A generated test is
                 `decided` answer; asked needs ask; a stage is never signed
                 before a step it comes after
   layering      kit.guards.layering.check_layers, and its planted self-test
+  clock         kit.guards.clock: no calendar read in the harness's code
+                but kit.dates.now() (by AST: datetime.now/today/utcnow, a
+                time.strftime/localtime without a time value, a name bound
+                by `from kit.dates import now`), its planted self-test,
+                and the clock itself reads the stdlib once, in now()
   boundary      kit.guards.boundary.check_boundaries
   json_contract every read verb on a fixture (facts init, the declaration
                 confirmed through the gate) keeps the --json contract; on an
@@ -69,6 +74,7 @@ ROW_STATUS = {"proposed", "asked", "accepted", "dropped", "retired"}
 STAGE_STATUS = {"todo", "doing", "signed", "blocked"}
 FILL = "<<" + "fill:"      # spelled apart: this file ships too
 SECRET = "suites-gate-secret-0123456789"
+RELAY_AT = "2026-01-01T00:00:00Z"      # a relayed confirm names its time, with a zone
 # the build's planning file (never shipped); spelled apart so the release
 # guard does not read this shipped module as opening it
 STAGES = "stages.agent" + ".tsv"
@@ -239,6 +245,15 @@ def layering(root: Path | str) -> Results:
     return [("the layering rules of harness.toml hold", g.check_layers(root)),
             ("each layering rule catches its planted violation",
              g.self_test())]
+
+
+def clock(root: Path | str) -> Results:
+    bind(root)
+    from kit.guards import clock as g
+    return [("the clock rule catches each planted calendar read",
+             g.self_test()),
+            ("the harness reads the calendar only through kit.dates "
+             "(one patch pins every read)", g.check_reads(root))]
 
 
 def boundary(root: Path | str) -> Results:
@@ -506,7 +521,7 @@ def gate(root: Path | str) -> Results:
         else:
             wrong = f"{(int(code) + 1) % 1000000:06d}"
             rc, doc, _ = cli(*argv, "--json", "--code", wrong, "--relay-user",
-                             "u", "--relay-at", "t", secret=True)
+                             "suite:owner", "--relay-at", RELAY_AT, secret=True)
             if _code_of(doc) != "confirm_code_mismatch":
                 probs.append(f"a wrong code: {doc}")
             rc, doc, _ = cli(*argv, "--json", "--code", code, secret=True)
@@ -516,7 +531,7 @@ def gate(root: Path | str) -> Results:
                 probs.append("a refused confirm wrote the declaration")
             rc, doc, _ = cli(*argv, "--json", "--code", code, "--relay-user",
                              "suite:owner", "--relay-at",
-                             "2026-01-01T00:00:00Z", secret=True)
+                             RELAY_AT, secret=True)
             if rc != 0 or cli.facts("market_declared") != (cli.market, 0):
                 probs.append(f"the right code with its audit: exit {rc}, "
                              f"{doc}")
@@ -535,17 +550,20 @@ def gate(root: Path | str) -> Results:
         probs.append(f"the challenge is not bound to {{{key}: 12}}: {doc}")
     else:
         rc, doc, _ = cli(*argv, "--value", "13", "--json", "--code", code,
-                         "--relay-user", "u", "--relay-at", "t", secret=True)
+                         "--relay-user", "suite:owner", "--relay-at",
+                         RELAY_AT, secret=True)
         if _code_of(doc) != "confirm_code_mismatch":
             probs.append(f"the code shown for 12 used for 13: {doc}")
-        rc, doc, _ = cli(*argv, "--json", "--code", code, "--relay-user", "u",
-                         "--relay-at", "t", secret=True)
+        rc, doc, _ = cli(*argv, "--json", "--code", code,
+                         "--relay-user", "suite:owner", "--relay-at",
+                         RELAY_AT, secret=True)
         if rc != 0 or cli.facts(key) != ("12", 0):
             probs.append(f"the right code: exit {rc}, {doc}")
         cli("facts", "unconfirm", key, "--reason", "doubted", "--json")
         n = cli.history()
-        rc, doc, _ = cli(*argv, "--json", "--code", code, "--relay-user", "u",
-                         "--relay-at", "t", secret=True)
+        rc, doc, _ = cli(*argv, "--json", "--code", code,
+                         "--relay-user", "suite:owner", "--relay-at",
+                         RELAY_AT, secret=True)
         if _code_of(doc) != "confirm_code_mismatch" or cli.history() != n:
             probs.append(f"the code replayed once the fact moved: {doc}")
     out.append(("a code is bound to what was shown: a swapped or replayed "
@@ -571,11 +589,11 @@ def gate(root: Path | str) -> Results:
             probs.append("approve with the secret: no challenge")
         else:
             rc, doc, _ = cli(*argv, "--json", "--code", code, "--relay-user",
-                             "u", "--relay-at", "t", secret=True)
+                             "suite:owner", "--relay-at", RELAY_AT, secret=True)
             if rc != 0:
                 probs.append(f"approve with its code: exit {rc}, {doc}")
             rc, doc, _ = cli(*argv, "--json", "--code", code, "--relay-user",
-                             "u", "--relay-at", "t", secret=True)
+                             "suite:owner", "--relay-at", RELAY_AT, secret=True)
             if rc == 0:
                 probs.append("the approve code replayed went through")
     out.append(("approving needs a person too; a used code is refused",

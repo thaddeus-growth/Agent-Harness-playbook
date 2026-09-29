@@ -65,7 +65,7 @@ Every sentence in `--json` is a code plus params. The test fails on a code emitt
 
 During a fan-out, each worker writes its codes to its own fragment, `message_codes.d/<unit>.tsv` (the same columns), with its own prefix (`<unit>_`); the integrator gives out both. The kit loads `message_codes.tsv` and then every fragment in name order, and refuses a code defined twice anywhere. Fragments need no row of their own in `index.tsv`: the `message_codes.tsv` row covers them. See BUILD.md, "Fan-out rules".
 
-Core's own codes (the gate's refusals and `unclassified_error`) live in [`core/message_codes.tsv`](../../core/message_codes.tsv); this file holds the harness's. A code in both is refused. The checks are [`core/contract.py`](../../core/contract.py): a harness's contract test calls `lint_registry`, `closed` and `check_verbs` on its own sources and verb table.
+The kit's own codes (the gate's refusals and `unclassified_error`) live in [`kit/message_codes.tsv`](../../kit/message_codes.tsv) and [`kit/message_codes.d/`](../../kit/message_codes.d/); this file holds the harness's. A code in both is refused. The reader and the registry checks are [`kit/messages.py`](../../kit/messages.py) (`lint_registry`, `check_registry_closed`); the every-verb check is `check_verbs` in [`kit/guards/json_contract.py`](../../kit/guards/json_contract.py), which a harness's contract test calls on its own verb table.
 
 ## Alert rules
 

@@ -21,7 +21,10 @@
   * a failure is one {error, next, code, params[, subject]} document, exit
     non-zero, coded (never unclassified_error), `next` a list of commands;
   * read verbs never create the DB: on a data dir without one, each read
-    verb fails `no_db` and leaves the data dir as it was.
+    verb fails `no_db` and leaves the data dir as it was;
+  * every verb of the table, whatever its kind, has a `--json` case
+    (`check_verbs`), so a new verb fails until it has one: the gate and
+    write verbs' refusals are then classified too, never "unclassified".
 
 Deviations (the reference): message keys are the configured prose keys
 plus every key the document itself codes somewhere, so one coded row
@@ -37,7 +40,8 @@ arguments harness.toml gives a verb that needs some
 (`<scripts_dir>/<cli>.py <words> -- --json [--market M]`, under
 kit.testing.sandbox's env) and applies the rules above.
 
-Test: kit/tests/test_guards.py.
+Test: kit/tests/test_guards.py (the units and the read verbs),
+kit/tests/test_verb_cases.py (check_verbs).
 """
 
 from __future__ import annotations
@@ -435,3 +439,56 @@ def check_json_contract(data_dir: Path | str, **kw: Any) -> bool:
     """check_read_verbs() as one kit.testing.check line."""
     return report("json contract: every read verb's --json keeps the "
                   "contract", check_read_verbs(data_dir, **kw))
+
+
+def check_verbs(cases: dict[str, list[list[str]]], *, verbs: Any = None,
+                run: Run | None = None, data_dir: Path | str | None = None,
+                skip: tuple[str, ...] = (), registry: dict | None = None
+                ) -> list[str]:
+    """Every verb of the table, of every kind (not only the reads), has at
+    least one case, so a new verb fails here until it has one; a case for a
+    verb the table does not have fails too. `cases` = {verb as typed:
+    [the arguments of each case, run in order]}; `--json` is added unless a
+    case has it; `run(argv)` -> (rc, stdout, stderr), default the harness
+    CLI on the fixture `data_dir` (cli_runner). Each case prints exactly one
+    JSON document with every message coded; a non-zero exit is the one
+    coded failure document, never unclassified_error (a gate or write
+    verb's refusal that reaches the owner as "unclassified" is found here).
+    `skip` = verbs (as typed) that need no case (a dev tool)."""
+    cfg = harness()
+    if run is None:
+        if data_dir is None:
+            raise ValueError("check_verbs needs `run` or a fixture `data_dir`")
+        run = cli_runner(data_dir, cfg)
+    table = {" ".join(v.words): v for v in verb_table(cfg, verbs)}
+    have = {" ".join(str(k).split()): list(v) for k, v in cases.items()}
+    out = [f"{label}: no --json case (a new verb fails here until it has one)"
+           for label in table if label not in skip and not have.get(label)]
+    out += [f"{label}: a case for a verb the table does not have"
+            for label in have if label not in table]
+    for label, argvs in have.items():
+        if label not in table:
+            continue
+        for rest in argvs:
+            flags = [] if "--json" in rest else ["--json"]
+            rc, stdout, err = run(verb_argv(list(table[label].words), rest,
+                                            flags))
+            where = f"{label} {' '.join(rest)}".rstrip()
+            if rc != 0:
+                out += [f"{where}: {p}" for p in check_failure(
+                    rc, stdout, err, registry=registry)]
+            doc, bad = one_doc(stdout)
+            if rc == 0:
+                out += [f"{where}: {p}" for p in bad]
+                if TRACEBACK in err:
+                    out.append(f"{where}: a traceback on stderr")
+            if doc is not None:
+                out += [f"{where}: uncoded message at {p}"
+                        for p in uncoded(doc, registry=registry, cfg=cfg)]
+    return out
+
+
+def check_verb_cases(cases: dict[str, list[list[str]]], **kw: Any) -> bool:
+    """check_verbs() as one kit.testing.check line."""
+    return report("json contract: every verb has a case, and each keeps "
+                  "the contract", check_verbs(cases, **kw))

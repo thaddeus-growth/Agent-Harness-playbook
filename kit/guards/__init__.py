@@ -11,6 +11,7 @@ kit.testing.check.
   ssot.py           the ssot index, the owner-file lint, ids kept not deleted
   release.py        what `git archive` ships, and .gitattributes from config
   layering.py       the import graph: pull / ingest / compute / one writer
+  clock.py          one clock: no calendar read but kit.dates.now(), by AST
   json_contract.py  one --json document, meta, every message coded
   boundary.py       the core never names an adapter; a consumer only reads
   drift.py          a vendored kit/ or console/ matches its MANIFEST.sha256

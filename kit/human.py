@@ -32,6 +32,9 @@ module guards:
   * relay_audit()    a relayed confirm must name who relayed it and when
                      (`--relay-user`, `--relay-at`); the suffix
                      ` [relay user=… at=…]` goes on the history reason.
+                     The user is one token (no space, no bracket) and the
+                     time is ISO 8601 with its zone, so what a caller
+                     types cannot close the suffix and forge another one.
   * changed_by()     `<OS user>@tty|relay|cli`: derived, never typed.
   * why()            the required, non-blank --reason (reason_required).
   * json_refusal()   the one --json document of a refused gate verb:
@@ -71,10 +74,12 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import stat
 import sys
 import time
 import unicodedata
+from datetime import datetime
 from typing import Literal
 
 from kit import dates
@@ -87,6 +92,8 @@ TTY_ENV = "KIT_TTY"          # the test seam: a file standing in for the termina
 WINDOW_S = 300               # one code slot is 5 minutes
 WINDOWS_BACK = 2             # + up to 2 slots old: a code is good 5-15 min
 TTL_MINUTES = (1 + WINDOWS_BACK) * WINDOW_S // 60
+# one token: it is written inside ` [relay user=… at=…]` on the history row
+RELAY_USER = re.compile(r"[^\s\[\]]{1,120}")
 
 
 class Refused(HarnessError):
@@ -309,7 +316,22 @@ def relay_audit(channel: str, relay_user: str | None,
             "confirm_relay_audit_missing",
             "--code needs --relay-user and --relay-at too (history must "
             "show who relayed the confirmation and when)"))
+    for field, ok in (("relay_user", RELAY_USER.fullmatch(relay_user)),
+                      ("relay_at", _iso_with_zone(relay_at))):
+        if not ok:
+            raise Refused(msg(
+                "confirm_relay_audit_invalid",
+                f"--{field.replace('_', '-')} is not valid (one token for "
+                f"the user, an ISO 8601 time with its zone). Nothing was "
+                f"written.", field=field))
     return f" [relay user={relay_user} at={relay_at}]"
+
+
+def _iso_with_zone(text: str) -> bool:
+    try:
+        return datetime.fromisoformat(text).tzinfo is not None
+    except ValueError:
+        return False
 
 
 # ---- attribution -----------------------------------------------------------

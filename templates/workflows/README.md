@@ -77,7 +77,7 @@ Both scripts take `args: {config, items}` (the sweep takes `{config, dimensions}
 
 ## The rules pasted into prompts
 
-Each prompt carries only its role's rules, by id: the builder R1–R7 and R9, reviewers R1–R6 and R10, the fixer and the repair R1–R9, the verify gate R4–R6 and R10. The sweep's finders get R1, R4, R5, R10, R11 and R13, and its skeptics R1, R4, R5 and R10–R12. The ids are checked against this table by `tests/test_scripts.py`.
+Each prompt carries only its role's rules, by id: the builder R1–R7 and R9, reviewers R1–R6 and R10, the fixer and the repair R1–R9, the verify gate R4–R6 and R10. The sweep's finders get R1, R4, R5, R10, R11 and R13, and its skeptics R1, R4, R5 and R10–R12. The ids are checked against this table by `test_scripts.py` in `workflows/tests/`.
 
 | Id | Rule | What it prevented |
 | --- | --- | --- |

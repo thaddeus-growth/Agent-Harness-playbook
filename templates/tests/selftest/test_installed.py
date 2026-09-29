@@ -24,6 +24,7 @@ LEAK = ("import sys, tempfile\nfrom _check import check, finish\n"
 CLOCK_TEST = _sample.read(os.path.join(_sample.KIT, "test_clock.py"))
 LAYER_TEST = _sample.read(os.path.join(_sample.KIT, "test_layering.py"))
 ATTRS = _sample.read(os.path.join(_sample.TEMPLATES, "gitattributes"))
+SAMPLE = {n: _sample.read(os.path.join(_sample.SAMPLE, n + ".py")) for n in ("dates", "raw", "runner")}
 STRAY = "\nimport datetime\n\n\ndef stamp():\n    return datetime.date.today()\n"
 ALLOW = CLOCK_TEST.replace("ALLOWED: dict[tuple[str, str], int] = {",
                            'ALLOWED: dict[tuple[str, str], int] = {("src/compute_kpi.py", "stamp"): 1,')
@@ -39,15 +40,15 @@ BROKEN = [  # (what changed, the test file, changes, what its output must say)
     ("a second module imports the writer", "test_layering.py",
      {"src/facts.py": "from api import writer\n" + C["src/facts.py"]},
      ["FAIL  a: only the executor imports the one writer", "facts"]),
-    ("pull reaches the database guard in core", "test_layering.py",
-     {"src/pull_ads.py": "from core import store\n" + C["src/pull_ads.py"]},
-     ["FAIL  b: pull_ads: pull reaches no database", "core.store"]),
-    ("core imports a harness helper", "test_layering.py",
-     {"core/dates.py": "from lib import rules\n" + _sample.read(os.path.join(_sample.REPO, "core", "dates.py"))},
-     ["FAIL  h: core.dates: core imports nothing of the harness", "lib.rules"]),
-    ("core names the console", "test_layering.py",
-     {"core/runner.py": "# see webconsole/serve.py\n" + _sample.read(os.path.join(_sample.REPO, "core", "runner.py"))},
-     ["FAIL  i: the core never names the console", "core/runner.py:1"]),
+    ("pull reaches the database guard in common", "test_layering.py",
+     {"src/pull_ads.py": "from common import store\n" + C["src/pull_ads.py"]},
+     ["FAIL  b: pull_ads: pull reaches no database", "common.store"]),
+    ("common imports a harness helper", "test_layering.py",
+     {"common/dates.py": "from lib import rules\n" + SAMPLE["dates"]},
+     ["FAIL  h: common.dates: common imports nothing of the harness", "lib.rules"]),
+    ("common names the console", "test_layering.py",
+     {"common/runner.py": "# see webconsole/serve.py\n" + SAMPLE["runner"]},
+     ["FAIL  i: common never names the console", "common/runner.py:1"]),
     ("pull_ads.py renamed: the pull rule would check nothing", "test_layering.py",
      {"src/pull_ads.py": None, "src/fetch_ads.py": C["src/pull_ads.py"]},
      ["FAIL  b: the layer pull_* has modules"]),
@@ -55,9 +56,9 @@ BROKEN = [  # (what changed, the test file, changes, what its output must say)
      {"webconsole/serve.py": C["webconsole/serve.py"]
       + '\n\ndef reject(qid):\n    return subprocess.run([TOOL, "queue", "reject", qid])\n'},
      ["FAIL  j: the console runs no write verb", "webconsole/serve.py:11"]),
-    ("the core names the console", "test_layering.py",
+    ("src names the console", "test_layering.py",
      {"src/lib/rules.py": "# pages: webconsole/pages.py\n" + C["src/lib/rules.py"]},
-     ["FAIL  i: the core never names the console", "src/lib/rules.py:1"]),
+     ["FAIL  i: common never names the console", "src/lib/rules.py:1"]),
     ("a text rule's pattern matches nothing", "test_layering.py",
      {"tests/test_layering.py": LAYER_TEST.replace(r're.compile(r"\bsqlite3?\b|\.db\b")',
                                                    r're.compile(r"\bsqlite4\b")')},
@@ -65,18 +66,18 @@ BROKEN = [  # (what changed, the test file, changes, what its output must say)
     ("a stray calendar read", "test_clock.py",
      {"src/compute_kpi.py": C["src/compute_kpi.py"] + STRAY},
      ["FAIL  no calendar read outside the clock", "src/compute_kpi.py:12 (stamp)"]),
-    ("a `from core.dates import now` binding", "test_clock.py",
-     {"src/ingest_ads.py": "from core.dates import now\n" + C["src/ingest_ads.py"]},
-     ["FAIL  no calendar read outside the clock", "from core.dates import now"]),
-    ("a core module stamps off the one clock", "test_clock.py",
-     {"core/raw.py": _sample.read(os.path.join(_sample.REPO, "core", "raw.py")) + STRAY},
-     ["FAIL  no calendar read outside the clock", "core/raw.py:"]),
+    ("a `from common.dates import now` binding", "test_clock.py",
+     {"src/ingest_ads.py": "from common.dates import now\n" + C["src/ingest_ads.py"]},
+     ["FAIL  no calendar read outside the clock", "from common.dates import now"]),
+    ("a common module stamps off the one clock", "test_clock.py",
+     {"common/raw.py": SAMPLE["raw"] + STRAY},
+     ["FAIL  no calendar read outside the clock", "common/raw.py:"]),
     ("an ALLOWED row whose read has moved", "test_clock.py",
      {"tests/test_clock.py": ALLOW},
      ["FAIL  ALLOWED lists only reads still there", "src/compute_kpi.py:stamp (1 moved)"]),
     ("the clock module renamed: the lint would read nothing of it", "test_clock.py",
-     {"core/dates.py": None, "core/clock.py": _sample.read(os.path.join(_sample.REPO, "core", "dates.py"))},
-     ["FAIL  src, core hold code to read, core/dates.py among it"]),
+     {"common/dates.py": None, "common/clock.py": SAMPLE["dates"]},
+     ["FAIL  src, common hold code to read, common/dates.py among it"]),
     ("an internal file that ships", "test_release_archive.py",
      {".gitattributes": ATTRS.replace("/CLAUDE.md export-ignore\n", "")},
      ["FAIL  no internal file ships", "CLAUDE.md"]),
@@ -95,9 +96,6 @@ BROKEN = [  # (what changed, the test file, changes, what its output must say)
     ("code opens a registry that is not in the release", "test_release_archive.py",
      {"src/lib/extra.py": 'NAME = "extra_rules.tsv"\n'},
      ["FAIL  every .tsv runtime code opens by name ships", "extra_rules.tsv"]),
-    ("core's tests would ship", "test_release_archive.py",
-     {".gitattributes": ATTRS.replace("/core/tests export-ignore\n", "")},
-     ["FAIL  no internal file ships", "core/tests/"]),
     ("runtime code left out", "test_release_archive.py",
      {".gitattributes": ATTRS + "/src/lib export-ignore\n"},
      ["FAIL  nothing but the internal files is left out", "src/lib/db.py"]),
@@ -126,7 +124,7 @@ def main() -> int:
         code, out = _sample.run(sample(changes), ENV, f"tests/{test}")
         check(f"{test}: {what}", code == 1 and all(s in out for s in says),
               "\n".join(out.splitlines()[-12:]))
-    code, out = _sample.run(sample({"tests/test_leak.py": LEAK}), ENV, "tests/run.py", "leak")
+    code, out = _sample.run(sample({os.path.join("tests", "test_leak.py"): LEAK}), ENV, "tests/run.py", "leak")
     check("run.py: a harness test that leaves a temp dir fails the run",
           code == 1 and "test_leak.py" in out and "left 1 temp entry" in out, out)
     return finish()

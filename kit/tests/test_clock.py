@@ -8,15 +8,19 @@ kit/**/*.py except kit/dates.py and kit/tests/:
 
   1. no `.now`, `.today` or `.utcnow` of the stdlib `datetime.datetime`
      or `datetime.date` class, however it was imported;
-  2. no `from kit.dates import now | today | host_today | market_day`:
+  2. no `time.localtime()`, `gmtime()`, `ctime()`, `asctime()` or
+     `strftime(fmt)` without a time value;
+  3. no `from kit.dates import now | today | host_today | market_day`:
      a name bound at import keeps the function a patch no longer reaches.
+
+The rule is kit.guards.clock, the one a generated harness's
+tests/test_clock.py runs on its own code.
 
 `time.time()` / `time.monotonic()` measure durations and code lifetimes
 (the gate's code slots), not the calendar: not flagged. The planted
 file proves the scan finds each form.
 """
 
-import ast
 import sys
 from pathlib import Path
 
@@ -24,67 +28,31 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import _shop  # noqa: E402
-from kit.testing.check import check, finish, tmp_dir  # noqa: E402
-
-READS = {"now", "today", "utcnow"}
-BOUND = {"now", "today", "host_today", "market_day"}
+from kit.guards import clock  # noqa: E402
+from kit.testing.check import check, finish  # noqa: E402
 
 
 def hits(path: Path) -> list[str]:
-    tree = ast.parse(path.read_text(encoding="utf-8"), str(path))
-    mod_alias: set[str] = set()      # names bound to the datetime module
-    cls_alias: set[str] = set()      # names bound to datetime.datetime/date
-    out = []
-    for n in ast.walk(tree):
-        if isinstance(n, ast.Import):
-            for a in n.names:
-                if a.name == "datetime":
-                    mod_alias.add(a.asname or a.name)
-        elif isinstance(n, ast.ImportFrom) and not n.level:
-            if n.module == "datetime":
-                for a in n.names:
-                    if a.name in ("datetime", "date"):
-                        cls_alias.add(a.asname or a.name)
-            if n.module == "kit.dates":
-                for a in n.names:
-                    if a.name in BOUND:
-                        out.append(f"{path.name}:{n.lineno}: from kit.dates "
-                                   f"import {a.name}")
-        elif isinstance(n, ast.ImportFrom) and n.level and n.module == "dates":
-            for a in n.names:
-                if a.name in BOUND:
-                    out.append(f"{path.name}:{n.lineno}: from .dates import "
-                               f"{a.name}")
-    for n in ast.walk(tree):
-        if not (isinstance(n, ast.Attribute) and n.attr in READS):
-            continue
-        v = n.value
-        if isinstance(v, ast.Name) and v.id in cls_alias:
-            out.append(f"{path.name}:{n.lineno}: {v.id}.{n.attr}")
-        elif (isinstance(v, ast.Attribute) and v.attr in ("datetime", "date")
-              and isinstance(v.value, ast.Name) and v.value.id in mod_alias):
-            out.append(f"{path.name}:{n.lineno}: {v.value.id}.{v.attr}.{n.attr}")
-    return out
+    return [f"{path.name}:{n}: {w}" for _, n, w in
+            clock.scan(path.read_text(encoding="utf-8"))]
 
 
 def main() -> int:
-    planted = Path(tmp_dir("clock-")) / "planted.py"
-    planted.write_text(
-        "import datetime\nimport datetime as dt\n"
-        "from datetime import datetime as DT, date\n"
-        "from kit.dates import now\n"
-        "a = datetime.datetime.now()\n"
-        "b = dt.date.today\n"
-        "c = DT.utcnow()\n"
-        "d = date.today()\n"
-        "import time; e = time.time()\n", encoding="utf-8")
-    found = hits(planted)
+    problems = clock.self_test()
     check("the scan finds every planted form (and not time.time)",
-          len(found) == 5 and not any("time.time" in f for f in found), found)
+          not problems, problems)
+    check("the guard is the same rule a generated harness runs "
+          "(kit.guards.clock: datetime, time.strftime/localtime, bound names)",
+          len(clock.scan("from kit.dates import now\n")) == 1
+          and len(clock.scan("import time\ntime.localtime()\n")) == 1)
+    d = _shop.KIT / "dates.py"
+    check("kit/dates.py reads the stdlib clock once, in now()",
+          [(q, w) for q, _, w in clock.scan(d.read_text(encoding="utf-8"))]
+          == [("now", "datetime.datetime.now")])
 
     files = sorted(p for p in _shop.KIT.rglob("*.py")
                    if "tests" not in p.relative_to(_shop.KIT).parts
-                   and p != _shop.KIT / "dates.py")
+                   and p != d)
     bad = [h for f in files for h in hits(f)]
     check(f"no calendar read outside kit/dates.py ({len(files)} modules)",
           files and not bad, bad)

@@ -40,13 +40,14 @@ Each module's docstring says what it guards and names its test; this is the map.
 | `messages.py` | Every English message is a `Msg` with a code from a closed registry (kit base + fragments + the harness's registry and fragments); a code defined twice anywhere is refused; one placement rule for codes | `test_messages.py` |
 | `contract.py` | One stdout document under `--json`, failures included; `HarnessError`; coded usage errors (`Parser`); read verbs never create the DB; one `meta` shape | `test_contract.py` |
 | `dates.py` | One clock every layer reads, patchable in one place | `test_dates.py`, `test_clock.py` |
-| `atomic.py`, `single_instance.py` | A half-written file is never seen; a second scheduled run skips | `test_atomic.py` |
+| `atomic.py`, `single_instance.py` | A half-written file is never seen (the temp file is fsynced before the rename); a second scheduled run skips | `test_atomic.py` |
 | `runner.py` | How one script runs another and reads its one document; a child's failure keeps its code | `test_runner.py` |
 | `raw.py` | Raw only grows: write-once files, content-hash imports | `test_raw.py` |
+| `pull.py` | A pull is merged into raw by natural key (newer wins per key, per-row `pulledAt`, raw never shrinks, duplicate keys refused); an unreadable raw file is moved aside; a long pull is planned in chunks, saved after each step, a chunk is requested again if a newer pull landed; every gap goes in an append-only ledger with its reason | `test_pull.py` |
 | `paths.py` | The data dir is required and absolute, never the cwd; one resolver for the DB | `test_paths.py` |
 | `env.py` | One env chain (process env → home file → `<DATA_DIR>/.env`), never the cwd; parsed, never sourced | `test_env.py` |
 | `auth.py` | Where a token comes from (`env` or a host `command`); expiry; a token never printed | `test_auth.py` |
-| `retry.py` | Reads only are retried; `Retry-After` honoured | `test_retry.py` |
+| `retry.py` | Reads only are retried; `Retry-After` honoured; `call` waits at least the quota's refill period, one budget per endpoint, and `GaveUp` carries the last reason | `test_retry.py` |
 | `db.py`, `schema_base.py` | Human tables are never dropped, never migrated, never shrink; triggers in the file; backups before a rebuild; a lossy rebuild and a newer file are refused | `test_db.py` |
 | `human.py` | The gate: a retype at `/dev/tty`, or a relayed one-time code bound to exactly what was shown; relay audit; no bypass flag | `test_human.py` |
 | `market.py` | A market is always named, never assumed; the declaration is the one door | `test_market.py` |
@@ -57,10 +58,25 @@ Each module's docstring says what it guards and names its test; this is the map.
 | `stories.py` | Each story's check runs read verbs only and reports pass, fail or skip with a coded reason | `test_stories.py` |
 | `verbs.py`, `cli.py` | Every verb is declared with its kind; an unlisted verb is refused; the dispatcher's env chain, data-dir guard, `--` rule and exit code | `test_cli.py` |
 | `doctor.py` | An install says where every value came from and what to fix; `writes: off` is healthy; `--strict` makes a warning fatal | `test_doctor.py` |
-| `guards/` | The structural rules a harness's own tests call: the ssot index, the release archive, layering, the `--json` contract, adapter boundaries, vendored-copy drift | `test_guards.py` |
+| `guards/` | The structural rules a harness's own tests call: the ssot index, the release archive, layering, the `--json` contract (every verb of every kind has a case: `check_verbs`), adapter boundaries, vendored-copy drift, one clock | `test_guards.py`, `test_verb_cases.py`, `test_clock.py` |
 | `testing/` | The test convention: `check()`/`finish()`, the RESULT-gated runner, the sandbox env | `test_check.py`, `test_run_tests.py` |
-| `testing/suites.py` | The nine day-one tests every new harness is generated with, as library calls (runner, ssot, layering, boundary, `--json` contract, human tables, gate, release, drift) | `test_suites.py` |
+| `testing/suites.py` | The ten day-one tests every new harness is generated with, as library calls (runner, ssot, layering, boundary, `--json` contract, human tables, gate, release, drift, clock) | `test_suites.py` |
 | `tools/` | `manifest.py` (the fingerprint), `vendor.py` (the plain copy) | `test_manifest.py`, `test_vendor.py` |
+
+## What each guard paid for
+
+Real incidents from the source project, kept with the module that now prevents them. The rows above say what a module guards; these say why it does.
+
+| Module | Paid for |
+| --- | --- |
+| `db.py` | Client facts were wiped once. A rolling window moved between a schema change and the ingest, so raw held as many days as the table, but later ones: a count check passed and the rebuild dropped the oldest days (so the check compares the set of days). |
+| `human.py` | Two rounds. The first guard only checked that stdin was a terminal, so an agent wrapped the call in a pseudo-terminal, confirmed live values and signed them as the owner. Then a relayed code approved a different pair of items than the one shown, confirmed another entity's value, and worked twice inside its window. |
+| `messages.py` | Codes were added to a live harness in one change without removing a key: about 70 at once. |
+| `guards/` (`check_verbs`) | The gate and write verbs sat outside the contract test, so about 40 of their refusals reached the owner's page as "unclassified". |
+| `runner.py` | Three write verbs reported "no output" because they read stderr, while the reason was on stdout. |
+| `pull.py` | Each pull replaced raw and the platform keeps only a few months; a late resumed report put older numbers back; an unreadable raw file was overwritten by one pull's rows; a long pull killed halfway started over and the quota ran out again; a run that cleared the last run's gaps lost the list a gaps-only pull needed. |
+| `retry.py` | Days were lost as rate-limit gaps: the exponential guess retried before the quota refilled and the tries ran out; a throttled day became a day with no data instead of a recorded gap. |
+| `atomic.py`, `single_instance.py` | A crash mid-write left a truncated raw file that the next ingest read as data; an hourly run outlasted the hour and two drains raced. |
 
 The whole gate protocol, the kit and the console together, is proved end to end by `test_e2e_shop.py`: the fake harness's own CLI, the real `console/ask.py` and `console/serve.py`, a relayed code that works once, a queue approval and a refused `--apply`.
 

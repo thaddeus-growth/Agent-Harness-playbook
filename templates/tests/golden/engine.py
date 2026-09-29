@@ -489,7 +489,7 @@ def checkout(spec: str, dest: Path, repo: Path | None,
             raise SystemExit(f"{spec}: no {C.ENTRY}")
         return tree
     rev = git(repo, "rev-parse", "--verify", "--quiet",
-              f"{spec}^{{commit}}") if repo else None
+              spec + "^" + "{commit}") if repo else None      # git's peel syntax
     if not rev or rev.returncode:
         raise SystemExit(f"{spec}: neither a directory nor a git rev")
     worktrees.append(dest)

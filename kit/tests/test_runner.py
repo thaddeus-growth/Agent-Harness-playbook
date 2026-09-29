@@ -7,7 +7,8 @@
     ChildFailed carrying its error, next and code (and fail() reports the
     child's code); a crash -> its stderr's last line, unclassified; no
     document -> ChildFailed; any_exit keeps a finding document; a hung
-    child times out.
+    child times out; a failed child's reason, fix commands and code come
+    from its stdout document even with noise on stderr.
 """
 
 import os
@@ -81,6 +82,28 @@ def main() -> int:
           rc == 2 and one_doc(out) == {"error": "No price on file for A",
                                        "next": ["shop prices set A"],
                                        **e.code}, out)
+    noisy = child(d, "noisy.py", (
+        "print('Installed 3 packages in 4ms', file=sys.stderr)\n"
+        "print(json.dumps({'error': 'approve needs a person', 'next': "
+        "['shop queue approve 1'], 'code': 'confirm_needs_human', 'params': "
+        "{'what': 'approve'}}))\n"
+        "print('uv: done', file=sys.stderr)\nsys.exit(1)\n"))
+    e = raises(lambda: runner.run_json(noisy, []), runner.ChildFailed)
+    check("a failed child is read from its document on stdout, whatever "
+          "stderr holds (its reason, next and code, not stderr's last line)",
+          e is not None and str(e) == "approve needs a person"
+          and e.next == ["shop queue approve 1"]
+          and e.code == {"code": "confirm_needs_human",
+                         "params": {"what": "approve"}}, e)
+    quiet_fail = child(d, "quiet_fail.py", (
+        "print(json.dumps({'error': 'no store', 'next': []}))\n"
+        "sys.exit(1)\n"))
+    e = raises(lambda: runner.run_json(quiet_fail, [], any_exit=True),
+               runner.ChildFailed)
+    check("a failure document with no code: its error, code None "
+          "(relayed: unclassified_error)",
+          e is not None and str(e) == "no store" and e.code is None
+          and failure(e)["code"] == "unclassified_error", e)
     crash = child(d, "crash.py", "raise RuntimeError('kaboom')\n")
     e = raises(lambda: runner.run_json(crash, []), runner.ChildFailed)
     check("a crash: stderr's last line, no next, unclassified",
