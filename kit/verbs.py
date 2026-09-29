@@ -38,7 +38,8 @@ What this module guards:
     `../tests/run.py` form) and one of the six kinds; anything else fails
     when the table loads, not when the verb runs;
   * no verb is listed twice, and no verb takes a built-in word (`doctor`,
-    `verbs`, `help`: the dispatcher answers those itself);
+    `verbs`, `help`: the dispatcher answers those itself); a verb's
+    example routes to that verb (not to a longer one listed beside it);
   * routing is the longest listed prefix (`match()`); what the script is
     given is fixed by its name alone (`script_args()`): the words after
     the first are the script's sub-verb (`facts confirm X` -> facts.py
@@ -51,6 +52,21 @@ Addition to the SPEC (§verbs): an optional last field `answers`, the one
 line `<cli> --help` and `<cli> verbs --json` show for the verb (default:
 the first line of the script's docstring). Every SPEC call form
 (`Verb(words, script, kind, takes_market, needs_data_dir)`) is unchanged.
+
+Teaching the agent from --help (kit 0.6.1), two more optional fields:
+
+  examples  full command lines without the cli name, each starting with
+            the verb's own words ("pull meta --market HK --days 28
+            --json"): two or three (minimal, typical, one with a cost or
+            gate flag). `<cli> <verb> --help` ends with them, each
+            prefixed by the cli name, and `verbs --json` lists them.
+  keys      the top-level keys of the verb's `--json` success document
+            ("rows", "meta"): `<cli> <verb> --help` ends with a
+            `JSON keys: a, b` line, and `verbs --json` lists them.
+
+Both default to (); a list is kept as a tuple. doctor reports a non-dev
+verb without examples at level info (never a warning: `doctor --strict`
+stays green on a harness that has not written them yet).
 
 Test: kit/tests/test_cli.py.
 """
@@ -92,12 +108,18 @@ class Verb:
     takes_market: bool = True
     needs_data_dir: bool = True
     answers: str = ""
+    examples: tuple[str, ...] = ()
+    keys: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         words = self.words
         if isinstance(words, str):
             words = tuple(words.split())
         object.__setattr__(self, "words", tuple(words))
+        for name in ("examples", "keys"):
+            val = getattr(self, name)
+            if isinstance(val, list):
+                object.__setattr__(self, name, tuple(val))
         problem = verb_problem(self)
         if problem:
             raise VerbTableError(problem)
@@ -136,6 +158,21 @@ def verb_problem(v: Any) -> str | None:
             return f"verb {label!r}: {flag} must be True or False"
     if not isinstance(getattr(v, "answers", ""), str):
         return f"verb {label!r}: answers must be a string"
+    exs = getattr(v, "examples", ())
+    if not isinstance(exs, (tuple, list)) or not all(
+            isinstance(e, str) and e.strip() for e in exs):
+        return (f"verb {label!r}: examples must be a tuple of command lines "
+                f"(strings)")
+    for e in exs:
+        if tuple(e.split()[:len(words)]) != words:
+            return (f"verb {label!r}: example {e!r} must start with the "
+                    f"verb's own words ({label}), without the cli name")
+    keys = getattr(v, "keys", ())
+    if not isinstance(keys, (tuple, list)) or not all(
+            isinstance(k, str) and k and not any(c.isspace() for c in k)
+            for k in keys):
+        return (f"verb {label!r}: keys must be a tuple of top-level --json "
+                f"key names (strings, no spaces)")
     return None
 
 
@@ -153,6 +190,13 @@ def check(verbs: Iterable[Any]) -> list[Any]:
         seen.add(w)
     if not table:
         raise VerbTableError("the verb table is empty")
+    for v in table:
+        for e in getattr(v, "examples", ()) or ():
+            hit = match(e.split(), table)
+            if hit is not v:
+                raise VerbTableError(
+                    f"verb {' '.join(v.words)!r}: example {e!r} routes to "
+                    f"{' '.join(hit.words)!r}, not to this verb")
     return table
 
 
@@ -266,4 +310,26 @@ def as_dict(v: Any, cli: str, scripts_dir: Path | str | None = None) -> dict:
             "kind": v.kind, "script": v.script,
             "takes_market": bool(getattr(v, "takes_market", True)),
             "needs_data_dir": bool(getattr(v, "needs_data_dir", True)),
-            "answers": answers(v, scripts_dir)}
+            "answers": answers(v, scripts_dir),
+            "examples": [f"{cli} {e}" for e in examples(v)],
+            "keys": list(getattr(v, "keys", ()) or ())}
+
+
+def examples(v: Any) -> list[str]:
+    """The verb's example command lines (without the cli name), each with
+    its whitespace collapsed; [] when it declares none."""
+    return [" ".join(e.split()) for e in getattr(v, "examples", ()) or ()]
+
+
+def help_tail(v: Any, cli: str) -> str:
+    """What `<cli> <verb> --help` prints after the script's own help: an
+    `Examples:` block (each line prefixed by the cli name) and a
+    `JSON keys: a, b` line; '' when the verb declares neither."""
+    out: list[str] = []
+    ex = examples(v)
+    if ex:
+        out += ["", "Examples:", *(f"  {cli} {e}" for e in ex)]
+    keys = list(getattr(v, "keys", ()) or ())
+    if keys:
+        out += ["", f"JSON keys: {', '.join(keys)}"]
+    return "\n".join(out) + "\n" if out else ""

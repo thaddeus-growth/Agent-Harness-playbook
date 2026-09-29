@@ -17,7 +17,9 @@ applied, say), as ask.py never calls the human's (tests/test_boundary.py).
 There is no login. With --user, anyone who can reach the port is that person, so
 a --host that is not loopback (127.0.0.1, ::1, localhost) is refused unless
 --user-header says who is asking (a proxy sets it): a console that writes and
-knows nobody is never bound to the network.
+knows nobody is never bound to the network. Without either, the person is the OS
+account the process runs as (its passwd entry, `uid:<euid>` without one), never
+$USER or $LOGNAME, which whatever launched the process can set to anything.
 
 A request is turned away, before anything is read or written, unless:
   host_ok       its Host is a loopback name (our own port or none) or an --allow-host
@@ -71,6 +73,7 @@ import http.server
 import json
 import logging
 import os
+import pwd
 import re
 import shlex
 import socket
@@ -514,6 +517,17 @@ class Server(http.server.ThreadingHTTPServer):
 
 # ------------------------------------------------------------------- main --
 
+def os_user() -> str:
+    """The OS account the process runs as: its passwd entry, `uid:<euid>`
+    without one. Never $USER or $LOGNAME, which whatever launched the
+    process can set to anything (the kit's changed_by reads it the same
+    way; the console does not import the kit)."""
+    try:
+        return pwd.getpwuid(os.geteuid()).pw_name
+    except (KeyError, OSError):
+        return f"uid:{os.geteuid()}"
+
+
 def die(message: str):
     print(f"serve.py: {message}", file=sys.stderr)
     sys.exit(2)
@@ -525,7 +539,8 @@ def _parser() -> argparse.ArgumentParser:
     add("--dir", help="the folder of the log (default $CONSOLE_DIR; never guessed)")
     add("--host", default="127.0.0.1", help="the address to listen on; anything but 127.0.0.1, ::1 or localhost needs --user-header")
     add("--port", type=int, default=8770)
-    add("--user", help="who answers (default $USER); there is no login: anyone who can reach the port is this person")
+    add("--user", help="who answers (default: the OS account this runs as, never $USER/$LOGNAME); there is no login: "
+        "anyone who can reach the port is this person")
     add("--user-header", help="take the user from this header, from a loopback peer only (a proxy sets it)")
     add("--allow-host", action="append", default=[], metavar="HOST[:PORT]", help="another Host to answer to")
     add("--title", default="Console")
@@ -551,7 +566,7 @@ def main(argv=None) -> int:
         die(f"--host {a.host!r} is not loopback (127.0.0.1, ::1, localhost), so it needs --user-header: "
             "a console with no login is never bound to the network")
     if not a.user_header:
-        user = a.user or os.environ.get("USER", "")
+        user = a.user if a.user is not None else os_user()
         if not core.TOKEN_RE.fullmatch(user):
             die("--user must be a plain name (letters, digits, _ . : @ / -)")
     allow = [split_host(h) for h in a.allow_host]
