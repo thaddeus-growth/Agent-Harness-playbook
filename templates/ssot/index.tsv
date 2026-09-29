@@ -7,7 +7,7 @@ ssot/glossary.agent.tsv	agent	—	tests/test_ssot.py	term	Where each term lives 
 ssot/constants.tsv	registry	src/lib/constants.py	tests/test_constants.py	parameter	Threshold defaults: the only place a number lives.
 ssot/policies.tsv	owner	—	tests/test_ssot.py	id	Business rules: when X, do Y; thresholds named, never numbered; the stories each rule serves.
 ssot/policies.agent.tsv	agent	—	tests/test_ssot.py	id	Same ids: the implementing function, notes, proposed rewording.
-ssot/message_codes.tsv	registry	src/lib/messages.py	tests/test_contract.py	code	Every message a --json document can carry: wording per language and its params, checked both ways.
+ssot/message_codes.tsv	registry	core/messages.py	tests/test_contract.py	code	Every message a --json document can carry: wording per language and its params, checked both ways. Core's own codes are in core/message_codes.tsv.
 ssot/fact_keys.tsv	registry	src/lib/facts.py	tests/test_facts.py	key	Every business fact a human can set: unit, bounds, required or not.
 ssot/decision_keys.tsv	registry	src/lib/decisions.py	tests/test_decisions.py	key	Every per-entity decision: its value domain and whether a human must confirm it.
 ssot/alert_rules.tsv	registry	src/compute_alerts.py	tests/test_alerts.py	name	Alert rules as rows: grain, metric, comparison, threshold, cooldown.
