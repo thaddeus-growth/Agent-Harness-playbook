@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _t  # noqa: E402
 from _host import Host, example, skill_md  # noqa: E402
 
-OPTIONAL = {"defaults", "console.deciders_key", "console.allow_host_key"}
+OPTIONAL = {"defaults", "console.allow_host_key"}
 
 
 def key_paths(obj, base=""):
@@ -97,7 +97,7 @@ def test_bad_values_are_named():
         bad(lambda x: x["scope"].update(list=[]), "scope.list", "must not be empty")
         bad(lambda x: x["console"].update(port=80), "console.port", "1024 to 65535")
         bad(lambda x: x["console"].update(args=["--port", "9"]), "console.args[0]", "set by zylos/bin/console.js")
-        bad(lambda x: x["console"].update(args=["--deciders", "a"]), "console.args", "deciders_key")
+        bad(lambda x: x["console"].update(deciders_key="SHOP_CONSOLE_DECIDERS"), "console.deciders_key", "unknown key")   # retired
         bad(lambda x: x["detach"].update(alias="uv"), "detach.alias", "not uv")
         bad(lambda x: x["detach"].update(exit_marker="done"), "detach.exit_marker", "upper-case")
         bad(lambda x: x["tasks"][1].update(cron="daily"), "tasks[1].cron", "five-field")

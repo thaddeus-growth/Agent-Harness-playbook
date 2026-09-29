@@ -207,7 +207,7 @@ flowchart LR
 - Every answer records whether the owner took the suggestion: the override log proposed under "The hardest open problem", for free.
 - A click can pass through a harness's own gate, so the proof stays where the rules live. It never widens what may be written: an ask that would widen an allowlist, a cap or a write switch is answered in chat (rule 8), not clicked. The agent's side is [`console/AGENT.md`](console/AGENT.md).
 - No login of its own: by default whoever can reach the port answers as one named user, so it binds to loopback and refuses the network unless a login proxy names the user. macOS or Linux only.
-- Team review: behind the proxy, `--deciders` names who answers. The others who were in the meeting see every answer and say whether they agree, with a reason to disagree; a disagreement reaches the owner as a Reopen offer or a new ask, never as a changed answer. `ask.py digest` is the decision record to forward.
+- `ask.py digest` is the decision record to forward.
 
 ---
 
@@ -530,7 +530,6 @@ Proven here: the core's rules and the process; the paid-ads rules on one marketp
 | [`templates/verify-challenge.md`](templates/verify-challenge.md) | 10 | Reader and skeptic prompts for an outside report |
 | [`templates/intake.schema.json`](templates/intake.schema.json) | 0 | The shape of one meeting's intake; `build/check_intake.py` reads it |
 | [`templates/prior-art-scan.md`](templates/prior-art-scan.md) | 0, 4, 8 | When and how to scan what already exists, each claim with its link and date |
-| [`templates/team-review.md`](templates/team-review.md) | 0, 10 | Deciders and advisers, the digest, and how a dissent becomes a new ask |
 | [`templates/harness.toml`](templates/harness.toml) | 3 | The harness declares itself once: names, languages, scopes, layers, what a release ships |
 | [`templates/gitlab-ci.yml`](templates/gitlab-ci.yml) | 3, 9 | Secret scan, story id in the title, the RESULT-gated test job |
 | [`templates/gitignore`](templates/gitignore) | 3 | Secrets, the console's log and client data never enter the repository |

@@ -143,7 +143,7 @@ def skill_md(m: dict) -> str:
     c = m["console"]
     required = sorted({k for t in m["tasks"] for k in t["requires"]})
     optional = [m["reply"]["channel"], m["reply"]["endpoint"], c["port_key"], c["title_key"]]
-    optional += [c[k] for k in ("deciders_key", "allow_host_key") if k in c]
+    optional += [c[k] for k in ("allow_host_key",) if k in c]
     defaults = {k: v for k, v in m.get("defaults", {}).items() if k != "_comment"}
     optional += [k for k in defaults if k not in optional and k not in required]
 

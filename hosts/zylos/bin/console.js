@@ -12,7 +12,6 @@
 //   --title T                     console.title_key's value, else the manifest name
 //   --allow-host D …              console.allow_host_key's value (the public
 //                                 domain Caddy passes through as Host)
-//   --deciders N,…                console.deciders_key's value, when set
 //   --relay-cmd <cli>             this node on bin/cli.js, when console.args
 //                                 carries --relay-verbs (serve.py wants both)
 //   <console.args…>               the rest, as the manifest gives them

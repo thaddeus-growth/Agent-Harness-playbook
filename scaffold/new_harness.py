@@ -12,7 +12,7 @@ What it writes (BUILD.md, B1):
     filled ({{name}}, {{cli}}, {{env_prefix}}, {{owner}}, {{repo_home}}):
     harness.toml, CLAUDE.md, SKILL.md, README.md, references/workflows.md,
     .gitignore, .gitlab-ci.yml, .gitlab/CODEOWNERS, docs/ (decision rights,
-    team review, the install and triage checklists, the data bug classes,
+    the install and triage checklists, the data bug classes,
     the doctor's checks), ssot/README.md.
     `<<fill: …>>` stays only in the files the build fills later (FILLED);
   * ssot/: every registry and owner file as its header row, plus the
@@ -67,7 +67,6 @@ RENDERED = {
     "gitlab-ci.yml": ".gitlab-ci.yml",
     "CODEOWNERS": ".gitlab/CODEOWNERS",
     "decision-rights.md": "docs/decision-rights.md",
-    "team-review.md": "docs/team-review.md",
     "install-checklist.md": "docs/install-checklist.md",
     "triage-checklist.md": "docs/triage-checklist.md",
     "bug-classes.md": "docs/bug-classes.md",

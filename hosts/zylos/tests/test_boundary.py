@@ -83,7 +83,7 @@ def test_no_example_manifest_value_is_hard_coded():
     values = [m["name"], m["cli"]["bin"], m["env"]["data_dir"], m["runtime"]["uv_installer_sha256"],
               m["runtime"]["uv_version"], str(m["console"]["port"]), m["detach"]["exit_marker"],
               m["reply"]["channel"], m["console"]["port_key"], m["console"]["title_key"],
-              m["console"]["deciders_key"], m["console"]["allow_host_key"], *m["endpoints"],
+              m["console"]["allow_host_key"], *m["endpoints"],
               *(t["name"] for t in m["tasks"]), *(k for t in m["tasks"] for k in t["requires"])]
     for rel in GENERIC:
         text = read(rel)
@@ -154,7 +154,7 @@ def test_the_readme_documents_the_contract():
                 leaves(v[0], out)
         return out
 
-    keys = leaves(example(), set()) | {"defaults", "deciders_key", "allow_host_key", "value", "when"}
+    keys = leaves(example(), set()) | {"defaults", "allow_host_key", "value", "when"}
     missing = sorted(k for k in keys if f"`{k}`" not in text)
     assert not missing, f"README.md does not document manifest keys {missing}"
     for p in ("{cli}", "{node}", "{detach}", "{data_dir}", "{skill_dir}", "{logs}", "{exit}", "{log:NAME}"):

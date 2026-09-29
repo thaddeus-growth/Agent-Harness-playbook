@@ -1,7 +1,7 @@
 """digest.py: the decision record a team lead forwards. One console holds an
 ask in every state; the record must show each, through ask.py only. Consoles
-that do not exist here (an older one without `digest`, one with the team's
-advice) are played by fake_ask.py around the real ask.py. Each test names the
+that do not exist here (an older one without `digest`, one from before team
+review was removed) are played by fake_ask.py around the real ask.py. Each test names the
 rule it guards and would fail if that rule were removed."""
 
 from __future__ import annotations
@@ -102,18 +102,12 @@ def test_json_is_the_same_record_as_data():
         assert a["intake-s2"]["answer"] is None and a["intake-s2"]["status"] == "open"
 
 
-def test_advice_is_shown_when_the_console_gives_it_and_nothing_is_said_when_it_does_not():
+def test_a_console_that_still_gives_advice_is_read_and_the_advice_is_left_out():
     with console() as (con, posted):
-        code, md = digest(con, "--asks", posted, "--ask", FAKE, env={"FAKE_ASK_MODE": "old"})
-        assert code == 0 and "Advice" not in md, md
-        code, md = digest(con, "--asks", posted, "--ask", FAKE, env={"FAKE_ASK_MODE": "advice"})
-        first = section(md, 'Call it "sampler"')           # the fake gives the first answer two views
-        assert "- **Advice from the team:**" in first, md
-        assert "  - ana disagrees about the answer, 2026-03-03 10:00 UTC: too slow for the rainy season" in first
-        assert "  - li agrees about the question, 2026-03-03 10:05 UTC" in first
-        assert "Advice" not in section(md, "What is the time")
-        code, md = digest(con, "--asks", posted, "--ask", FAKE, env={"FAKE_ASK_MODE": "counts"})
-        assert "- **Advice from the team:** 2 agree, 1 disagree" in section(md, "Build this"), md
+        code, md = digest(con, "--asks", posted, "--ask", FAKE, env={"FAKE_ASK_MODE": "legacy"})
+        assert code == 0 and "Advice" not in md and "rainy season" not in md and "disagree" not in md, md
+        code, out = _t.tool("digest.py", "--console-dir", con, "--ask", FAKE, "--format", "json", env={"FAKE_ASK_MODE": "legacy"})
+        assert code == 0 and all("advice" not in x for x in out["asks"])
 
 
 def test_text_from_the_log_cannot_break_the_page():

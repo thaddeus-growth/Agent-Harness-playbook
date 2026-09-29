@@ -9,7 +9,7 @@ table, the skill and ssot/stages.agent.tsv list the same steps; the ssot files
 carry the columns the kit reads and the trail every owner row needs; the
 placeholders are the ones explained; harness.toml parses; CODEOWNERS names real
 paths; the CI template's title rule and secret scan match what they should; the
-dissent ask in team-review.md is one the console accepts. Each check is tried on
+digest guidance in decision-rights.md names real console verbs. Each check is tried on
 a broken input first, so it cannot pass by looking at nothing.
 """
 
@@ -414,15 +414,12 @@ def test_the_skill_template_has_its_frontmatter_and_three_scopes():
     assert "console" in section(skill, "Where questions go")
 
 
-def test_decision_rights_keeps_the_lanes_and_names_deciders_and_dissent():
+def test_decision_rights_keeps_the_lanes_and_the_digest():
     text = doc("templates/decision-rights.md")
     for heading in ("1. Always the owner", "2. AI proposes, owner confirms", "3. AI alone",
-                    "The risky list (owner merges)", "Channels that count", "Deciders and advisers", "Dissent"):
+                    "The risky list (owner merges)", "Channels that count", "The digest"):
         assert section(text, heading), heading
-    kinds = re.findall(r"^\| ([A-Z][^|]*?)(?::[^|]*)? \|", section(text, "Deciders and advisers"), re.M)
-    assert {"Meaning", "Numbers", "Money", "Contract", "Risky merges", "Release"} <= set(kinds), kinds
-    for rel in ("templates/decision-rights.md", "templates/team-review.md"):
-        assert "Advice never answers" in doc(rel) or "Advice is evidence, not an answer" in doc(rel), rel
+    assert "Deciders and advisers" not in text and "Dissent" not in text
 
 
 CALL = re.compile(r"ask\.py (?:--\S+ \S+ )*([a-z]+)\b")
@@ -465,20 +462,18 @@ def test_the_console_verbs_and_flags_the_build_docs_use_are_real():
     assert CALL.findall("run ask.py fly, then ask.py --as x add -") == ["fly", "add"]
     assert "fly" not in verbs and "--fly" not in flags                          # the check would notice
     called = set()
-    for rel in (BUILD, SKILL, "templates/team-review.md", "templates/decision-rights.md"):
+    for rel in (BUILD, SKILL, "templates/decision-rights.md"):
         found = set(CALL.findall(doc(rel)))
         called |= found
         assert found <= verbs, (rel, sorted(found - verbs))
     assert {"add", "answers", "applied", "digest"} <= called, called
-    shown = set(FLAG.findall(TOOL.sub("", doc("templates/team-review.md"))))   # a build tool's flags are its own
-    assert shown and shown <= flags, sorted(shown - flags)
     assert set(FLAG.findall(doc("templates/decision-rights.md"))) - {"--json"} <= flags   # --json is the harness's
-    assert "--deciders" in flags and "--deciders" in doc("templates/team-review.md")
+    assert "--deciders" not in flags and "--user-header" in flags
 
 
 def test_every_build_tool_command_the_docs_print_uses_real_flags():
     assert TOOL.findall("run `python3 build/x.py --a B --c` now") == [("build/x.py", " --a B --c")]
-    runs = [(rel, m) for rel in (BUILD, SKILL, "templates/team-review.md") for m in TOOL.findall(doc(rel))]
+    runs = [(rel, m) for rel in (BUILD, SKILL, "templates/decision-rights.md") for m in TOOL.findall(doc(rel))]
     assert len(runs) >= 5, runs
     known = {}
     for rel, (script, rest) in runs:
@@ -489,19 +484,6 @@ def test_every_build_tool_command_the_docs_print_uses_real_flags():
         shown = set(FLAG.findall(rest))
         assert shown <= known[script], (rel, script, sorted(shown - known[script]))
     assert "--pick" in known.get("build/intake_to_asks.py", {"--pick"})
-
-
-def test_the_dissent_ask_in_team_review_is_one_the_console_accepts():
-    sys.path.insert(0, os.path.join(REPO, "console"))
-    import core
-    block = re.search(r"```json\n(.*?)\n```", doc("templates/team-review.md"), re.S).group(1)
-    ask = json.loads(block)
-    broken = {k: v for k, v in ask.items() if k != "if_no"}
-    assert [e["field"] for e in core.validate_ask(broken)[1]] == ["if_no"]      # the console would notice
-    assert core.validate_ask(ask)[1] == []
-    assert ask["step"] == "confirm" and len(ask["evidence"]) >= 2               # both views, and "no" keeps the first
-    first = ask["evidence"][0]["source"].split()[-1].split("@")[0]
-    assert first != ask["id"] and ask["id"].startswith(first), (first, ask["id"])  # a new id, never the answered one
 
 
 if __name__ == "__main__":

@@ -156,7 +156,7 @@ function validate(m) {
 
   const C = m.console;
   shape(C, 'console', ['entry', 'port', 'port_key', 'title_key', 'base_path', 'user_header', 'users_file', 'args'],
-        ['deciders_key', 'allow_host_key']);
+        ['allow_host_key']);
   str(C.entry, 'console.entry', relPath, 'a path inside the skill dir, e.g. console/serve.py');
   int(C.port, 'console.port', 1024, 65535);
   envName(C.port_key, 'console.port_key');
@@ -169,11 +169,7 @@ function validate(m) {
     const owned = CONSOLE_OWNED.find((f) => v === f || v.startsWith(`${f}=`));
     if (owned) fail(key, `${owned} is set by zylos/bin/console.js, not console.args`);
   });
-  if ('deciders_key' in C) envName(C.deciders_key, 'console.deciders_key');
   if ('allow_host_key' in C) envName(C.allow_host_key, 'console.allow_host_key');
-  if (C.deciders_key && C.args.some((a) => a === '--deciders' || a.startsWith('--deciders='))) {
-    fail('console.args', '--deciders comes from console.deciders_key; do not set both');
-  }
 
   shape(m.detach, 'detach', ['exit_marker', 'alias']);
   str(m.detach.exit_marker, 'detach.exit_marker', re(RE.marker), 'an upper-case marker such as ACME-EXIT');
@@ -751,8 +747,6 @@ function consoleCommand() {
   const argv = ['--dir', CONSOLE_DIR, '--host', '127.0.0.1', '--port', String(port),
                 '--user-header', C.user_header, '--title', envValue(C.title_key) || NAME];
   for (const h of hosts) argv.push('--allow-host', h);
-  const deciders = C.deciders_key ? envValue(C.deciders_key) : '';
-  if (deciders) argv.push('--deciders', deciders);
   // serve.py takes --relay-cmd and --relay-verbs together or neither.
   if (C.args.some((a) => a === '--relay-verbs' || a.startsWith('--relay-verbs='))) {
     argv.push('--relay-cmd', relayCommand());
@@ -908,7 +902,7 @@ function skillProblems(text) {
   const names = new Set(items.map((i) => i.name));
   const C = M.console;
   const adapterKeys = [M.reply.channel, M.reply.endpoint, C.port_key, C.title_key,
-                       C.deciders_key, C.allow_host_key, ...M.tasks.flatMap((t) => t.requires),
+                       C.allow_host_key, ...M.tasks.flatMap((t) => t.requires),
                        ...Object.keys(M.defaults || {}).filter((k) => k !== '_comment')].filter(Boolean);
   for (const k of new Set(adapterKeys)) want(names.has(k), `SKILL.md config must declare ${k} (read by zylos/)`);
   for (const i of items) {

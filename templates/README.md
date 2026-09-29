@@ -10,8 +10,7 @@ The files a new harness starts from. The build workflow, [BUILD.md](../BUILD.md)
 | [intake.schema.json](intake.schema.json) | B0 | (used, not copied) | The shape of one `intake.json`: every item's `iid`, `audience` and `source`; `build/check_intake.py` reads it |
 | [prior-art-scan.md](prior-art-scan.md) | B0.5 | `docs/prior-art/` | When and how to scan what already exists |
 | [owner-queue-item.md](owner-queue-item.md) | B0.6, B10 | (used, not copied) | The shape of one owner ask, and its console fields |
-| [team-review.md](team-review.md) | B0.6 | `docs/team-review.md` | Deciders, advisers, the digest, and how a dissent becomes a new ask |
-| [decision-rights.md](decision-rights.md) | B0.6, B2 | `docs/decision-rights.md` | The three lanes, the risky list, deciders and advisers, dissent |
+| [decision-rights.md](decision-rights.md) | B0.6, B2 | `docs/decision-rights.md` | The three lanes, the risky list, the channels that count, the digest |
 | [harness.toml](harness.toml) | B1 | `harness.toml` | The harness's names, languages, scopes, layers and release lists |
 | [AGENT_INSTRUCTIONS.md](AGENT_INSTRUCTIONS.md) | B1 | `CLAUDE.md` | Invariants only, each naming its test |
 | [CODEOWNERS](CODEOWNERS) | B1 | `.gitlab/CODEOWNERS` | Protected paths for the risky list |

@@ -2,9 +2,9 @@
 then changes its reply, so digest.py can be tested against consoles that do
 not exist yet or no longer do. Chosen by FAKE_ASK_MODE:
 
-    old      no `digest` verb (refused as bad_request) and no `advice` anywhere
-    advice   `answers` lists two views of the team on the first answer
-    counts   `list` gives only counts of views (agree 2, disagree 1), nothing else does
+    old      no `digest` verb (refused as bad_request)
+    legacy   a console from before team review was removed: `answers` lists two
+             views of the team, `list` counts them (digest.py must ignore both)
     garbage  prints something that is not JSON
 
 FAKE_ASK_LOG, when set, gets one line per call: the arguments, as JSON.
@@ -33,17 +33,7 @@ p = subprocess.run([sys.executable, REAL, *args], capture_output=True, text=True
 doc = json.loads(p.stdout)
 
 
-def strip(x):
-    if isinstance(x, dict):
-        return {k: strip(v) for k, v in x.items() if k != "advice"}
-    if isinstance(x, list):
-        return [strip(v) for v in x]
-    return x
-
-
-if mode == "old":
-    doc = strip(doc)
-elif mode == "advice":
+if mode == "legacy":
     if verb == "answers":
         first = doc["answers"][0]["id"] if doc.get("answers") else "none"
         doc["advice"] = [
@@ -53,13 +43,6 @@ elif mode == "advice":
             {"seq": 91, "at": "2026-03-03T10:05:00Z", "by": "web:li", "id": first, "title": "",
              "on": "ask", "on_seq": 1, "value": "yes", "stance": "agree", "reason": "",
              "current": True, "verified": True}]
-    if verb == "list":
-        for r in doc.get("asks", []):
-            r["advice"] = {"agree": 0, "disagree": 0}
-    if verb == "digest":
-        doc = strip(doc)
-elif mode == "counts":
-    doc = strip(doc)
     if verb == "list":
         for r in doc.get("asks", []):
             r["advice"] = {"agree": 2, "disagree": 1}

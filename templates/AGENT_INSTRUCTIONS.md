@@ -56,4 +56,4 @@ Nothing a later session needs lives only in a session: tools go in the repo, the
 ## Output paths
 
 - `{{env_prefix}}_DATA_DIR` — root of all client data; required; never guessed from the working directory. Data never belongs inside the code checkout.
-- `CONSOLE_DIR` — the owner console's log folder; one per person who decides.
+- `CONSOLE_DIR` — the owner console's log folder.

@@ -211,7 +211,7 @@ textarea { display: block; min-height: 5.5rem; margin-top: .4rem; resize: vertic
 .secondary { background: transparent; color: var(--ink); border-color: var(--line); }
 .secondary:hover { background: var(--sunk); }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
-.answer .btn, .reopen .btn, .all .btn, .noteform .btn, .adviceform .btn { justify-self: start; }
+.answer .btn, .reopen .btn, .all .btn, .noteform .btn { justify-self: start; }
 .btn .no { display: none; }
 .answer:has(input[value="no"]:checked) .btn .yes { display: none; }
 .answer:has(input[value="no"]:checked) .btn .no { display: inline; }
@@ -248,16 +248,6 @@ textarea { display: block; min-height: 5.5rem; margin-top: .4rem; resize: vertic
 .problems li + li { margin-top: .25rem; }
 .done .inner { padding-top: .5rem; }
 
-/* team review: the team's views on an ask, an adviser's form, a disagreement to look at */
-.advice { display: grid; grid-template-columns: minmax(0, 1fr); gap: .5rem; }
-.advice ul { display: grid; gap: .5rem; }
-.advice .msg > .chip { margin-bottom: .35rem; }
-.adviceform { display: grid; grid-template-columns: minmax(0, 1fr); gap: .75rem; padding-top: 1rem; border-top: 1px solid var(--line); }
-.adviceform > label { font-weight: 600; }
-.adviceform textarea { margin: 0; }
-.dissent { padding: .75rem 1rem; border: 1px solid var(--bad-line); border-left: 4px solid var(--bad); border-radius: 10px; background: var(--bad-bg); }
-.head + .dissent { margin: -.5rem 0 1.25rem; }
-
 /* after a POST, and errors */
 .res { position: relative; margin-bottom: .6rem; padding-left: 2.75rem; color: var(--ink); }
 .res::before { position: absolute; left: 1rem; font-weight: 700; }
@@ -288,7 +278,7 @@ textarea { display: block; min-height: 5.5rem; margin-top: .4rem; resize: vertic
   .age { margin-left: 0; }
   .rec { grid-template-columns: minmax(0, 1fr); gap: .1rem; }
   .rec dd { margin-bottom: .55rem; }
-  .answer .btn, .all .btn, .reopen .btn, .noteform .btn, .adviceform .btn { justify-self: stretch; }
+  .answer .btn, .all .btn, .reopen .btn, .noteform .btn { justify-self: stretch; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }

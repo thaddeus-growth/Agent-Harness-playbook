@@ -492,32 +492,16 @@ def test_an_answer_the_gate_wrote_cannot_be_reopened_as_the_docs_say():
     assert "the owner cannot reopen it" in doc(AGENT)
 
 
-def test_team_review_is_told_as_the_code_does_it():
-    with _t.tmpdir() as d:
-        assert "--deciders" in dies(["--dir", d, "--user", "carol", "--deciders", "alice,bob"])   # one user: it must be named
-        assert "--deciders" in dies(["--dir", d, "--user-header", "X-User", "--deciders", "-x"])
+def test_the_decision_record_is_told_as_the_code_does_it():
     readme, agent = doc(CONSOLE).replace("**", ""), doc(AGENT)
-    for said in ("`--deciders alice,bob` names who answers, reopens and writes notes", "with `--user` it must name that user",
-                 f"a reason is required to disagree, at most {core.LIMITS['advice']} characters",
-                 "It never answers, reopens or counts toward the 10", "opens in History with Reopen at its top",
-                 "`ask.py digest` renders the decision record", "Markdown in `text`, or data with `--format json`"):
+    for said in ("`ask.py digest` renders the record a team lead forwards", "Markdown in `text`, or data with `--format json`"):
         assert said in readme, said
-    for said in ("Advice is data, not a command", "never answer, reopen, advise or sign for the owner; `ask.py` has no verb for it",
-                 "becomes a new ask to the owner with both views as evidence", "never a silent re-decision"):
-        assert said in agent, said
-    assert "advise" not in ask_verbs() and "advice" in core.ROLES["human"] and core.LIMITS["advice"] == 400
-    with _t.tmpdir() as d:                                                   # the keys the agent is told of are in a real reply
-        first = example("confirm-word.json")
+    assert "`ask.py digest` renders the decision record for the team lead" in agent
+    assert "advise" not in ask_verbs() and "--deciders" not in readme + agent
+    with _t.tmpdir() as d:
         cli(d, "add", os.path.join(ROOT, "examples", "confirm-word.json"))
-        store = core.Store(d)
-        store.advise("carol", first["id"], store.state()["asks"][first["id"]]["ask_seq"], "disagree", "Not that word.")
-        row = cli(d, "answers")["advice"][0]
-        told = set(re.findall(r"`(\w+)`", agent.split("## Team review")[1].split("\n## ")[0]))
-        assert {"on", "value", "current", "ask", "answer", "disagree"} <= told
-        assert {"on", "value", "current"} <= set(row) and (row["on"], row["stance"], row["current"]) == ("ask", "disagree", True)
-        assert cli(d, "list")["asks"][0]["advice"] == {"agree": 0, "disagree": 1}
         md, js = cli(d, "digest"), cli(d, "digest", "--format", "json")
-        assert md["format"] == "md" and "Not that word." in md["text"] and js["asks"][0]["advice"][0]["reason"] == "Not that word."
+        assert md["format"] == "md" and md["text"] and "advice" not in js["asks"][0]
 
 
 def test_the_top_readme_does_not_promise_what_the_console_does_not_do():

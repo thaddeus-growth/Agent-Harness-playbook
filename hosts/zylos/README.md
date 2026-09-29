@@ -68,7 +68,6 @@ Then add `node zylos/lib.js check` to the harness's CI. It exits 1 and names eac
 | `console` | `user_header` | The header Caddy sets to the logged-in user, e.g. `X-Remote-User` |
 | `console` | `users_file` | The logins file in the data dir, e.g. `console.users` |
 | `console` | `args` | More `serve.py` flags, e.g. `--relay-verbs`, `--lang`, `--default-reason`, a static `--allow-host`; console.js owns `--dir`, `--host`, `--port`, `--user`, `--user-header`, `--relay-cmd`, `--title` |
-| `console` | `deciders_key` | Optional. The config key listing who decides (`--deciders`) |
 | `console` | `allow_host_key` | Optional. The config key holding the public domain(s) the console answers to (`--allow-host`) |
 | `detach` | `exit_marker` | The last log line of a detached job, `<MARKER> <status>`, e.g. `SHOP-EXIT` |
 | `detach` | `alias` | The word that means the harness CLI at the start of a detached command, e.g. `shop` |
@@ -136,8 +135,6 @@ config:
       description: the console's port on 127.0.0.1 (default 8767); read by zylos/ only
     - name: SHOP_CONSOLE_TITLE
       description: the console's page title; read by zylos/ only
-    - name: SHOP_CONSOLE_DECIDERS
-      description: who decides in the console (comma-separated logins); read by zylos/ only
     - name: SHOP_CONSOLE_ALLOW_HOST
       description: the host's public domain, which the console answers to behind Caddy; read by zylos/ only
 ---
@@ -271,7 +268,6 @@ The owner console (the playbook's `console/serve.py`: the asks inbox and the rel
 - `--user-header <user_header>` (believed from a loopback peer only; without it no one can answer);
 - `--title <title_key or name>`;
 - `--allow-host` for each domain in `allow_host_key`;
-- `--deciders` from `deciders_key`, when set;
 - `--relay-cmd '<node>' '<skill>/zylos/bin/cli.js'` when `console.args` carries `--relay-verbs` (serve.py wants both or neither);
 - then `console.args`.
 
@@ -316,7 +312,7 @@ Core never rewrites the block on upgrade (no routes are declared). A reinstall (
     chmod 600 ~/zylos/components/<name>/console.users
     pm2 reload caddy
 
-The console records each answer under the header's user. With `deciders_key` set, only those logins answer; everyone else logged in advises.
+The console records each answer under the header's user; everyone the proxy lets in answers.
 
 **After a restart, check:**
 
