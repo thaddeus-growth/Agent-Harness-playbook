@@ -16,7 +16,11 @@ a prefix needs no configuration.
 ctx: lang, title, user (None = read-only), token (the POST token), relay
 (None or [] = no harness; else the verb prefixes the operator allows, each a
 list of words), now (ISO Z), secret (bytes | None, to verify signatures),
-flash ({kind: ok|error, text}, optional: a banner at the top of a page).
+flash ({kind: ok|error, text}, optional: a banner at the top of a page),
+deciders (optional: None = everyone logged in answers; else the names that
+do, and anyone else logged in is an adviser: every ask and answer, the team's
+views, and in place of each answer form an Agree / Disagree form; no answer,
+reopen or note form).
 `lines` for a result: {ok, id, title, value, code, message}, plus an optional
 `reason` (the `Refused.params["reason"]` of a bad_value) that picks the exact
 sentence and an optional `comment` (what the person typed), given back on a
@@ -30,6 +34,7 @@ The forms drawn here are what serve.py reads (all `method=post`):
     answer_all  token pair=<id>:<hash> (repeated) a group, with its suggestions
     reopen      token id answer_seq
     note        token text
+    advise      token id on_seq stance reason back?   an adviser's view (back=history: return there)
 
 A result or error page is the answer to a POST, so it has no poll (a reload
 would send the form again) and its language link goes to `./`. console.js sends
@@ -62,6 +67,7 @@ CSS classes (console.css styles exactly these):
   rec reopen problems              history: what was answered, the reopen form, ignored entries
   res                              one line of a result page
   toasts toast                     console.js's tray and one notice in it: the result lines of a form it sent in place
+  advice adviceform dissent        team review: the views on an ask, an adviser's form, a disagreement to look at
   foot                             footer
 """
 
@@ -81,7 +87,7 @@ JSON_WORDS = {"True": "true", "False": "false", "None": "null"}
 HARNESS_SAYS = ("gate_refused", "gate_changed", "gate_timeout", "gate_unsure")
 UNSURE = ("gate_timeout", "gate_unsure", "not_recorded")        # the harness may have been written
 # what a finished redirect (`?done=<key>`) says: a page cannot be made to say anything else
-FLASH = {"reopened": "flash.reopened", "noted": "flash.noted"}
+FLASH = {"reopened": "flash.reopened", "noted": "flash.noted", "advised": "flash.advised"}
 # what a yes/no answer is called, per step
 YES_NO = {("confirm", "yes"): "ans.yes", ("confirm", "no"): "ans.no",
           ("approve", "yes"): "ans.approve", ("approve", "no"): "ans.reject"}
@@ -192,6 +198,17 @@ def _runs_here(ctx: dict, gate: dict) -> bool:
         p and verb[:len(p)] == list(p) for p in relay)
 
 
+def _decides(ctx: dict) -> bool:
+    """May the person answer here? Everyone logged in, unless the operator named who decides."""
+    names = ctx.get("deciders")
+    return bool(ctx.get("user")) and (names is None or ctx["user"] in names)
+
+
+def _advises(ctx: dict) -> bool:
+    """Logged in, but not one who decides: an adviser, who sees everything and says whether they agree."""
+    return bool(ctx.get("user")) and not _decides(ctx)
+
+
 def _lang(ctx: dict) -> str:
     return ctx["lang"] if ctx.get("lang") in i18n.LANGS else "en"
 
@@ -243,10 +260,15 @@ def _shell(ctx: dict, t: _T, *, title: str, body: str, tab=None, st=None,
     if f and f.get("text"):
         kind = "ok" if f.get("kind") == "ok" else "bad"
         flash = f'<p class="flash {kind}" role="status">{_e(f["text"])}</p>'
-    banner = f'<p class="banner">{t("ro.banner")}</p>' if ro and not ctx.get("user") else ""
+    banner = ""
+    if ro and not ctx.get("user"):
+        banner = f'<p class="banner">{t("ro.banner")}</p>'
+    elif ro and _advises(ctx):
+        banner = f'<p class="banner">{t("advise.banner", names=", ".join(ctx.get("deciders") or ()))}</p>'
     who = ""
     if identity:
-        who = f'<p>{t("foot.user", user=ctx["user"]) if ctx.get("user") else t("foot.ro")}</p>'
+        key = "foot.adviser" if _advises(ctx) else "foot.user"
+        who = f'<p>{t(key, user=ctx["user"]) if ctx.get("user") else t("foot.ro")}</p>'
     return (f'<!doctype html>\n<html lang="{t.lang}"><head><meta charset="utf-8">'
             f'<meta name="viewport" content="width=device-width, initial-scale=1">'
             f'<meta name="color-scheme" content="light dark">'
@@ -431,7 +453,7 @@ def _button(t: _T, k: dict) -> str:
 
 
 def _form(t: _T, ctx: dict, a: dict, k: dict, rec) -> str:
-    if not ctx.get("user"):
+    if not _decides(ctx):
         return ""
     gate = k.get("gate")
     decline = bool(gate) and not _runs_here(ctx, gate)
@@ -466,10 +488,73 @@ def _ask(t: _T, ctx: dict, a: dict, is_open: bool) -> str:
     parts.append(_ifno(t, k))
     if k.get("gate"):
         parts.append(_tech(t, k))
-    parts.append(_form(t, ctx, a, k, rec))
+    parts += [_views(t, ctx, a), _form(t, ctx, a, k, rec), _advice_form(t, ctx, a)]
     return (f'<details class="ask{" approve" if step == "approve" else ""}"{" open" if is_open else ""}>'
-            f'<summary><span class="ttl">{_e(k.get("title"))}</span><span class="meta">{chips}</span></summary>'
+            f'<summary><span class="ttl">{_e(k.get("title"))}</span><span class="meta">{chips}{_against(t, a)}</span></summary>'
             f'<div class="inner">{"".join(p for p in parts if p)}</div></details>')
+
+
+# ------------------------------------------------------------ team review --
+
+def _against(t: _T, a: dict) -> str:
+    """A chip on the row when someone disagrees with the ask as it stands."""
+    n = len(core.dissent(a))
+    return f'<span class="chip bad">{t("dissent.chip", n=n)}</span>' if n else ""
+
+
+def _views(t: _T, ctx: dict, a: dict) -> str:
+    """What the team said: each person's last word on each version, oldest
+    first; who, agrees or not, why, when, and what it was about."""
+    rows = core.latest_views(a)
+    if not rows:
+        return ""
+    now, lis = core.target(a), []
+    for e in rows:
+        kind = (a["targets"].get(e["on_seq"]) or {}).get("type")
+        about = ("advice.about_old" if now is not None and e["on_seq"] != now["seq"]
+                 else "advice.about_answer" if kind == "answer" else "advice.about_ask")
+        agrees = e.get("stance") == "agree"
+        chip = (f'<span class="chip ok">{t("advice.agree")}</span>' if agrees
+                else f'<span class="chip bad">{t("advice.disagree")}</span>')
+        why = f'<p class="txt">{_e(e["reason"])}</p>' if e.get("reason") else ""
+        sig = (f' <span class="chip warn">{t("sig.bad")}</span>'
+               if core.verify(ctx.get("secret"), e) is False else "")
+        lis.append(f'<li class="msg">{chip}{why}<p class="who">{_e(_who(e.get("by")))} · '
+                   f'{_e(_age(t, e.get("at"), ctx["now"]))} · {t(about)}{sig}</p></li>')
+    return f'<div class="advice"><h3>{t("advice.head")}</h3><ul>{"".join(lis)}</ul></div>'
+
+
+def _advice_form(t: _T, ctx: dict, a: dict, back: str = "") -> str:
+    """An adviser's Agree / Disagree, bound to the ask or the answer as shown
+    (`on_seq`); nothing is picked for them, and a disagreement needs a reason."""
+    now = core.target(a)
+    if not _advises(ctx) or now is None:
+        return ""
+    lead = "advice.lead_answer" if now.get("type") == "answer" else "advice.lead_ask"
+    fields = [("token", ctx.get("token")), ("id", a["id"]), ("on_seq", now["seq"])] + ([("back", back)] if back else [])
+    hidden = "".join(f'<input type="hidden" name="{n}" value="{_e(v)}">' for n, v in fields)
+    radios = "".join(f'<label class="opt"><input type="radio" name="stance" value="{v}" required>'
+                     f'<span class="lab">{t(key)}</span></label>'
+                     for v, key in (("agree", "advice.opt_agree"), ("disagree", "advice.opt_disagree")))
+    rid = f'r-{_e(a["id"])}'
+    return (f'<form class="adviceform" method="post" action="advise" autocomplete="off">{hidden}'
+            f'<fieldset class="opts"><legend class="lead">{t(lead)}</legend>{radios}</fieldset>'
+            f'<label for="{rid}">{t("advice.reason")}</label>'
+            f'<textarea id="{rid}" name="reason" rows="3" maxlength="{core.LIMITS["advice"]}"></textarea>'
+            f'<button class="btn secondary" type="submit">{t("advice.send")}</button></form>')
+
+
+def _dissent_line(t: _T, st: dict) -> str:
+    """The inbox's count of disagreements with what is still in play: an open
+    ask, or an answer the agent has not applied (those wait in History)."""
+    live = [(a, core.dissent(a)) for a in st["asks"].values()
+            if a["status"] == "open" or (a["status"] == "answered" and not a["applied"])]
+    n = sum(len(d) for _, d in live)
+    if not n:
+        return ""
+    see = (f' <a href="history">{t("dissent.see")}</a>'
+           if any(d and a["status"] == "answered" for a, d in live) else "")
+    return f'<p class="dissent">{t("dissent.inbox", n=n)}{see}</p>'
 
 
 # ------------------------------------------------------------- the inbox --
@@ -480,7 +565,7 @@ def _all_form(t: _T, ctx: dict, items: list[dict]) -> str:
     something (that is read one ask at a time) and none needs a gate the
     console cannot run."""
     asks = [a["ask"] for a in items]
-    if not (ctx.get("user") and len(items) > 1 and all(k.get("recommend") for k in asks)
+    if not (_decides(ctx) and len(items) > 1 and all(k.get("recommend") for k in asks)
             and not any(k.get("step") == "approve" for k in asks)
             and all(_runs_here(ctx, k["gate"]) for k in asks if k.get("gate"))):
         return ""
@@ -514,7 +599,7 @@ def _messages(t: _T, st: dict, ctx: dict, top: dict | None = None) -> str:
     if len(msgs) > SHOW_MESSAGES:
         body += f'<p class="hint">{t("messages.more", n=SHOW_MESSAGES)}</p>'
     form = ""
-    if ctx.get("user"):
+    if _decides(ctx):                   # an adviser's one write is a view on an ask
         form = (f'<form class="noteform" method="post" action="note" autocomplete="off">'
                 f'<input type="hidden" name="token" value="{_e(ctx.get("token"))}">'
                 f'<label for="note-text">{t("note.label")}</label>'
@@ -534,7 +619,7 @@ def render_inbox(st: dict, ctx: dict) -> str:
     segs = "".join("<b></b>" if i < n else "<i></i>" for i in range(core.MAX_OPEN))
     parts = [f'<div class="head"><h1>{t("page.waiting")}</h1>'
              f'<span class="meter{" over" if over else ""}" aria-hidden="true">{segs}</span>'
-             f'<p class="sub">{line}</p></div>']
+             f'<p class="sub">{line}</p></div>', _dissent_line(t, st)]
     say = next((m for m in reversed(st.get("messages", [])) if m.get("type") == "say"), None)
     if say:
         parts.append(f'<aside class="say"><p class="txt">{_e(say.get("text"))}</p><p class="who">'
@@ -550,7 +635,7 @@ def render_inbox(st: dict, ctx: dict) -> str:
     for i, (name, items) in enumerate(groups, 1):
         parts.append(_group(t, ctx, i, name, items, titled=len(groups) > 1 or bool(name)))
     parts.append(_messages(t, st, ctx, say))
-    return _shell(ctx, t, title=t("page.waiting"), body="".join(parts), tab="waiting", st=st, ro=True)
+    return _shell(ctx, t, title=t("page.waiting"), body="".join(p for p in parts if p), tab="waiting", st=st, ro=True)
 
 
 # ------------------------------------------------------------- the history --
@@ -568,7 +653,13 @@ def _done(t: _T, ctx: dict, a: dict) -> str:
     answered = a["status"] == "answered"
     ev = a["answer"] if answered else a["withdrawn"]
     shown = a["revs"].get(ev.get("subject"), a["ask"]) if answered else a["ask"]
-    chips, rec = [], []
+    chips, rec, notice = [], [], ""
+    gate = ev.get("gate") if answered else None
+    against = core.dissent(a)
+    if against and answered and not a["applied"] and _decides(ctx):     # someone disagrees, and it can still change
+        undo = (f'<p class="hint">{t("reopen.written")}</p>' if isinstance(gate, dict) and gate.get("ok")
+                else _reopen_form(t, ctx, a))
+        notice = f'<div class="dissent"><p>{t("dissent.row", n=len(against))}</p>{undo}</div>'
     if answered:
         chips.append(f'<span class="chip">{_e(_answer(t, shown, ev.get("value")))}</span>')
         chips.append(f'<span class="chip ok">{t("state.applied")}</span>' if a["applied"]
@@ -583,14 +674,13 @@ def _done(t: _T, ctx: dict, a: dict) -> str:
             rec.append((t("history.compare"),
                         f'<span class="chip ok">{t("chip.suggested")}</span>' if ev.get("suggested")
                         else f'<span class="chip">{t("history.changed")}</span>'))
-        gate = ev.get("gate")
         if isinstance(gate, dict):
             rec.append((t("history.gate"), _e(gate.get("message")) or t("history.gate_done")))
         if a["applied"]:
             status = t("state.applied_where", where=a["applied"].get("where"))
         else:
             status = f'<span class="chip warn">{t("state.waiting")}</span>'
-            if ctx.get("user"):     # what the system already took cannot be taken back here
+            if _decides(ctx) and not notice:     # what the system already took cannot be taken back here
                 status += (f'<p class="hint">{t("reopen.written")}</p>' if isinstance(gate, dict) and gate.get("ok")
                            else _reopen_form(t, ctx, a))
     else:
@@ -600,12 +690,12 @@ def _done(t: _T, ctx: dict, a: dict) -> str:
     dl = "".join(f"<dt>{dt}</dt><dd>{dd}</dd>" for dt, dd in rec)
     byline = f'{_e(_who(ev.get("by")))} · {_e(_age(t, ev.get("at"), ctx["now"]))}'
     state = "waiting" if answered and not a["applied"] else "applied" if answered else "withdrawn"
-    return (f'<details class="ask done {state}"><summary><span class="ttl">{_e(shown.get("title"))}</span>'
-            f'<span class="meta">{"".join(chips)}<span class="age">{byline}</span></span></summary>'
-            f'<div class="inner"><h3>{t("history.shown")}</h3>'
+    return (f'<details class="ask done {state}"{" open" if notice else ""}><summary><span class="ttl">{_e(shown.get("title"))}</span>'
+            f'<span class="meta">{"".join(chips)}{_against(t, a)}<span class="age">{byline}</span></span></summary>'
+            f'<div class="inner">{notice}<h3>{t("history.shown")}</h3>'
             f'<p class="why txt">{_e(shown.get("why"))}</p>{_evidence(t, shown.get("evidence"), heading=False)}'
             f'{_ifno(t, shown)}'
-            f'<dl class="rec">{dl}</dl></div></details>')
+            f'<dl class="rec">{dl}</dl>{_views(t, ctx, a)}{_advice_form(t, ctx, a, "history")}</div></details>')
 
 
 def render_history(st: dict, ctx: dict) -> str:

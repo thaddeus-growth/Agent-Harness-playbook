@@ -1800,6 +1800,135 @@ def test_two_consoles_on_one_host_keep_their_own_language_because_cookies_ignore
         assert '<html lang="en">' in a.get(Cookie="console_lang=zh").text             # and the name without a port is nobody's
 
 
+# ------------------------------------------------------------- team review --
+
+def test_deciders_are_plain_names_and_with_one_user_must_name_that_user():
+    with _t.tmpdir() as root:
+        d = os.path.join(root, "d")
+        for extra in (("--user", "carol", "--deciders", "alice,bob"), ("--user", "carol", "--deciders", "alice"),
+                      ("--deciders", "alice", "--user-header", "X-User", "--user", "alice"),
+                      ("--user-header", "X-User", "--deciders", ""), ("--user-header", "X-User", "--deciders", " , "),
+                      ("--user-header", "X-User", "--deciders", "alice,-x"), ("--user-header", "X-User", "--deciders", "a b")):
+            code, out, err = run_serve("--dir", d, "--port", "0", *extra)
+            assert code == 2 and out == "" and len(err.strip().splitlines()) == 1, (extra, code, out, err)
+        code, _, err = run_serve("--dir", d, "--port", "0", "--deciders", "alice", env={"USER": "carol"})   # no --user: $USER
+        assert code == 2 and "--deciders" in err and "carol" in err, err
+        assert not os.path.exists(d)                                            # a refused start makes nothing
+    with _t.tmpdir() as root, Srv(root, "--deciders", "bob,alice") as srv:      # the good counterpart: the one user is named
+        srv.agent(raw_ask("confirm", "c1"))
+        assert say("foot.user", user="alice") in flat(srv.get().text)
+        saved(srv.submit(form_for(srv.get().text, "answer", "c1")))
+        assert srv.proc.stdout.readline().strip() == "Deciders: bob, alice"
+
+
+def test_an_adviser_sees_everything_answers_nothing_and_is_refused_every_other_write():
+    as_carol, as_alice = {"X-Forwarded-User": "carol"}, {"X-Forwarded-User": "alice"}
+    with _t.tmpdir() as root, Srv(root, "--user-header", "X-Forwarded-User", "--deciders", "alice", user=None) as srv:
+        srv.agent(raw_ask("confirm", "c1"), raw_ask("confirm", "c2"), raw_ask("confirm", "c3"))
+        saved(srv.submit(form_for(srv.get(**as_alice).text, "answer", "c3"), headers=as_alice))
+        page = srv.get(**as_carol).text
+        assert say("advise.banner", names="alice") in flat(page) and say("foot.adviser", user="carol") in flat(page)
+        assert "Title of c1" in page and {f.action for f in forms_of(page)} == {"advise"}     # no answer, answer-all or note form
+        hist = srv.get("history", **as_carol).text
+        assert "Title of c3" in hist and {f.action for f in forms_of(hist)} == {"advise"}    # no reopen form either
+        tok = form_for(page, "advise", "c1").value("token")
+        answer_seq = str(srv.events("answer")[0]["seq"])
+        n = len(srv.events())
+        for path, fields in (("answer", {"id": "c1", "hash": srv.store.state()["asks"]["c1"]["hash"], "value": "yes"}),
+                             ("answer_all", [("pair", f"c1:{srv.store.state()['asks']['c1']['hash']}")]),
+                             ("reopen", {"id": "c3", "answer_seq": answer_seq}), ("note", {"text": "do it my way"})):
+            r = srv.post(path, fields, token=tok, headers=as_carol)
+            assert r.status == 403 and say("err.not_decider") in flat(r.text), (path, r.status, flat(r.text)[:200])
+        assert len(srv.events()) == n                                               # nothing was written
+        assert srv.store.state()["asks"]["c1"]["status"] == "open" and srv.store.state()["asks"]["c3"]["status"] == "answered"
+        # the advice itself, through the form the page drew
+        r = srv.submit(form_for(page, "advise", "c1"), headers=as_carol, stance="disagree", reason="Too early <b>now</b>.")
+        see_other(r, "./?done=advised")
+        assert flashed(srv.follow(r, "advise").text) == say("flash.advised")
+        ev = srv.events("advice")[-1]
+        assert (ev["by"], ev["id"], ev["stance"], ev["reason"], ev["on_seq"]) == \
+            ("web:carol", "c1", "disagree", "Too early <b>now</b>.", srv.store.state()["asks"]["c1"]["ask_seq"])
+        assert core.verify(srv.secret(), ev) is True
+        assert srv.store.state()["asks"]["c1"]["status"] == "open" and srv.store.state()["asks"]["c1"]["answer"] is None
+        r = srv.submit(form_for(hist, "advise", "c3"), page="history", headers=as_carol, stance="agree")
+        see_other(r, "history?done=advised")                                        # back where it was sent from
+        back = srv.follow(r, "advise")
+        assert back.status == 200 and flashed(back.text) == say("flash.advised") and "Title of c3" in back.text
+        assert srv.events("advice")[-1]["on_seq"] == int(answer_seq)
+        # a disagreement needs its reason, and the page gives back what was typed
+        n = len(srv.events())
+        refused(srv.submit(form_for(page, "advise", "c2"), headers=as_carol, stance="disagree", reason="  "), 400, "err.no_reason")
+        refused(srv.submit(form_for(page, "advise", "c2"), headers=as_carol, stance="maybe", reason="x"), 400, "err.bad_request")
+        refused(srv.submit(form_for(page, "advise", "c2"), headers=as_carol, stance="agree", on_seq="x"), 400, "err.bad_request")
+        r = srv.submit(form_for(page, "advise", "c2"), headers=as_carol, stance="agree", reason="y" * 401)
+        assert r.status == 400 and "y" * 401 in flat(r.text)                         # nothing typed is lost
+        assert len(srv.events()) == n
+        # a decider is not an adviser
+        r = srv.post("advise", {"id": "c2", "on_seq": "2", "stance": "agree"}, token=tok, headers=as_alice)
+        assert r.status == 403 and say("err.forbidden") in flat(r.text) and len(srv.events()) == n
+        alice = srv.get(**as_alice).text
+        assert "advise" not in {f.action for f in forms_of(alice)} and form_for(alice, "answer", "c1")
+        assert "Too early &lt;b&gt;now&lt;/b&gt;." in alice and "<b>now</b>" not in alice
+
+
+def test_a_view_is_bound_to_what_the_page_showed():
+    as_carol, as_alice = {"X-Forwarded-User": "carol"}, {"X-Forwarded-User": "alice"}
+    with _t.tmpdir() as root, Srv(root, "--user-header", "X-Forwarded-User", "--deciders", "alice", user=None) as srv:
+        srv.agent(raw_ask("confirm", "c1"), raw_ask("confirm", "c2"))
+        page = srv.get(**as_carol).text
+        saved(srv.submit(form_for(srv.get(**as_alice).text, "answer", "c1"), headers=as_alice))    # answered meanwhile
+        srv.agent(raw_ask("confirm", "c2", why="A revised reason."))                                 # revised meanwhile
+        for id in ("c1", "c2"):
+            refused(srv.submit(form_for(page, "advise", id), headers=as_carol, stance="agree"), 409, "err.changed")
+        srv.store.withdraw("bot", ["c2"], "moot")
+        refused(srv.submit(form_for(page, "advise", "c2"), headers=as_carol, stance="agree"), 409, "err.not_open")
+        refused(srv.post("advise", {"id": "ghost", "on_seq": "1", "stance": "agree"}, headers=as_carol,
+                         token=form_for(page, "advise", "c1").value("token")), 409, "err.unknown_id")
+        assert srv.events("advice") == []
+        fresh = srv.get("history", **as_carol).text
+        see_other(srv.submit(form_for(fresh, "advise", "c1"), page="history", headers=as_carol, stance="agree"),
+                  "history?done=advised")
+
+
+def test_a_disagreement_after_the_answer_offers_the_decider_reopen_and_counts_on_the_inbox():
+    as_carol, as_alice = {"X-Forwarded-User": "carol"}, {"X-Forwarded-User": "alice"}
+    with _t.tmpdir() as root, Srv(root, "--user-header", "X-Forwarded-User", "--deciders", "alice", user=None) as srv:
+        srv.agent(raw_ask("confirm", "c1"), raw_ask("confirm", "c2"))
+        saved(srv.submit(form_for(srv.get(**as_alice).text, "answer", "c1"), headers=as_alice))
+        assert say("dissent.row", n=1) not in flat(srv.get("history", **as_alice).text)
+        hist = srv.get("history", **as_carol).text
+        see_other(srv.submit(form_for(hist, "advise", "c1"), page="history", headers=as_carol,
+                             stance="disagree", reason="We said matcha in the meeting."), "history?done=advised")
+        inbox = flat(srv.get(**as_alice).text)
+        assert f'{say("dissent.inbox", n=1)} {say("dissent.see")}' in inbox
+        page = srv.get("history", **as_alice).text
+        assert say("dissent.row", n=1) in flat(page) and "We said matcha in the meeting." in flat(page)
+        assert len([f for f in forms_of(page) if f.action == "reopen"]) == 1
+        reopened(srv.submit(form_for(page, "reopen", "c1"), page="history", headers=as_alice))
+        cur = srv.store.state()["asks"]["c1"]
+        assert cur["status"] == "open" and srv.events("reopen")[0]["by"] == "web:alice"
+        assert say("dissent.inbox", n=1) not in flat(srv.get(**as_alice).text)       # the answer it was about is gone
+        saved(srv.submit(form_for(srv.get(**as_alice).text, "answer", "c1"), headers=as_alice, value="no"))
+        srv.store.applied("bot", ["c1"], "the plan")
+        assert say("dissent.row", n=1) not in flat(srv.get("history", **as_alice).text)
+
+
+def test_without_deciders_everyone_answers_and_nobody_can_advise():
+    with _t.tmpdir() as root, Srv(root, "--user-header", "X-Forwarded-User", user=None) as srv:
+        srv.agent(raw_ask("confirm", "c1"))
+        for who in ("alice", "carol"):
+            page = srv.get(**{"X-Forwarded-User": who}).text
+            assert "advise" not in {f.action for f in forms_of(page)} and form_for(page, "answer", "c1")
+        tok = srv.token(**{"X-Forwarded-User": "carol"})
+        r = srv.post("advise", {"id": "c1", "on_seq": "1", "stance": "agree"}, token=tok, headers={"X-Forwarded-User": "carol"})
+        assert r.status == 403 and srv.events("advice") == []
+        noted(srv.post("note", {"text": "hi"}, token=tok, headers={"X-Forwarded-User": "carol"}))
+    with _t.tmpdir() as root, inproc(root) as app:                                  # the in-process console defaults the same way
+        assert app.app.deciders is None and app.app.decides("anyone") and not app.app.decides(None)
+    with _t.tmpdir() as root, inproc(root, deciders=["alice"]) as app:
+        assert app.app.decides("alice") and not app.app.decides("carol")
+
+
 def test_what_a_person_types_is_shown_back_only_as_text():
     with _t.tmpdir() as root, Srv(root) as srv:
         srv.agent(raw_ask("provide", "t1", input={"type": "text"}, recommend=None))

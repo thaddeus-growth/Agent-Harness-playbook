@@ -1,0 +1,10 @@
+code	params	meaning_en	meaning_zh
+story_check_registry_missing	path	No story-check registry at {path}: declare [ssot].story_checks in harness.toml and create the file	找不到验收检查清单 {path}：请在 harness.toml 的 [ssot].story_checks 里声明它，并创建这个文件
+story_check_registry_bad	path,detail	{path} is not a valid story-check registry: {detail}	验收检查清单 {path} 格式不对：{detail}
+story_check_verb_refused	story,verb	Story check {story}: `{verb}` is not a read verb a story check may run; nothing was run	验收清单里 {story} 那一行的命令 {verb} 不是允许运行的只读命令，整次检查都没有运行
+story_check_bad_term	story,term	Story check {story}: `{term}` is not an expect term (path, path>0, path=V, !term); nothing was run	验收清单里 {story} 那一行的检查条件 {term} 写法不对，整次检查都没有运行
+story_check_ci_only	story	{story}: proved by the harness's tests in CI; no check on the client's data	{story}：由持续集成里的测试验证，客户数据上没有对应的检查
+story_check_no_data	story,verb,table,market	{story}: no {table} rows for market {market} yet, so `{verb}` was not checked	{story}：市场 {market} 还没有 {table} 的数据，这个故事先不判
+story_check_verb_no_data	story,verb,market,error	{story}: `{verb}` found no data for market {market} yet ({error}), so it was not checked	{story}：市场 {market} 还没有检查命令 {verb} 要用的数据（{error}），这个故事先不判
+story_check_verb_failed	story,verb,error	{story}: `{verb}` failed: {error}	{story}：检查命令 {verb} 运行失败：{error}
+story_check_expect_failed	story,verb,expect	{story}: `{verb}` ran, but {expect} does not hold	{story}：检查命令 {verb} 跑通了，但输出里 {expect} 不成立

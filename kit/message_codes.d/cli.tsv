@@ -1,0 +1,3 @@
+code	params	meaning_en	meaning_zh
+cli_unknown_verb	cli,words,candidates	`{cli} {words}` is not a verb of this harness; the closest listed verbs are {candidates}	`{cli} {words}` 不是这个工具的命令；最接近的已登记命令：{candidates}
+cli_script_missing	verb,script	`{verb}` is listed in the verb table but its script {script} does not exist	命令 `{verb}` 已登记，但它的脚本 {script} 不存在

@@ -3,7 +3,7 @@
 # requires-python = ">=3.11"
 # dependencies = []
 # ///
-"""The human's side of the console: the pages, and the four things a click can
+"""The human's side of the console: the pages, and the five things a click can
 do. Stdlib only. The agent's side is ask.py; the two meet only in the event
 log (core.py), and this file never calls the agent's verbs (post, withdraw,
 applied, say), as ask.py never calls the human's (tests/test_boundary.py).
@@ -12,12 +12,19 @@ applied, say), as ask.py never calls the human's (tests/test_boundary.py).
         [--user NAME | --user-header NAME] [--allow-host HOST[:PORT]]
         [--title TEXT] [--lang en|zh] [--relay-cmd "CMD ARGS"]
         [--relay-verbs "facts confirm,queue approve"] [--default-reason TEXT]
-        [--log-level debug|info|warning]
+        [--deciders NAME[,NAME...]] [--log-level debug|info|warning]
 
 There is no login. With --user, anyone who can reach the port is that person, so
 a --host that is not loopback (127.0.0.1, ::1, localhost) is refused unless
 --user-header says who is asking (a proxy sets it): a console that writes and
 knows nobody is never bound to the network.
+
+Team review: with --deciders only the names given answer, reopen and write notes;
+anyone else logged in (behind a proxy, the header's user) is an adviser, who sees
+every page and in place of each form says Agree or Disagree, with a reason to
+disagree (/advise; a decider's /advise is 403, an adviser's other writes are
+403 `not_decider`). Without it everyone logged in answers, as before; with one
+--user the flag must name that user.
 
 A request is turned away, before anything is read or written, unless:
   host_ok       its Host is a loopback name (our own port or none) or an --allow-host
@@ -51,8 +58,9 @@ failure to record it after the harness ran (a refusal, or the disk) is reported 
 "check before you go on", never as "nothing was saved". A refused answer gives the
 typed comment back. One click per ask at a time (`Console.claim`), so a second click
 never runs the harness twice; the lock is held only for the write, never while the
-harness runs. A saved note or reopen answers 303 to the waiting page, which says so
-(`?done=`: only the two known words are shown, nothing else), so a reload cannot
+harness runs. A saved note, reopen or view answers 303 to the waiting page (a view sent
+from History, to History), which says so
+(`?done=`: only the known words are shown, nothing else), so a reload cannot
 write twice; the answer and answer-all results are pages of their own. console.js sends
 the forms itself and shows those same lines over the page it is on, so the person never
 leaves it; the server has one way to answer and does not know which it is talking to. The language
@@ -107,7 +115,7 @@ SECURITY = {
 # the HTTP status of a code; anything not here is a conflict with the current state
 STATUS = {"bad_request": 400, "bad_value": 400, "forbidden": 403, "forbidden_event": 403, "not_found": 404,
           "method_not_allowed": 405, "too_large": 413, "bad_host": 421, "corrupt_log": 500, "server_error": 500,
-          "gate_unavailable": 503, "gate_timeout": 504}
+          "gate_unavailable": 503, "gate_timeout": 504, "not_decider": 403, "no_reason": 400}
 STATIC = os.path.join(HERE, "static")
 TYPES = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8"}
 FILES = {f"/static/{n}": (os.path.join(STATIC, n), TYPES[os.path.splitext(n)[1]])
@@ -115,7 +123,7 @@ FILES = {f"/static/{n}": (os.path.join(STATIC, n), TYPES[os.path.splitext(n)[1]]
          if os.path.splitext(n)[1] in TYPES}
 PAGES = ("/", "/history", "/poll")
 # a saved note or reopen goes to the waiting page and says what happened (relative, so a proxy's prefix holds)
-AFTER = {"/note": "./?done=noted", "/reopen": "./?done=reopened"}
+AFTER = {"/note": "./?done=noted", "/reopen": "./?done=reopened", "/advise": "./?done=advised"}
 
 
 class Reject(Exception):
@@ -171,8 +179,10 @@ def token_ok(given, token: str) -> bool:
 class Console:
     """What one running console shares between requests."""
 
-    def __init__(self, store, secret, *, port, user, user_header, allow, title, lang, cmd, verbs, reason):
+    def __init__(self, store, secret, *, port, user, user_header, allow, title, lang, cmd, verbs, reason,
+                 deciders=None):
         self.store, self.secret, self.port = store, secret, port
+        self.deciders = tuple(deciders) if deciders is not None else None   # None: everyone logged in decides
         self.user, self.user_header, self.allow = user, user_header, allow
         self.title, self.lang, self.cmd, self.verbs, self.reason = title, lang, cmd, verbs, reason
         self.token = hmac.new(secret, TOKEN_KEY, "sha256").hexdigest()[:32]
@@ -192,12 +202,17 @@ class Console:
             self._cache = (key, self.store.state())
         return self._cache[1]
 
+    def decides(self, user) -> bool:
+        """May this person answer, reopen and write notes? Anyone else logged in is an adviser."""
+        return user is not None and (self.deciders is None or user in self.deciders)
+
     def ctx(self, lang: str, user) -> dict:
         """`relay` is the verb prefixes a gate may run here, or None: the page draws
         a gated ask's form only for a verb that starts with one of them."""
         return {"lang": lang, "title": self.title, "user": user, "token": self.token,
                 "relay": self.verbs if self.cmd and self.verbs else None,
-                "now": core.now(), "secret": self.secret}
+                "now": core.now(), "secret": self.secret,
+                "deciders": list(self.deciders) if self.deciders is not None else None}
 
     @contextmanager
     def claim(self, id: str):
@@ -213,7 +228,7 @@ class Console:
                 self.busy.discard(id)
 
 
-# --------------------------------------------------------- the four writes --
+# --------------------------------------------------------- the five writes --
 
 def _one(form: dict, name: str, default=None) -> str:
     v = form.get(name, [])
@@ -321,7 +336,22 @@ def h_note(c, user, lang, form):
     return [_line(lang)]
 
 
-POSTS = {"/answer": h_answer, "/answer_all": h_answer_all, "/reopen": h_reopen, "/note": h_note}
+def h_advise(c, user, lang, form):
+    """An adviser's view of an ask or an answer, bound to the one the page showed (`on_seq`)."""
+    id, seq = _one(form, "id"), _one(form, "on_seq")
+    stance, reason = _one(form, "stance", ""), _one(form, "reason", "")
+    try:
+        if not re.fullmatch(r"[0-9]{1,9}", seq):
+            raise core.Refused("bad_request", "on_seq is a number")
+        with c.lock:
+            c.store.advise(user, id, int(seq), stance, reason)
+    except core.Refused as e:
+        return [_line(lang, _ask_of(c, id), refused=e, comment=reason)]
+    return [_line(lang, _ask_of(c, id))]
+
+
+POSTS = {"/answer": h_answer, "/answer_all": h_answer_all, "/reopen": h_reopen, "/note": h_note,
+         "/advise": h_advise}
 
 
 # ------------------------------------------------------------- the server --
@@ -397,8 +427,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return self._send(200, json.dumps({"seq": st["seq"], "open": len(core.open_asks(st))}).encode(),
                               "application/json")
         ctx = self._ctx(self._user())
-        if path == "/":
-            done = pages.flash_text(ctx["lang"], parse_qs(query).get("done", [""])[0])
+        done = parse_qs(query).get("done", [""])[0]
+        if path == "/" or done == "advised":          # a view sent from History comes back there
+            done = pages.flash_text(ctx["lang"], done)
             if done:
                 ctx["flash"] = {"kind": "ok", "text": done}
         self._send(200, (pages.render_inbox if path == "/" else pages.render_history)(st, ctx).encode())
@@ -413,13 +444,18 @@ class Handler(http.server.BaseHTTPRequestHandler):
         user = self._user()
         if user is None:
             raise Reject("forbidden")
+        if path == "/advise" and c.decides(user):
+            raise Reject("forbidden")              # a decider answers; a view is an adviser's
+        if path != "/advise" and not c.decides(user):
+            raise Reject("not_decider")            # an adviser's one write is a view
         ctx = self._ctx(user)
         try:
             lines = POSTS[path](c, user, ctx["lang"], form)
         except core.Refused as e:
             lines = [_line(ctx["lang"], refused=e)]
         if path in AFTER and lines[0]["ok"]:
-            return self._send(303, b"", location=AFTER[path])
+            back = path == "/advise" and form.get("back") == ["history"]
+            return self._send(303, b"", location="history?done=advised" if back else AFTER[path])
         status = 200 if any(x["ok"] for x in lines) else STATUS.get(lines[0]["code"], 409)
         self._send(status, pages.render_result(ctx, lines).encode())
 
@@ -532,6 +568,8 @@ def _parser() -> argparse.ArgumentParser:
     add("--relay-cmd", help="the harness command that answers a gate")
     add("--relay-verbs", help="comma-separated verb prefixes it may be asked to run, e.g. 'facts confirm,queue approve'")
     add("--default-reason", default="console", help="the reason given to a gate when the person wrote no comment")
+    add("--deciders", metavar="NAME[,NAME...]", help="only these people answer, reopen and write notes; anyone else "
+        "logged in advises (agree or disagree, with a reason). Default: everyone logged in answers")
     add("--log-level", choices=("debug", "info", "warning"), default="info")
     return p
 
@@ -553,6 +591,13 @@ def main(argv=None) -> int:
         user = a.user or os.environ.get("USER", "")
         if not core.TOKEN_RE.fullmatch(user):
             die("--user must be a plain name (letters, digits, _ . : @ / -)")
+    deciders = None
+    if a.deciders is not None:
+        deciders = [n.strip() for n in a.deciders.split(",") if n.strip()]
+        if not deciders or not all(core.TOKEN_RE.fullmatch(n) for n in deciders):
+            die("--deciders is NAME[,NAME...]: plain names (letters, digits, _ . : @ / -)")
+        if user is not None and user not in deciders:
+            die(f"--deciders must name --user {user!r}: with no login, the one person at the console is the one who decides")
     allow = [split_host(h) for h in a.allow_host]
     if None in allow:
         die("--allow-host is HOST or HOST:PORT")
@@ -578,10 +623,12 @@ def main(argv=None) -> int:
         srv.server_close()
         die(str(e))
     srv.app = Console(store, secret, port=srv.server_address[1], user=user, user_header=a.user_header, allow=allow,
-                      title=a.title, lang=a.lang, cmd=cmd, verbs=verbs, reason=a.default_reason)
+                      title=a.title, lang=a.lang, cmd=cmd, verbs=verbs, reason=a.default_reason, deciders=deciders)
     print(f"Console: http://{f'[{a.host}]' if ':' in a.host else a.host}:{srv.server_address[1]}/", flush=True)
     if cmd:
         print("Relay verbs: " + ", ".join(" ".join(v) for v in verbs), flush=True)
+    if deciders:
+        print("Deciders: " + ", ".join(deciders), flush=True)
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

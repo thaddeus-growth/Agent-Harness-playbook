@@ -17,9 +17,9 @@ Every ok document carries `dir`, the absolute folder it used (null when none is
 declared, as for `schema`): a relative or mistyped path shows up there, instead
 of an agent and a console quietly working in two folders.
 This side writes only the agent's events (ask, withdraw, applied, say). It has
-no verb that answers, reopens or notes, and it never makes the console's
-secret: it only reads it to check signatures (`verify`, `verified`); with no
-secret `verify` is refused (`no_secret`), it does not pass.
+no verb that answers, reopens, notes or advises, and it never makes the
+console's secret: it only reads it to check signatures (`verify`, `verified`);
+with no secret `verify` is refused (`no_secret`), it does not pass.
 
     add [FILE|-] [--dry-run] [--max-open N]   post one ask or an array, all or nothing
     list [--status open|answered|withdrawn|all]
@@ -30,6 +30,7 @@ secret `verify` is refused (`no_secret`), it does not pass.
     say TEXT                                  a message on top of the human's inbox
     schema                                    fields, limits, one example per step
     verify                                    check every human event's signature
+    digest [--format md|json]                 the decision record, to forward
 
 Recommended flow: add -> answers -> apply -> applied -> wait --since <the seq
 answers returned>. `wait` hands over what `answers` does, so the loop goes round
@@ -41,6 +42,13 @@ since you read it is refused (`changed`), never marked applied.
 `answers` and `wait` list the asks reopened and the notes written after
 `--since`; of the notes only the newest 20, and `notes_truncated` says when
 there were more (a first look, with no --since, is a look at the newest).
+They also list, in `advice`, every view the team gave after `--since` (team
+review: someone who may not decide agrees or disagrees, with a reason), never
+cut short: a disagreement is turned into a new ask, not missed. `list` counts
+each ask's views as it stands. `digest` renders the decision record (asks,
+evidence, suggestion, answer and who gave it, the views, where it was applied)
+as Markdown in `text`, or as data with --format json: it is still one JSON
+document, like every other verb.
 """
 
 from __future__ import annotations
@@ -152,7 +160,7 @@ def _parser() -> Parser:
                    help="only reopened asks and notes after this seq (the newest "
                         f"{NOTES} notes at most)")
     v.add_argument("--all", action="store_true", help="also the answers already applied")
-    v = verb("wait", cmd_wait, "block until a human answer, reopen or note after SEQ, then say what `answers` says")
+    v = verb("wait", cmd_wait, "block until a human answer, reopen, note or view after SEQ, then say what `answers` says")
     v.add_argument("--since", type=_number(int, 0), default=None, metavar="SEQ",
                    help="default: the seq when this command starts")
     v.add_argument("--timeout", type=_number(float, 0), default=900, metavar="SEC",
@@ -169,6 +177,10 @@ def _parser() -> Parser:
     v.add_argument("text", metavar="TEXT")
     verb("schema", cmd_schema, "the fields of an ask, the limits and one example per step")
     verb("verify", cmd_verify, "check every human event's signature with the console's secret")
+    v = verb("digest", cmd_digest, "the decision record: every ask, what was shown, the answer and who gave it, "
+             "the team's views and where it was applied")
+    v.add_argument("--format", choices=("md", "json"), default="md",
+                   help="md (default): Markdown in `text`, the file a team lead forwards; json: the same record as data")
     return p
 
 
@@ -239,8 +251,28 @@ def cmd_list(a):
                      "status": x["status"], "rev": x["rev"], "opened_at": x["opened_at"],
                      "answer": _brief_event(x["answer"], "value", "suggested"),
                      "applied": _brief_event(x["applied"], "where"),
-                     "withdrawn": _brief_event(x["withdrawn"], "reason")})
+                     "withdrawn": _brief_event(x["withdrawn"], "reason"),
+                     "advice": _counts(x)})
     return {"ok": True, "seq": st["seq"], "open": len(core.open_asks(st)), "asks": rows}
+
+
+def _counts(x) -> dict:
+    """The team's views of the ask as it stands (each person's last word)."""
+    views = core.views(x)
+    return {s: sum(e["stance"] == s for e in views) for s in core.STANCES}
+
+
+def _advice_row(x, e, secret) -> dict:
+    """One view, with what it was about: `on` the ask (its suggestion is
+    `value`) or an answer (its `value`), and whether that is still `current`."""
+    about, now = x["targets"].get(e["on_seq"]) or {}, core.target(x)
+    value = (about.get("value") if about.get("type") == "answer"
+             else ((about.get("ask") or {}).get("recommend") or {}).get("value"))
+    return {"seq": e["seq"], "at": e["at"], "by": e["by"], "id": x["id"], "title": x["ask"]["title"],
+            "on": about.get("type"), "on_seq": e["on_seq"], "value": value,
+            "stance": e["stance"], "reason": e.get("reason", ""),
+            "current": now is not None and now["seq"] == e["on_seq"],
+            "verified": core.verify(secret, e)}
 
 
 def _answer_row(x, secret):
@@ -257,9 +289,9 @@ def _answer_row(x, secret):
 
 def _report(events, secret, since, everything=False) -> dict:
     """What the human has said, from one snapshot of the log: the answers
-    waiting to be applied, the asks reopened after `since` and the newest
-    notes after it. `seq` is that snapshot's last event, the `since` to pass
-    next time."""
+    waiting to be applied, the asks reopened after `since`, the newest notes
+    after it and every view of the team after it. `seq` is that snapshot's
+    last event, the `since` to pass next time."""
     st = core.fold(events)
     asks = [st["asks"][i] for i in st["order"]]
     answers = [_answer_row(x, secret) for x in asks
@@ -273,10 +305,12 @@ def _report(events, secret, since, everything=False) -> dict:
     notes = [{"seq": e["seq"], "at": e["at"], "by": e["by"], "text": e["text"],
               "verified": core.verify(secret, e)}
              for e in st["messages"] if e["type"] == "note" and e["seq"] > since]
+    advice = [_advice_row(x, e, secret) for x in asks for e in x["advice"] if e["seq"] > since]
     return {"ok": True, "seq": st["seq"], "open": len(core.open_asks(st)),
             "answers": sorted(answers, key=lambda r: r["seq"]),
             "reopened": sorted(reopened, key=lambda r: r["seq"]),
-            "notes": notes[-NOTES:], "notes_truncated": len(notes) > NOTES}
+            "notes": notes[-NOTES:], "notes_truncated": len(notes) > NOTES,
+            "advice": sorted(advice, key=lambda r: r["seq"])}
 
 
 def cmd_answers(a):
@@ -368,6 +402,159 @@ def cmd_verify(a):
                           "signed by this console's secret.")
         doc["params"] = {"bad": bad, "unsigned": unsigned}
     return doc
+
+
+# ----------------------------------------------------------------- digest --
+
+STATUS_WORDS = {"open": "Open: waiting for an answer", "waiting": "Answered: waiting for the agent to apply",
+                "applied": "Applied", "withdrawn": "Withdrawn"}
+ABOUT_WORDS = {("ask", True): "about the question", ("ask", False): "about the question",
+               ("answer", True): "about the answer", ("answer", False): "about an earlier answer"}
+YES_NO = {("confirm", "yes"): "Yes", ("confirm", "no"): "No", ("approve", "yes"): "Approve", ("approve", "no"): "Reject"}
+
+
+def _label(ask: dict, value):
+    """An answer in the words it was picked in: an option's label, a value with its unit."""
+    if value is None:
+        return None
+    v = str(value)
+    if (ask.get("step"), v) in YES_NO:
+        return YES_NO[(ask.get("step"), v)]
+    if ask.get("step") == "choose":
+        return next((o.get("label", v) for o in ask.get("options") or [] if o.get("value") == v), v)
+    unit = (ask.get("input") or {}).get("unit") if ask.get("step") == "provide" else None
+    return f"{v} {unit}" if unit else v
+
+
+def _given(e, shown, secret) -> dict:
+    """One answer as the record keeps it: what, who, when, and whether it was the suggestion."""
+    return {"seq": e["seq"], "at": e["at"], "by": e["by"], "value": e["value"], "label": _label(shown, e["value"]),
+            "suggested": bool(e.get("suggested")), "comment": e.get("comment", ""),
+            "revised": bool(e.get("revised")), "gate": e.get("gate"), "verified": core.verify(secret, e)}
+
+
+def _record(x, secret) -> dict:
+    """One ask for the decision record: what the owner was shown (for an answer, the
+    version they answered), the answer, answers taken back, the views, where it went."""
+    ans, now = x["answer"], core.target(x)
+    shown = x["revs"].get(ans.get("subject"), x["ask"]) if ans else x["ask"]
+    rec = shown.get("recommend")
+    reopens = {e["answer_seq"]: e for e in x["history"] if e["type"] == "reopen"}
+    earlier = [{**_given(e, x["revs"].get(e.get("subject"), x["ask"]), secret),
+                "reopened": _brief_event(reopens.get(e["seq"]), "by")}
+               for e in x["history"] if e["type"] == "answer" and e is not ans]
+    state = "applied" if x["applied"] else "waiting" if x["status"] == "answered" else x["status"]
+    return {"id": x["id"], "title": shown["title"], "kind": shown.get("kind", "general"),
+            "group": shown.get("group", ""), "step": shown["step"], "status": x["status"], "state": state,
+            "asked": {"seq": x["opened_seq"], "at": x["opened_at"], "by": x["by"]},
+            "why": shown["why"], "evidence": shown["evidence"], "options": shown.get("options"),
+            "effect": shown.get("effect"), "if_no": shown["if_no"],
+            "suggestion": ({"value": rec["value"], "label": _label(shown, rec["value"]), "because": rec.get("because")}
+                           if rec else None),
+            "answer": _given(ans, shown, secret) if ans else None, "earlier": earlier,
+            "advice": [{"seq": e["seq"], "at": e["at"], "by": e["by"],
+                        "on": (x["targets"].get(e["on_seq"]) or {}).get("type"), "on_seq": e["on_seq"],
+                        "current": now is not None and now["seq"] == e["on_seq"],
+                        "stance": e["stance"], "reason": e.get("reason", ""), "verified": core.verify(secret, e)}
+                       for e in x["advice"]],
+            "applied": _brief_event(x["applied"], "by", "where"),
+            "withdrawn": _brief_event(x["withdrawn"], "by", "reason")}
+
+
+def _md(text) -> str:
+    """Text someone else wrote, as one line of Markdown that shows exactly those words."""
+    return re.sub(r"([\\`*_\[\]<>|#])", r"\\\1", " ".join(str(text).split()))
+
+
+def _who(by) -> str:
+    return _md(str(by or "").split(":", 1)[-1])
+
+
+def _when(at) -> str:
+    at = str(at or "")
+    return f"{at[:10]} {at[11:16]} UTC" if re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", at) else _md(at)
+
+
+def _unsigned(row) -> str:
+    return " (its signature does not check)" if row.get("verified") is False else ""
+
+
+def _md_evidence(items) -> list[str]:
+    out = []
+    for it in items:
+        src = "".join(f", {_md(it[k])}" for k in ("source", "url") if it.get(k))
+        if "table" in it:
+            tb = it["table"]
+            out += ["", _md(tb.get("caption") or "Table"), "",
+                    "| " + " | ".join(_md(c) for c in tb["columns"]) + " |",
+                    "|" + " --- |" * len(tb["columns"])]
+            out += ["| " + " | ".join(_md(c) for c in r) + " |" for r in tb["rows"]]
+            out.append("")
+        elif "quote" in it:
+            out.append(f"- \u201c{_md(it['quote'])}\u201d{' (' + src[2:] + ')' if src else ''}")
+        else:
+            out.append(f"- {_md(it.get('label'))}: {_md(it.get('value'))}{' (' + src[2:] + ')' if src else ''}")
+    return out
+
+
+def _md_record(n: int, r: dict) -> list[str]:
+    a = r["answer"]
+    out = [f"## {n}. {_md(r['title'])}", "",
+           f"`{r['id']}` · {_md(r['kind'])}{' · ' + _md(r['group']) if r['group'] else ''} · "
+           f"asked {_when(r['asked']['at'])} by {_who(r['asked']['by'])} · **{STATUS_WORDS[r['state']]}**", "",
+           f"**Why:** {_md(r['why'])}", "", "**Evidence:**", "", *_md_evidence(r["evidence"]), ""]
+    if r["options"]:
+        out += ["**Options:** " + " · ".join(_md(o["label"]) for o in r["options"]), ""]
+    if r["suggestion"]:
+        s = r["suggestion"]
+        out += [f"**Suggested:** {_md(s['label'])}" + (f" — {_md(s['because'])}" if s.get("because") else ""), ""]
+    if r["effect"]:
+        out += [f"**If approved:** {_md(r['effect'])}", ""]
+    out += [f"**If no:** {_md(r['if_no'])}", ""]
+    for e in r["earlier"]:
+        back = e["reopened"]
+        took = f"; reopened {_when(back['at'])} by {_who(back['by'])}" if back else ""
+        out += [f"**Answer taken back:** {_md(e['label'])}, by {_who(e['by'])}, {_when(e['at'])}{took}{_unsigned(e)}", ""]
+    if a:
+        took = ("the suggestion" if a["suggested"] else "not the suggestion") if r["suggestion"] else ""
+        bits = [f"{_md(a['label'])}, by {_who(a['by'])}, {_when(a['at'])}"] + ([took] if took else [])
+        if a["comment"]:
+            bits.append(f"comment: \u201c{_md(a['comment'])}\u201d")
+        if isinstance(a["gate"], dict):
+            bits.append("written to the system" + (f": {_md(a['gate'].get('message'))}" if a["gate"].get("message") else ""))
+        out += ["**Answer:** " + "; ".join(bits) + _unsigned(a), ""]
+    if r["advice"]:
+        out += ["**The team:**", ""]
+        for v in r["advice"]:
+            said = "agrees" if v["stance"] == "agree" else "disagrees"
+            why = f": {_md(v['reason'])}" if v["reason"] else ""
+            about = ABOUT_WORDS.get((v["on"], v["current"]), "")
+            out.append(f"- {_who(v['by'])} {said} {about}, {_when(v['at'])}{why}{_unsigned(v)}")
+        out.append("")
+    if r["applied"]:
+        out += [f"**Applied:** {_md(r['applied']['where'])}, {_when(r['applied']['at'])}", ""]
+    if r["withdrawn"]:
+        out += [f"**Withdrawn:** {_md(r['withdrawn']['reason'])}, {_when(r['withdrawn']['at'])}", ""]
+    return out
+
+
+def cmd_digest(a):
+    store = _store(a)
+    secret = store.secret()
+    st = core.fold(store.events())
+    records = [_record(st["asks"][i], secret) for i in st["order"]]
+    if a.format == "json":
+        return {"ok": True, "format": "json", "seq": st["seq"], "asks": records}
+    count = {k: sum(r["state"] == k for r in records) for k in STATUS_WORDS}
+    lines = ["# Decision record", "",
+             f"{len(records)} asks: {count['applied']} applied, {count['waiting']} answered and waiting to be applied, "
+             f"{count['open']} open, {count['withdrawn']} withdrawn. As of {_when(core.now())}.",
+             "Signatures checked with this console's secret." if secret else
+             "Signatures not checked: there is no secret here.", ""]
+    for n, r in enumerate(records, 1):
+        lines += _md_record(n, r)
+    text = re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).rstrip() + "\n"
+    return {"ok": True, "format": "md", "seq": st["seq"], "text": text}
 
 
 # ------------------------------------------------------------------- main --

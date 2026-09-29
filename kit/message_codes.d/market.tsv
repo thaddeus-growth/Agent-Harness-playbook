@@ -1,0 +1,6 @@
+code	params	meaning_en	meaning_zh
+market_not_a_market	market,markets	{market} is not a market of this harness; valid: {markets} (the set is closed)	{market} 不是这个系统管理的市场；可用的市场：{markets}
+market_unpartitioned	market	{market}: this harness keeps no market partition — omit --market	{market}：这个系统不按市场区分，请不要指定市场
+market_none_declared		No market is declared in this database yet — nothing is onboarded; declare one first	还没有设置任何市场，请先设置一个
+market_ambiguous	markets	Several markets are declared ({markets}) — pass --market to say which	有多个市场（{markets}），需要指定一个
+market_not_onboarded	market	Market {market} is not onboarded — it has no confirmed declaration; declare it and have a human confirm it first	市场 {market} 还没有设置好（没有经本人确认的市场声明），请先设置并由本人确认

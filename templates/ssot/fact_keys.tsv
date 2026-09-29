@@ -1,3 +1,4 @@
-key	required	unit	min	max	label	explanation	why
-unit_cost	yes	currency	0		unit cost	what one unit costs you to buy or make	profit and break-even read it; setup asks for it and the doctor warns while it is missing
-return_loss_share	no	ratio	0	1	share of sales lost to returns	0.05 means 5 %	a ratio is bounded 0–1, so 5 typed for 0.05 is refused
+key	group	type	unit	min	max	label_en	label_zh	why
+monthly_spend_cap	required	number	currency	0		monthly spend cap	每月花费上限	the budget report reads it; init asks for it; a client's number, stated in a meeting and confirmed through the gate
+unit_cost	required	number	currency	0		unit cost	单位成本	what one unit costs you to buy or make; profit and break-even read it; setup asks for it and the doctor warns while it is missing
+return_loss_share	optional	number	ratio	0	1	share of sales lost to returns	退货损失占销售额的比例	0.05 means 5 %; a ratio is bounded 0–1, so 5 typed for 0.05 is refused

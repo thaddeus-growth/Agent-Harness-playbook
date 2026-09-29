@@ -1,0 +1,82 @@
+{
+  "meeting": {
+    "date": "2026-03-02",
+    "participants": ["client: Mara (owner, Northwind Tea Co., a fictional shop)", "us: the builder"],
+    "consent": "given by Mara at 00:00:12"
+  },
+  "goals": [
+    {"iid": "g1", "audience": "client", "text": "Know every Monday which teas make money once the ads are paid",
+     "quote": "Every Monday I want to know which teas actually make money once the ads are paid.",
+     "source": "2026-03-02 00:03:10"},
+    {"iid": "g2", "audience": "client", "text": "Never run out of a tea while it is being pushed",
+     "source": "2026-03-02 00:18:40"}
+  ],
+  "words": [
+    {"iid": "w1", "audience": "client", "word": "sampler", "meaning": "A 50 g pouch of one tea, sold to try it.",
+     "quote": "The little 50 gram pouches, we call those samplers.", "source": "2026-03-02 00:12:31"},
+    {"iid": "w2", "audience": "client", "word": "tin", "meaning": "A 250 g tin of one tea; what people come back for.",
+     "quote": "The 250 gram tins are what people come back for.", "source": "2026-03-02 00:12:40"},
+    {"iid": "w3", "audience": "client", "word": "push",
+     "meaning": "Two weeks in which one tea gets the ads and the front page.",
+     "quote": "A push is two weeks where one tea gets the ads and the front page.",
+     "source": "2026-03-02 00:21:05", "unsure": true, "note": "said once; it may mean the front page only"}
+  ],
+  "stories": [
+    {"iid": "s1", "audience": "client",
+     "want": "a Monday list of every tea with its profit after ad spend",
+     "so_that": "I stop pushing teas that lose money",
+     "done_when": ["every tea shows last week's sales, ad spend and profit",
+                   "a tea that lost money is marked",
+                   "the list is ready by 8:00 on Monday"],
+     "human_step": "none",
+     "quote": "Monday morning I want one list: what sold, what the ads cost, what is left.",
+     "source": "2026-03-02 00:04:02"},
+    {"iid": "s2", "audience": "client",
+     "want": "to approve each push before its ads start",
+     "so_that": "no push spends money I did not agree to",
+     "done_when": ["the push shows its daily cap and expected spend",
+                   "nothing starts until I approve it",
+                   "I can stop it at any time"],
+     "human_step": "approve",
+     "quote": "Nothing should start spending before I say yes.",
+     "source": "2026-03-02 00:25:40"}
+  ],
+  "numbers": [
+    {"iid": "n1", "audience": "client", "key": "lead_time_days", "value": 45, "unit": "days",
+     "applies_to": "the time from ordering Sencha to having it in the warehouse",
+     "quote": "From the day we order, Sencha takes forty-five days to reach the warehouse.",
+     "source": "2026-03-02 00:16:20"},
+    {"iid": "n2", "audience": "client", "key": "daily_ad_cap", "value": "20–30", "unit": "USD per day",
+     "applies_to": "the most ads may spend in one day during a push",
+     "quote": "Twenty, thirty dollars a day is what I can live with.",
+     "source": "2026-03-02 00:26:10"},
+    {"iid": "n3", "audience": "client", "key": "reorder_point_weeks", "value": "6", "unit": "weeks",
+     "applies_to": "the weeks of stock left that start a reorder",
+     "quote": "When there are six weeks of stock left, we reorder.",
+     "source": "2026-03-02 00:17:02"},
+    {"iid": "n4", "audience": "client", "key": "lead_time_days", "value": 60, "unit": "days",
+     "applies_to": "the time from ordering Sencha to having it in the warehouse",
+     "quote": "In the rainy season it is more like sixty days.",
+     "source": "2026-03-02 00:31:45", "unsure": true, "note": "maybe only in the rainy season"}
+  ],
+  "questions": [
+    {"iid": "q1", "audience": "client", "text": "Which currency is the daily cap in?",
+     "quote": "Twenty, thirty dollars a day is what I can live with.",
+     "source": "2026-03-02 00:26:10", "about": ["n2"],
+     "options": ["USD", "EUR"],
+     "suggest": {"value": "USD", "because": "The ad account bills in USD."}},
+    {"iid": "q2", "audience": "client", "text": "Is the Sencha lead time 45 or 60 days?",
+     "source": "2026-03-02 00:16:20; 2026-03-02 00:31:45", "about": ["n1", "n4"],
+     "options": ["45 days", "60 days", "45, and 60 in the rainy season"],
+     "suggest": {"value": "45, and 60 in the rainy season", "because": "Both were said; the second only for the rainy season."}},
+    {"iid": "q3", "audience": "client", "text": "Who may approve a push when you are away?",
+     "source": "2026-03-02 00:25:40",
+     "suggest": {"value": "Nobody: pushes wait until I am back", "because": "You said nothing should spend before you say yes."}},
+    {"iid": "q4", "audience": "builder", "text": "Which machine runs the harness?",
+     "source": "doc:kickoff-brief.pdf#page 2",
+     "options": ["the shop's own server", "our server"],
+     "suggest": {"value": "the shop's own server", "because": "The order data already lives there."}},
+    {"iid": "q5", "audience": "client", "text": "Which teas count as the core range?",
+     "source": "2026-03-02 00:40:12"}
+  ]
+}

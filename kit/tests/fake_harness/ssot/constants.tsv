@@ -1,0 +1,2 @@
+name	default	unit	min	max	group	label_en	label_zh	explain	why
+reorder_units	12	units	1	500	stock	Reorder units	补货数量	How many units one restock orders	A restock too small runs out again at once

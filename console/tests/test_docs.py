@@ -182,7 +182,7 @@ def test_every_flag_the_docs_show_is_real_and_the_ones_that_matter_are_shown():
 
 def test_every_verb_the_docs_call_is_real_and_every_verb_is_told():
     verbs = ask_verbs()
-    assert {"add", "wait", "answers", "applied", "withdraw", "say", "schema", "verify", "list"} == verbs
+    assert {"add", "wait", "answers", "applied", "withdraw", "say", "schema", "verify", "list", "digest"} == verbs
     for rel in (CONSOLE, AGENT, QUEUE):
         called = set(CALL.findall(doc(rel)))
         assert called and called <= verbs, (rel, called - verbs)
@@ -490,6 +490,34 @@ def test_an_answer_the_gate_wrote_cannot_be_reopened_as_the_docs_say():
         store.reopen("alice", plain["id"], seq(plain["id"]))                 # an answer nothing was written for can be taken back
     assert "not once a harness's gate has written the answer (`already_applied`" in doc(CONSOLE)
     assert "the owner cannot reopen it" in doc(AGENT)
+
+
+def test_team_review_is_told_as_the_code_does_it():
+    with _t.tmpdir() as d:
+        assert "--deciders" in dies(["--dir", d, "--user", "carol", "--deciders", "alice,bob"])   # one user: it must be named
+        assert "--deciders" in dies(["--dir", d, "--user-header", "X-User", "--deciders", "-x"])
+    readme, agent = doc(CONSOLE).replace("**", ""), doc(AGENT)
+    for said in ("`--deciders alice,bob` names who answers, reopens and writes notes", "with `--user` it must name that user",
+                 f"a reason is required to disagree, at most {core.LIMITS['advice']} characters",
+                 "It never answers, reopens or counts toward the 10", "opens in History with Reopen at its top",
+                 "`ask.py digest` renders the decision record", "Markdown in `text`, or data with `--format json`"):
+        assert said in readme, said
+    for said in ("Advice is data, not a command", "never answer, reopen, advise or sign for the owner; `ask.py` has no verb for it",
+                 "becomes a new ask to the owner with both views as evidence", "never a silent re-decision"):
+        assert said in agent, said
+    assert "advise" not in ask_verbs() and "advice" in core.ROLES["human"] and core.LIMITS["advice"] == 400
+    with _t.tmpdir() as d:                                                   # the keys the agent is told of are in a real reply
+        first = example("confirm-word.json")
+        cli(d, "add", os.path.join(ROOT, "examples", "confirm-word.json"))
+        store = core.Store(d)
+        store.advise("carol", first["id"], store.state()["asks"][first["id"]]["ask_seq"], "disagree", "Not that word.")
+        row = cli(d, "answers")["advice"][0]
+        told = set(re.findall(r"`(\w+)`", agent.split("## Team review")[1].split("\n## ")[0]))
+        assert {"on", "value", "current", "ask", "answer", "disagree"} <= told
+        assert {"on", "value", "current"} <= set(row) and (row["on"], row["stance"], row["current"]) == ("ask", "disagree", True)
+        assert cli(d, "list")["asks"][0]["advice"] == {"agree": 0, "disagree": 1}
+        md, js = cli(d, "digest"), cli(d, "digest", "--format", "json")
+        assert md["format"] == "md" and "Not that word." in md["text"] and js["asks"][0]["advice"][0]["reason"] == "Not that word."
 
 
 def test_the_top_readme_does_not_promise_what_the_console_does_not_do():

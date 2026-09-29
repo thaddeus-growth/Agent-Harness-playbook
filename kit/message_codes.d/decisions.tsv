@@ -1,0 +1,10 @@
+code	params	meaning_en	meaning_zh
+decision_not_found	market,entity_type,entity_id,key	No decision {market} {entity_type} {entity_id} {key}	没有这项决定：{market} {entity_type} {entity_id} {key}
+decision_harness_written	entity_type,key	{entity_type} {key} is written only by the harness, inside another human confirm — it cannot be set or confirmed by itself	{entity_type} {key} 只由系统在本人确认其他决定时一并写入，不能单独设置或确认
+decision_source_required		--source is required: who said it and when (convention: <who>_<status>_<YYYY-MM-DD>)	需要写明来源：谁说的、什么时候说的（格式：<谁>_<状态>_<年-月-日>）
+decision_value_one_id		--value confirms exactly one id	指定值确认时只能针对一个对象
+decision_already_confirmed	entity_id,value	{entity_id} is already confirmed ({value})	{entity_id} 已经确认过（{value}）
+decision_withdrawn	entity_id	{entity_id}: its pending value was withdrawn — nothing to confirm (a new set proposes again; a human may confirm a value of their own)	{entity_id}：待确认的值已撤回，没有可确认的内容（重新设置即可再次提议；本人也可以直接确认自己给出的值）
+decision_confirm_refused	refused,total,reasons	Nothing confirmed: {refused} of {total} ids cannot be — {reasons}	一项都没有确认：{total} 个对象中有 {refused} 个不能确认——{reasons}
+decision_changed_meanwhile	market,entity_type,key	{market} {entity_type} {key}: the decision changed while the confirm waited for its answer — nothing was written; run it again to see the current value	{market} {entity_type} {key}：等待确认期间这项决定有了变化，未写入任何内容；请重新运行查看最新的值
+decision_nothing_pending	market,entity_type,key,entity_ids,refused,total	Nothing withdrawn: no pending {market} {entity_type} {key} for {entity_ids} ({refused} of {total} ids) — only a value awaiting a confirm can be withdrawn	一项都没有撤回：{entity_ids} 没有待确认的 {market} {entity_type} {key}（{total} 个中有 {refused} 个）；只能撤回等待确认的值

@@ -1,14 +1,15 @@
 file	owner	reader	test	id_column	purpose
-ssot/index.tsv	registry	—	tests/test_ssot_index.py	file	Every registry and owner file: who owns it, which code reads it, which test guards it. Agents read this first.
-ssot/user-stories.tsv	owner	—	tests/test_ssot.py	id	User stories: what the owner wants, why, and when it counts as done.
-ssot/user-stories.agent.tsv	agent	—	tests/test_ssot.py	id	Same ids: status, blocking issue, notes, proposed rewording.
+ssot/index.tsv	registry	—	tests/test_ssot.py	file	Every registry and owner file: who owns it, which code reads it, which test guards it. Agents read this first.
 ssot/glossary.tsv	owner	—	tests/test_ssot.py	term	One name and one definition per business idea, in the client's words.
-ssot/glossary.agent.tsv	agent	—	tests/test_ssot.py	term	Where each term lives in data and code; proposed new terms.
-ssot/constants.tsv	registry	src/lib/constants.py	tests/test_constants.py	parameter	Threshold defaults: the only place a number lives.
+ssot/glossary.agent.tsv	agent	—	tests/test_ssot.py	term	Same terms: status, source, the ask and the answer that settled it, where each term lives in data and code, proposed new terms.
+ssot/user-stories.tsv	owner	—	tests/test_ssot.py	id	User stories: what the owner wants, why, the human step, and when it counts as done.
+ssot/user-stories.agent.tsv	agent	—	tests/test_ssot.py	id	Same ids: status, source, ask, decided, progress, blocking issue, where the runnable check is, data dependencies, notes, proposed rewording.
 ssot/policies.tsv	owner	—	tests/test_ssot.py	id	Business rules: when X, do Y; thresholds named, never numbered; the stories each rule serves.
-ssot/policies.agent.tsv	agent	—	tests/test_ssot.py	id	Same ids: the implementing function, notes, proposed rewording.
-ssot/message_codes.tsv	registry	core/messages.py	tests/test_contract.py	code	Every message a --json document can carry: wording per language and its params, checked both ways. Core's own codes are in core/message_codes.tsv.
-ssot/fact_keys.tsv	registry	src/lib/facts.py	tests/test_facts.py	key	Every business fact a human can set: unit, bounds, required or not.
-ssot/decision_keys.tsv	registry	src/lib/decisions.py	tests/test_decisions.py	key	Every per-entity decision: its value domain and whether a human must confirm it.
-ssot/alert_rules.tsv	registry	src/compute_alerts.py	tests/test_alerts.py	name	Alert rules as rows: grain, metric, comparison, threshold, cooldown.
-ssot/story_checks.tsv	registry	src/compute_stories.py	tests/test_compute_stories.py	story	One read-only check per done story: the verb, what its JSON must hold, the tables it needs.
+ssot/policies.agent.tsv	agent	—	tests/test_ssot.py	id	Same ids: status, source, ask, decided, where the rule is implemented, notes, proposed rewording; a rule not yet approved is a proposed row here only.
+ssot/constants.tsv	registry	scripts/kit/registry.py	tests/test_ssot.py	name	Threshold defaults: the only place a number lives. A client's own value is a confirmed threshold fact, never an edit here.
+ssot/fact_keys.tsv	registry	scripts/kit/registry.py	tests/test_ssot.py; tests/test_human_tables.py	key	Every business fact a client may state (costs, caps, limits): type, unit, bounds, required or not. Setting any other key is refused.
+ssot/decision_keys.tsv	registry	scripts/kit/registry.py	tests/test_ssot.py; tests/test_gate.py	entity_type+key	Per-entity decisions: value domain and whether a human must confirm (confirm = human) before it is in force.
+ssot/message_codes.tsv	registry	scripts/kit/messages.py	tests/test_json_contract.py	code	The harness's own message codes: params and one meaning per language, checked both ways. A fan-out unit's codes go in message_codes.d/<unit>.tsv, which this row covers. The kit's codes live in the vendored kit, never here.
+ssot/alert_rules.tsv	registry	scripts/compute_alerts.py	tests/test_ssot.py	name	Alert rules as rows: grain, metric, comparison, threshold, cooldown. Read by the harness's own alert compute; the kit has no alert reader.
+ssot/story_checks.tsv	registry	scripts/kit/stories.py	tests/test_ssot.py	story	One read-only check per done story: a read verb, what its JSON must hold, which tables it needs.
+ssot/stages.agent.tsv	agent	—	tests/test_ssot.py	stage	Which build step (BUILD.md) the harness is at, who must sign each gate, and the answer, merge or pipeline that signed it.

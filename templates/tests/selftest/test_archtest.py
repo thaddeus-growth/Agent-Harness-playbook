@@ -112,18 +112,18 @@ def main() -> int:
           res["u: the layer renamed has modules"] and res["u: only chain imports the renamed"], res)
 
     print("text rules")
-    src = tree({"core/a.py": "x = 1\n# see webconsole/pages.py\n", "core/b.md": "fine\n"})
+    src = tree({"common/a.py": "x = 1\n# see webconsole/pages.py\n", "common/b.md": "fine\n"})
     S = archtest.Scan
     pat = re.compile(r"\bwebconsole\b")
     res = dict(archtest.scan(src, [
-        S("t", "names it", ("core",), pat, hits=("webconsole/x",), misses=("console",)),
-        S("b", "broken", ("core",), re.compile(r"\bwebkonsole\b"), hits=("webconsole/x",)),
-        S("o", "over-wide", ("core",), re.compile(r"console"), hits=("webconsole",), misses=("console",)),
+        S("t", "names it", ("common",), pat, hits=("webconsole/x",), misses=("console",)),
+        S("b", "broken", ("common",), re.compile(r"\bwebkonsole\b"), hits=("webconsole/x",)),
+        S("o", "over-wide", ("common",), re.compile(r"console"), hits=("webconsole",), misses=("console",)),
         S("m", "required", ("nothere",), pat, hits=("webconsole",)),
         S("p", "armed", ("nothere",), pat, hits=("webconsole",), optional=True),
-        S("e", "no samples", ("core",), pat, hits=()),
+        S("e", "no samples", ("common",), pat, hits=()),
     ]))
-    check("a hit is named as file:line", res["t: names it"] == ["core/a.py:2"], res)
+    check("a hit is named as file:line", res["t: names it"] == ["common/a.py:2"], res)
     check("a pattern that misses its sample fails before it can pass on nothing",
           res["b: the pattern catches its samples and only them"] == ["misses 'webconsole/x'"], res)
     check("a pattern that catches what it must leave alone fails",

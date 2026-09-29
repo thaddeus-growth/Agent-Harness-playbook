@@ -1,0 +1,7 @@
+code	params	meaning_en	meaning_zh
+schema_too_new	path,found,knows	{path} was written by schema v{found}; this harness knows v{knows} — update the harness checkout. Nothing was read or changed	{path} 由第 {found} 版数据结构写入，本工具只认识第 {knows} 版——请先更新工具代码。未读取或改动任何内容
+lossy_rebuild	table,held,lacking,missing	REFUSED: stale {table} holds {held} period(s) but raw lacks {lacking} of them ({missing}) — rebuilding would lose history, so it stays stale and nothing was dropped; refill raw for those periods first, or restore a copy of the raw that held them	已拒绝重建：旧结构的表 {table} 有 {held} 个时段的数据，但原始数据缺少其中 {lacking} 个（{missing}）——重建会丢失历史，所以保持原样，没有删除任何内容；请先补齐这些时段的原始数据，或恢复保存过它们的原始数据副本
+human_table_drift	table,expected,found	Schema drift on human table {table}: expected {expected}, found {found}. This is human data — back it up and migrate it deliberately; it is never dropped or migrated automatically	人工数据表 {table} 的结构不符：应为 {expected}，实际为 {found}。这是人工录入的数据——请先备份，再有意识地迁移；系统从不自动删除或迁移它
+human_rows_would_shrink	lost	Refused: this write would remove human rows ({lost}); rolled back, nothing changed. Human tables are never emptied and their history is append-only	已拒绝：这次写入会删除人工数据行（{lost}）；已回滚，未做任何改动。人工数据表不会被清空，其历史只追加、不修改
+db_human_table_missing	table	The database has no human table {table} — open it once with a verb that writes to create it; nothing was changed	数据库里没有人工数据表 {table}——请用任一会写入的命令打开一次来创建它；未做任何改动
+db_unreadable	path,detail	{path} cannot be read as a database: {detail}. Nothing was changed	无法把 {path} 当作数据库读取：{detail}。未做任何改动

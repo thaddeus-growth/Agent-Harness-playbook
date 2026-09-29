@@ -19,7 +19,7 @@ set of modules that import the layer. Every rule first checks that its layer
 matches a module: a renamed file must fail the rule, not switch it off.
 
 Text rules (`Scan`, `scan`). A regex over every text file under some folders:
-the core never names the console or the host adapter; a consumer runs no write
+the shared package never names the console or the host adapter; a consumer runs no write
 verb. Each `Scan` carries samples it must catch and samples it must leave
 alone, checked first, so a regex that matches nothing fails instead of
 passing. `verbs()` builds the regex for a CLI's verbs as shell text

@@ -1,0 +1,3 @@
+key	group	type	unit	min	max	label_en	label_zh	why
+unit_cost	cost	number	USD	0	50	Unit cost	单位成本	What one unit costs landed; the restock proposal rests on it
+channel	profile	choice:web|store				Channel	渠道	Where the shop sells

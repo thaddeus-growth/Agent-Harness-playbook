@@ -1,0 +1,12 @@
+code	params	meaning_en	meaning_zh
+write_killed	var	Kill switch: {var} is set — no call to the external API goes out while it is	紧急停止：已设置 {var}——在它被取消之前，不会向外部接口发出任何调用
+write_stop_file	path	Kill switch: {path} exists — remove it to allow calls again	紧急停止：{path} 存在——删除它之后才会再次允许调用
+write_stop_unchecked	var,file	Writes refused: {var} is not an absolute path, so the {file} kill-switch file cannot be checked	拒绝写入：{var} 不是绝对路径，因此无法检查紧急停止文件 {file}
+write_off	var	Writes are off: only {var}=1 enables them (credentials alone never do)	写入已关闭：只有 {var}=1 才会开启（仅有凭据不会开启）
+write_not_allowed	method,path	{method} {path} is not on the write allowlist	{method} {path} 不在允许写入的清单上
+write_bad_body	method,path,expected	{method} {path}: the body must be exactly {expected}	{method} {path}：请求体必须恰好是 {expected}
+write_fields_not_allowed	method,path,fields,allowed	{method} {path}: fields {fields} are not an allowed set; allowed: {allowed}	{method} {path}：字段 {fields} 不是允许的组合；允许的是：{allowed}
+write_fixed_mismatch	method,path,expected	{method} {path}: the fixed values must be {expected}	{method} {path}：固定字段的值必须是 {expected}
+write_not_own	method,path,id	{method} {path}: {id} is not an entity the harness created — only those may be changed this way	{method} {path}：{id} 不是本系统创建的对象——只有本系统创建的才能这样修改
+write_value_refused	method,path,field	{method} {path}: the value of {field} is not allowed	{method} {path}：{field} 的值不被允许
+write_failed	method,path,detail	{method} {path} did not complete ({detail}); it is recorded as failed and never sent again	{method} {path} 没有完成（{detail}）；已记为失败，不会重发

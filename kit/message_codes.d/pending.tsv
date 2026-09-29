@@ -1,0 +1,21 @@
+code	params	meaning_en	meaning_zh
+pending_title_declared	market	Do we work on market {market} for you?	我们是否为你运营 {market} 市场？
+pending_why_declared	market,by,at	{by} declared market {market} on {at}. Until a person confirms it, nothing can be confirmed for {market}	{by} 于 {at} 登记了市场 {market}。在本人确认之前，{market} 的任何内容都无法确认
+pending_if_no_declared	market	{market} stays undeclared and nothing is written for it; the agent asks which markets are right	{market} 保持未登记，不会为它写入任何内容；助手会再问哪些市场是对的
+pending_title_fact	label,market,value	{label} for {market}: is {value} right?	{market} 的{label}：{value} 对吗？
+pending_why_fact	key,market,value,by,at,source,why	{key} [{market}] = {value} waits for a person: {by} set it on {at} (source {source}). Nothing uses it until it is confirmed. It is used for: {why}	{key} [{market}] = {value} 等待本人确认：{by} 于 {at} 设置（来源 {source}）。确认之前不会被使用。用途：{why}
+pending_if_no_fact	key	{key} stays pending and nothing uses it; the agent sets the right value or asks again	{key} 保持待确认，不会被使用；助手会改成正确的值或再次询问
+pending_title_decision	label,entity_type,entity_id,value	{label} of {entity_type} {entity_id}: is {value} right?	{entity_type} {entity_id} 的{label}：{value} 对吗？
+pending_why_decision	entity_type,entity_id,key,value,by,at,source,effective,why	{entity_type} {entity_id} {key} = {value} waits for a person: {by} set it on {at} (source {source}). Until it is confirmed, {effective} stays in force. It is used for: {why}	{entity_type} {entity_id} {key} = {value} 等待本人确认：{by} 于 {at} 设置（来源 {source}）。确认之前仍以 {effective} 为准。用途：{why}
+pending_if_no_decision	effective	{effective} stays in force; the agent withdraws the proposal or sets another value	仍以 {effective} 为准；助手会撤回提议或改设别的值
+pending_title_queue	kind,target_ref,market	Approve {kind} on {target_ref} ({market})?	批准对 {target_ref}（{market}）执行 {kind} 吗？
+pending_why_queue	created_at,basis,because	The harness proposed this on {created_at} from the data it read (basis {basis}). Nothing is sent until a person approves, and execute refuses it if that data moves. The rule says: {because}	系统于 {created_at} 根据读取的数据（依据 {basis}）提出此操作。本人批准前不会发送；数据若有变动，执行时会被拒绝。规则说明：{because}
+pending_effect_queue	kind,target_ref,expected	{kind} on {target_ref}: {expected}	对 {target_ref} 执行 {kind}：{expected}
+pending_if_no_queue		Nothing is sent. The agent records the no with a reason code, and the next proposal run reads it	不会发送任何内容。助手会记录拒绝原因代码，下次提案时会参考
+pending_gate_bad_word	id,word	{id}: no gate, {word} cannot be a console verb word; confirm it at the terminal	{id}：无法通过控制台确认，{word} 不能作为命令词；请在终端确认
+pending_gate_too_long	id,length	{id}: no gate, what it binds is {length} characters, more than the console holds; confirm it at the terminal	{id}：无法通过控制台确认，绑定内容有 {length} 个字符，超出控制台上限；请在终端确认
+pending_gate_market_ambiguous	id,markets	{id}: no gate, the console's call names no market and several are declared ({markets}); confirm it at the terminal with --market	{id}：无法通过控制台确认，控制台的调用不带市场，而已登记多个市场（{markets}）；请在终端用 --market 确认
+pending_gate_not_onboarded	id,market	{id}: no gate yet, market {market} is not confirmed; answer its market declaration first	{id}：暂时无法通过控制台确认，市场 {market} 尚未确认；请先确认市场登记
+pending_gate_refused	id,reason	{id}: no gate, the confirm would be refused: {reason}	{id}：无法通过控制台确认，确认会被拒绝：{reason}
+pending_fill_because	count	write recommend.because in each of the {count} ask(s) before ask.py add; the console refuses an ask without it	在 ask.py add 之前，请为这 {count} 个问题逐一写上 recommend.because；缺少它控制台会拒收
+pending_summary	facts,decisions,queue	asks waiting on a person: {facts} fact(s), {decisions} decision(s), {queue} queue item(s)	等待本人处理的问题：事实 {facts} 项，决定 {decisions} 项，队列操作 {queue} 项

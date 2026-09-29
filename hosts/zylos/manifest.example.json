@@ -1,0 +1,70 @@
+{
+  "_comment": "A fictional harness, shop-harness (CLI word shop, env prefix SHOP). Copy to <harness>/zylos/manifest.json and replace every value; zylos/README.md \"The manifest\" explains each key; runtime.uv_installer_url is a placeholder for Astral's installer of uv_version.",
+  "name": "shop-harness",
+  "min_zylos": "0.7.1",
+  "cli": {
+    "bin": "northwind-shop",
+    "entry": "scripts/shop.py",
+    "doctor": ["doctor"]
+  },
+  "env": {
+    "prefix": "SHOP",
+    "data_dir": "SHOP_DATA_DIR",
+    "files": ["~/.shop.env"]
+  },
+  "runtime": {
+    "python": "3.12",
+    "uv_version": "0.12.16",
+    "uv_installer_url": "https://uv-installer.example.com/uv/0.12.16/install.sh",
+    "uv_installer_sha256": "889a5745afddc78b389841caede74711003b782e2ec8c2f29b3c03cbd7b580a9"
+  },
+  "endpoints": ["https://api.shop.example.com"],
+  "scope": {
+    "list": ["facts", "list", "--json"],
+    "field": "declared_markets",
+    "declare": "facts init"
+  },
+  "reply": {
+    "channel": "SHOP_REPLY_CHANNEL",
+    "endpoint": "SHOP_REPLY_ENDPOINT"
+  },
+  "console": {
+    "entry": "console/serve.py",
+    "port": 8767,
+    "port_key": "SHOP_CONSOLE_PORT",
+    "title_key": "SHOP_CONSOLE_TITLE",
+    "base_path": "/shop",
+    "user_header": "X-Remote-User",
+    "users_file": "console.users",
+    "args": ["--relay-verbs", "facts confirm,decisions confirm", "--lang", "en"],
+    "deciders_key": "SHOP_CONSOLE_DECIDERS",
+    "allow_host_key": "SHOP_CONSOLE_ALLOW_HOST"
+  },
+  "detach": {
+    "exit_marker": "SHOP-EXIT",
+    "alias": "shop"
+  },
+  "tasks": [
+    {
+      "name": "shop-hourly-stock",
+      "cron": "5 * * * *",
+      "miss_threshold": 14400,
+      "requires": ["SHOP_API_KEY"],
+      "prompt": "Hourly stock sync: run {cli} pull stock, then {cli} ingest stock. Both exit 0: call done, report nothing. Either fails: send the owner the error lines, then call done."
+    },
+    {
+      "name": "shop-daily-sync",
+      "cron": "20 2 * * *",
+      "miss_threshold": 21600,
+      "requires": ["SHOP_API_KEY"],
+      "prompt": "Daily order sync; run only these commands. Start the detached pull: {detach} pull-orders -- shop pull orders. Then every 5 minutes run tail -n 5 {log:pull-orders} until it ends with a {exit} line; then run {cli} ingest orders. A log still without {exit} after 90 minutes counts as failed. The log ends {exit} 0 and the ingest exits 0: call done, report nothing. Anything else: send the owner the error lines, then call done."
+    },
+    {
+      "name": "shop-nightly-stories",
+      "cron": "30 4 * * *",
+      "miss_threshold": 21600,
+      "requires": [],
+      "prompt": "Nightly story checks; run only these commands: {cli} facts list --json, then for each entry of its \"declared_markets\": {cli} compute stories --json --market <M>. Send the owner exactly one line per market in the owner's language: the pass, fail and skip counts, then each failed story's id and its reason worded from reason_code. No market declared, or a command that exits non-zero or prints no JSON: send the owner that and its error lines instead. Then call done."
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+# A tiny harness used by the kit's own tests (kit.config.use(<this dir>)).
+[harness]
+name = "shop-harness"
+cli = "shop"
+env_prefix = "SHOP"
+db_file = "shop.db"
+scripts_dir = "scripts"
+languages = ["en", "zh"]
+markets = ["US", "CA"]
+home_env_file = ""
+
+[ssot]
+dir = "ssot"
+message_codes = "ssot/message_codes.tsv"
+fact_keys = "ssot/fact_keys.tsv"
+decision_keys = "ssot/decision_keys.tsv"
+constants = "ssot/constants.tsv"
+story_checks = "ssot/story_checks.tsv"
+
+[release]
+internal = ["CLAUDE.md", "tests", "evals", ".claude", "ssot/README.md"]
+must_ship = ["SKILL.md", "README.md", "harness.toml", "scripts/shop.py"]
+
+[layers]
+pull = "pull_*"
+ingest = "ingest_*"
+compute = "compute_*"
+writer = "_lib/writer"
+writer_importers = ["execute_actions"]
+clients = ["_lib/shop_api"]
+spawn_allowed = ["compute_stories"]
+
+[contract]
+no_db_next = ["facts init"]
+
+[guards.json_contract]
+# sample arguments for the read verbs that need some (kit.guards.json_contract)
+args = {"facts get" = ["unit_cost"], "decisions get" = ["product", "SKU-1", "stage"]}

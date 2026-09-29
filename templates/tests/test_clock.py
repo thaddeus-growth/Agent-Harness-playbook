@@ -36,8 +36,8 @@ from unittest import mock
 from _check import check, finish
 
 ROOT = Path(__file__).resolve().parent.parent
-CODE = ("src", "core")                   # folders of code to lint (core/tests too: its toy harness is an example)
-CLOCK = "core/dates.py"                  # the one module that reads the calendar
+CODE = ("src", "common")                 # folders of code to lint
+CLOCK = "common/dates.py"                  # the one module that reads the calendar
 ALLOWED: dict[tuple[str, str], int] = {
     # ("src/pull_ads.py", "window"): 1,  a read still to move to dates.now()
 }
@@ -121,8 +121,8 @@ SAMPLE = '''\
 import datetime as dt
 import time
 from datetime import date, datetime as DT
-from core import dates
-from core.dates import now, utc_stamp
+from common import dates
+from common.dates import now, utc_stamp
 def f():
     a = dt.datetime.now(dt.timezone.utc)
     b = date.today()
@@ -142,7 +142,7 @@ def main() -> int:
     print("the rule")
     got = scan(SAMPLE)
     check("catches every datetime/date now/today/utcnow, called or not, a time "
-          "read with no time value, and a `from core.dates import now` binding",
+          "read with no time value, and a `from common.dates import now` binding",
           [(q, n) for q, n, _ in got] == [("<module>", 5), ("f", 7), ("f", 8), ("f", 9),
                                           ("f", 10), ("f", 14), ("C.m", 17)], got)
     check("leaves time.time, time.monotonic, dates.now/today, utc_stamp, "

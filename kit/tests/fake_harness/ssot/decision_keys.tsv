@@ -1,0 +1,9 @@
+entity_type	key	domain	confirm	label_en	label_zh	story	why
+product	stage	draft|live|retired	human	Stage	阶段	S1	Which stage the product is in; moving it back is a human act
+product	stage_since	date	human	Stage since	阶段开始日	S1	The day the stage in force began
+product	stage_record	json	harness	Stage record	阶段记录	S1	Written by the stage confirm: the stage left and the stage entered, frozen
+product	floor_price	number:0..	human	Floor price	最低价	S2	The price nothing is sold below
+product	artwork	sha256	human	Artwork	主图	S3	The sha256 of the approved artwork file
+product	agent_score	int:0..10	none	Agent score	助手评分	S4	An agent rating, in force at once because it moves no money
+product	note	text	human	Note	备注	S5	A free note about the product
+campaign	channel	organic|paid	human	Channel	渠道	S6	Which budget the campaign draws from

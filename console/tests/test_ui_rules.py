@@ -25,7 +25,7 @@ import _t  # noqa: E402
 import core  # noqa: E402
 import i18n  # noqa: E402
 import pages  # noqa: E402
-from test_pages import Doc, Log, Node, T, ask_raw, ctx, full_log, history_log  # noqa: E402
+from test_pages import Doc, Log, Node, T, adviser, advised_log, ask_raw, ctx, decider, full_log, history_log  # noqa: E402
 
 LANGS = i18n.LANGS
 
@@ -130,6 +130,10 @@ def every_page(lang):
                                         {"ok": False, "id": "b", "title": RES_TITLE, "value": None, "code": "gate_refused", "message": RES_MESSAGE}]),
         pages.render_error(ctx(lang), "corrupt_log", ERR_DETAIL),
         pages.render_error(ctx(lang), "gate_timeout", RES_MESSAGE),
+        pages.render_inbox(advised_log().state(), decider(lang)),            # team review, both sides
+        pages.render_inbox(advised_log().state(), adviser(lang)),
+        pages.render_history(advised_log().state(), decider(lang)),
+        pages.render_history(advised_log().state(), adviser(lang)),
     ]
 
 
@@ -158,7 +162,7 @@ def rules():
 def test_the_rules_file_is_the_checklist_and_each_rule_has_a_check_named_after_it():
     head, rows = rules()
     assert head == ["id", "when", "do", "example"]
-    assert [r[0] for r in rows] == [f"U{n:02d}" for n in range(1, 18)]
+    assert [r[0] for r in rows] == [f"U{n:02d}" for n in range(1, 19)]
     for r in rows:
         assert len(r) == 4 and all(c.strip() and c == c.strip() for c in r), r
     mine = {n for n in globals() if re.fullmatch(r"test_u\d\d_\w+", n)}
@@ -399,7 +403,7 @@ def test_u09_the_consoles_words_come_only_from_the_dictionary_the_agents_are_sho
         elif isinstance(x, list):
             for v in x:
                 strings(v, agents)
-    for log in (L, over_log(), numbers_log(), problem_log()):
+    for log in (L, over_log(), numbers_log(), problem_log(), advised_log()):
         for e in log.events:
             strings({k: v for k, v in e.items() if k in fields})
     agent |= {"Northwind Console", "alice", "Done", RES_TITLE, RES_VALUE, RES_MESSAGE, ERR_DETAIL}
@@ -555,6 +559,11 @@ def test_u17_a_form_is_sent_without_leaving_the_page_and_the_page_keeps_what_the
         assert d.find("li", "res") is not None
         n = Doc(pages.render_inbox(full_log().state(), {**ctx(lang), "flash": {"kind": "ok", "text": "x"}}))
         assert n.find("p", "flash") is not None
+        for who in (adviser(lang), decider(lang)):   # a view sent from History, or a reopen from a disagreement's notice, ends the same way
+            h = Doc(pages.render_history(advised_log().state(), {**who, "flash": {"kind": "ok", "text": "x"}}))
+            assert h.find("p", "flash") is not None
+            forms = h.find_all("form")
+            assert forms and all(f.attrs.get("method") == "post" and f.attrs.get("action") for f in forms)   # each one the script can send
     got = script_run()
     if got is None:
         return
@@ -581,7 +590,6 @@ def test_u17_a_form_is_sent_without_leaving_the_page_and_the_page_keeps_what_the
     assert tray["position"] == "fixed" and tray["pointer-events"] == "none" and toast["pointer-events"] == "auto"
     assert px(decls(".toasts", "(max-width: 480px)")["top"]) > px(tray["top"])           # under the taller bar of a phone
     assert "toast-in" in toast["animation"]
-
 
 
 def test_u16_when_the_console_cannot_be_reached_a_bar_says_so_and_goes_when_it_can_again():
@@ -1000,6 +1008,37 @@ def test_u14_an_answer_the_console_cannot_write_draws_no_form_and_says_so_before
             assert numbers.find("form", "all") is None                        # and no group button that would send it
         ok = Doc(pages.render_inbox(full_log().state(), ctx(lang, relay=[["facts", "confirm"]])))
         assert [a for a in ok.find_all("details", "ask") if "Title of p1" in a.text()][0].find("form", "answer")
+
+
+def test_u18_an_adviser_sees_everything_decides_nothing_and_a_disagreement_reaches_the_one_who_decides():
+    st = advised_log().state()
+    for lang in LANGS:
+        for page in (pages.render_inbox(st, adviser(lang)), pages.render_history(st, adviser(lang))):
+            d = Doc(page)
+            forms = d.find_all("form")
+            assert forms and all(f.attrs["class"] == "adviceform" for f in forms)    # nothing that answers, reopens or notes
+            for f in forms:
+                radios = f.find_all("input", type="radio")
+                assert [r.attrs["value"] for r in radios] == ["agree", "disagree"] and not [r for r in radios if "checked" in r.attrs]
+                assert "required" not in f.find("textarea").attrs                    # agreeing needs no reason; the console asks one to disagree
+            assert len(d.find_all("details", "ask")) == len(forms)                  # every ask or answer has its own
+        inbox = Doc(pages.render_inbox(st, decider(lang)))
+        assert inbox.main.find("p", "dissent").text().startswith(T("dissent.inbox", lang, n=3))
+        for a in inbox.find_all("details", "ask"):
+            views, form = a.find("div", "advice"), a.find("form", "answer")
+            if views:
+                walk = list(a.walk())
+                assert walk.index(views) < walk.index(form)                         # read before the answer controls
+        hist = Doc(pages.render_history(st, decider(lang)))
+        opened = [r for r in hist.find_all("details", "ask") if "open" in r.attrs]
+        assert [r.find("span", "ttl").text() for r in opened] == ["Gated with a disagreement", "Waiting with a disagreement"]
+        waiting = opened[1]
+        kids = [k for k in waiting.find("div", "inner").kids if isinstance(k, Node)]
+        assert "dissent" in kids[0].classes and kids[0].find("form", "reopen")       # Reopen at the top, the reasons below
+        assert waiting.find("div", "advice").find("span", "chip").text() == T("advice.disagree", lang)
+    d = decls(".dissent")
+    assert d["background"] == "var(--bad-bg)" and "var(--bad)" in d["border-left"]
+    assert decls(".adviceform")["display"] == "grid" and "grid-template-columns" in decls(".adviceform")
 
 
 if __name__ == "__main__":

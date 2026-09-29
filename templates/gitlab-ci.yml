@@ -1,0 +1,71 @@
+# {{name}}: CI. Every branch and merge request runs the secret scan and the
+# offline test suite; a merge request also checks that its title names a story.
+# Nothing here needs a secret or the client's data folder.
+
+stages: [check]
+
+# One pipeline per change: a merge request's own pipeline when the branch has
+# one open (every job runs there, so the MR shows the whole result), else the
+# branch pipeline. Tags run too, so a release tag is tested as it is.
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+# Last line of defence if .gitignore ever breaks: fail on anything that looks
+# like a real credential in tracked text. Add the harness's own credential
+# prefixes to the pattern. This file names the patterns, so it is not scanned;
+# .env.example holds placeholders only.
+secret scan:
+  stage: check
+  image: alpine:3.20
+  script:
+    - |
+      if grep -rEn --exclude-dir=.git --exclude=.gitlab-ci.yml --exclude=.env.example \
+          'BEGIN( [A-Z]+)* PRIVATE KEY|AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{30,}|xox[abpr]-[0-9A-Za-z-]{10,}|sk-[A-Za-z0-9_-]{32,}' \
+          --include='*.py' --include='*.json' --include='*.md' --include='*.yml' \
+          --include='*.yaml' --include='*.toml' --include='*.tsv' --include='*.txt' \
+          --include='*.env' --include='*.js' --include='*.html' .; then
+        echo "A credential-like string is tracked. Rotate the credential and remove it from history."
+        exit 1
+      fi
+      echo "OK: no credential-like string found."
+
+# CLAUDE.md: every merge request names the story (S..) or rule (P..) it serves;
+# a release is titled "release X.Y.Z". Only merge request pipelines have a title.
+story id:
+  stage: check
+  image: alpine:3.20
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  script:
+    - |
+      if printf '%s\n' "$CI_MERGE_REQUEST_TITLE" | grep -Eq '(^|[^A-Za-z0-9])[SP][0-9]{2,}([^0-9]|$)|^release [0-9]'; then
+        echo "OK: the title names a story or rule, or is a release."
+      else
+        echo "The title must name the story (S..) or rule (P..) it serves, or start with 'release X.Y.Z' (CLAUDE.md)."
+        exit 1
+      fi
+
+# The whole suite is offline: fixtures and temporary folders, no credentials.
+# The runner fails any test file that exits non-zero, prints no
+# "RESULT: N passed" line, or leaves files behind; this job also checks the
+# runner's own last line, so a runner that stops early cannot pass.
+{{cli}} test:
+  stage: check
+  image: python:3.12-bookworm
+  variables:
+    UV_CACHE_DIR: .uv-cache
+  cache:
+    paths: [.uv-cache]
+  before_script:
+    - pip install -q uv
+  script:
+    - |
+      if uv run scripts/{{cli}}.py test > test.log 2>&1; then ok=1; else ok=0; fi
+      cat test.log
+      test "$ok" = 1
+      tail -n 1 test.log | grep -Eq '^RESULT: [0-9]+ passed$'

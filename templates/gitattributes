@@ -3,16 +3,17 @@
 # playbook's own archive downloads.)
 #
 # A release is `git archive` of its tag, so every path below stays out of it:
-# a host gets only what runs. tests/test_release_archive.py fails an entry
-# that names no tracked path, an internal file that ships, and a runtime file
-# left out. Keep only the lines for what your repository has.
+# a host gets only what runs. The release test (templates/tests/test_release_archive.py
+# here; tests/test_release.py in a scaffolded harness, which renders this file
+# from harness.toml) fails an entry that names no tracked path, an internal file
+# that ships, and a runtime file left out. Keep only the lines for what your
+# repository has.
 
 # for the people changing the code, and its CI: nothing on a host runs them
 /.gitattributes export-ignore
 /CLAUDE.md export-ignore
 /.claude export-ignore
 /tests export-ignore
-/core/tests export-ignore
 /evals export-ignore
 /.github export-ignore
 /.gitlab-ci.yml export-ignore
@@ -20,6 +21,7 @@
 # registry files no runtime code opens: ssot/index.tsv names no reader for them
 /ssot/README.md export-ignore
 /ssot/index.tsv export-ignore
+/ssot/stages.agent.tsv export-ignore
 /ssot/user-stories.tsv export-ignore
 /ssot/user-stories.agent.tsv export-ignore
 /ssot/policies.tsv export-ignore

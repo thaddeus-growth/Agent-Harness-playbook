@@ -1,2 +1,3 @@
-id	implementation	notes	proposed
-P01	src/rules/negatives.py negate_candidates() → compute actions, rule add_negative	the owner has not approved it yet; the code may propose, never execute	
+id	status	source	ask	decided	implemented_in	notes	proposed
+P01	proposed	agent:2026-09-20			scripts/_lib/rules/negatives.py negate_candidates() → compute actions, rule add_negative	the owner has not approved it yet; the code may propose, never execute	when: a keyword has at least min_clicks_to_judge clicks in one ad group and no order there. do: propose an exact negative in that ad group, unless the term has orders anywhere else. params: min_clicks_to_judge. why: clicks that never sell in one place are waste there; a term that sells elsewhere still earns its traffic. stories: S02
+P02	accepted	doc:playbook-README#human-in-the-loop-rule-5	rule-p02	console:rule-p02@21	scripts/kit/queue.py (expiry at approve and at execute)		

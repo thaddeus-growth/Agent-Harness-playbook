@@ -1,0 +1,1 @@
+One registry fragment per kit module: <module>.tsv (e.g. human.tsv), same columns as ../message_codes.tsv (code, params, meaning_en, meaning_zh); only that module adds or edits its rows, and kit/messages.py loads every *.tsv here in sorted order after ../message_codes.tsv.

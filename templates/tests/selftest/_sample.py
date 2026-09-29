@@ -1,5 +1,5 @@
 """A sample harness with the test kit installed the way templates/tests/README.md
-says: the kit's tests/*.py in tests/, the playbook's core/ at the root,
+says: the kit's tests/*.py in tests/, the small common/ package (selftest/sample/) at the root,
 templates/gitattributes as .gitattributes, templates/ssot/ as ssot/, plus a
 few lines of code in the example layout. `build()` writes it, applies the
 changes a test asks for and stages it all in a fresh git repository.
@@ -14,7 +14,7 @@ import sys
 
 KIT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # templates/tests
 TEMPLATES = os.path.dirname(KIT)
-REPO = os.path.dirname(TEMPLATES)
+SAMPLE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sample")
 
 CODE = {
     "README.md": "# Sample harness\n",
@@ -24,6 +24,7 @@ CODE = {
     ".gitlab-ci.yml": "test:\n  script: python3 tests/run.py\n",
     "evals/README.md": "# Agent-behaviour evals, run by hand\n",
     "src/harness.py": '"""The CLI: one verb per script."""\n\n\ndef main(verb):\n    return verb\n',
+    "common/__init__.py": "",
     "src/lib/__init__.py": "",
     "src/lib/db.py": "import sqlite3\n\n\ndef connect(path):\n    return sqlite3.connect(path)\n",
     "src/lib/constants.py": ("from pathlib import Path\n\n\ndef load():\n"
@@ -33,15 +34,15 @@ CODE = {
     "src/api/client.py": ("import json\n\n\nclass Client:\n    def get(self, path):\n"
                           "        return json.dumps({'path': path})\n"),
     "src/api/writer.py": "from .client import Client\n\n\ndef write(change):\n    return Client().get(change)\n",
-    "src/pull_ads.py": ("from api import Client\nfrom core import dates\n\n\ndef main():\n"
+    "src/pull_ads.py": ("from api import Client\nfrom common import dates\n\n\ndef main():\n"
                         "    return Client().get('report'), dates.today()\n"),
-    "src/ingest_ads.py": ("from core import dates\nfrom lib import db\n\n\ndef main(path):\n"
+    "src/ingest_ads.py": ("from common import dates\nfrom lib import db\n\n\ndef main(path):\n"
                           "    return db.connect(path), dates.utc_stamp()\n"),
-    "src/compute_kpi.py": ("from core import dates\nfrom lib import db, rules\n\n\ndef main(path):\n"
+    "src/compute_kpi.py": ("from common import dates\nfrom lib import db, rules\n\n\ndef main(path):\n"
                            "    return db.connect(path), dates.today(), rules.over_cap(1, 2)\n"),
     "src/compute_stories.py": ("import subprocess\nimport sys\n\n\ndef run(verb):\n"
                                "    return subprocess.run([sys.executable, 'src/harness.py', *verb])\n"),
-    "src/facts.py": ("from core import dates\nfrom lib import db\n\n\ndef set_pending(path, key, value):\n"
+    "src/facts.py": ("from common import dates\nfrom lib import db\n\n\ndef set_pending(path, key, value):\n"
                      "    return db.connect(path), key, value, dates.now()\n"),
     "src/execute.py": ("from api import writer\nfrom lib import db, rules\n\n\ndef main(path, apply=False):\n"
                        "    return writer.write('x') if apply and rules.over_cap(2, 1) else db.connect(path)\n"),
@@ -63,9 +64,9 @@ def build(root: str, changes: dict[str, str | None] | None = None) -> str:
         files[f"tests/{os.path.basename(p)}"] = read(p)
     for p in glob.glob(os.path.join(TEMPLATES, "ssot", "*")):
         files[f"ssot/{os.path.basename(p)}"] = read(p)
-    for p in glob.glob(os.path.join(REPO, "core", "**", "*"), recursive=True):
-        if os.path.isfile(p) and "__pycache__" not in p:
-            files[os.path.relpath(p, REPO)] = read(p)
+    files["ssot/README.md"] = "# ssot\n"   # the template's prose names the console; the sample's text rules read ssot/
+    for p in glob.glob(os.path.join(SAMPLE, "*.py")):   # the sample's common/: the one clock, a runner, a raw and a database guard
+        files[f"common/{os.path.basename(p)}"] = read(p)
     files[".gitattributes"] = read(os.path.join(TEMPLATES, "gitattributes"))
     for path, text in (changes or {}).items():
         if text is None:

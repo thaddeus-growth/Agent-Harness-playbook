@@ -1,0 +1,47 @@
+# {{name}}: the harness declares itself once, here. The vendored kit
+# (scripts/kit/) reads every name it needs from this file and hard-codes none.
+# A change here can move the write path or what a release ships, so it is on
+# the risky list (CODEOWNERS).
+
+[harness]
+name = "{{name}}"                # the repository and skill name
+cli = "{{cli}}"                  # the CLI word in docs and in every `next` command
+env_prefix = "{{env_prefix}}"    # {{env_prefix}}_DATA_DIR, {{env_prefix}}_CONFIRM_CODE_SECRET, {{env_prefix}}_ALLOW_WRITES, {{env_prefix}}_KILL …
+db_file = "{{cli}}.db"           # the database, under {{env_prefix}}_DATA_DIR
+scripts_dir = "scripts"          # on sys.path; the harness's own library is scripts/_lib
+languages = ["en", "zh"]         # every message code row has one meaning_<lang> per language
+markets = []                     # the closed set of scopes, for example ["HK", "TW"]; [] = no scope partition
+home_env_file = ""               # an optional env file in the home folder, for example "~/.{{cli}}.env"; "" = none
+
+[ssot]
+dir = "ssot"
+message_codes = "ssot/message_codes.tsv"
+fact_keys = "ssot/fact_keys.tsv"
+decision_keys = "ssot/decision_keys.tsv"
+constants = "ssot/constants.tsv"
+story_checks = "ssot/story_checks.tsv"
+
+[release]
+# A release is `git archive` of its tag. These stay out of it (export-ignore) ...
+internal = ["CLAUDE.md", "tests", "evals", "docs", ".gitlab-ci.yml", ".gitlab", ".claude", "ssot/README.md"]
+# ... and these must be in it. The vendored kit and console always ship.
+must_ship = ["SKILL.md", "README.md", "harness.toml", "scripts/{{cli}}.py"]
+
+[layers]
+# Read by the layering test: pull never imports the database, ingest never an
+# API client, compute neither a client nor the writer, and only the modules in
+# writer_importers import the writer.
+pull = "pull_*"
+ingest = "ingest_*"
+compute = "compute_*"
+writer = "_lib/writer"                 # the only module that may call the external write API
+writer_importers = ["execute_actions"]
+clients = []                           # API client modules, for example ["_lib/api_client"]; they never import the database
+spawn_allowed = ["compute_stories"]    # the one compute that may run other read verbs
+
+# Optional, read by tests/test_clock.py: the code it lints defaults to the
+# scripts dir, minus the vendored kit. A harness that adopts the kit late lists
+# the calendar reads it has not moved to kit.dates yet, as "path::function" =
+# count; the list must match exactly and only shrinks. A new harness has none.
+# [guards.clock.allowed]
+# "scripts/pull_ads.py::window" = 1

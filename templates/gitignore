@@ -1,0 +1,45 @@
+# {{name}}: what never goes into the repository. Rendered as .gitignore.
+
+# secrets: a client's credentials live in its data folder, never here
+.env
+.env.*
+!/.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# the owner console's log and its signing secret: they live in CONSOLE_DIR
+events.jsonl
+secret
+
+# client data: databases, raw pulls, reports, backups. The data root is
+# {{env_prefix}}_DATA_DIR, outside the checkout; these catch a mistake at the root
+*.db
+*.db-wal
+*.db-shm
+/data/
+/workspace/
+/backups/
+/reports/
+
+# Python and tools
+__pycache__/
+*.py[cod]
+.venv/
+.uv-cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# editors, the OS, agent worktrees
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+.claude/worktrees/
+
+# CI and test leftovers
+test.log
+*.log
+/evals/results/
