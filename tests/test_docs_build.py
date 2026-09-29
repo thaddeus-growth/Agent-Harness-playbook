@@ -388,10 +388,12 @@ def test_the_ci_template_gates_on_result_and_its_title_rule_works():
         assert re.search(rf"^{re.escape(job)}$", text, re.M), job
     assert "uv run scripts/{{cli}}.py test" in text and "'^RESULT: [0-9]+ passed$'" in text
     title = re.compile(ci_pattern(text, "grep -Eq"))
-    for good in ("S01 add the budget report", "Fix expiry (P12)", "release 0.2.0"):
+    for good in ("S01 add the budget report", "Fix expiry (P12)", "release 0.2.0", "S012 the hundredth story"):
         assert title.search(good), good
-    for bad in ("fix a typo", "S1 short", "AS01 prefix", "S012 too long", "Release notes"):
+    for bad in ("fix a typo", "S1 short", "AS01 prefix", "P7 one digit", "Release notes"):
         assert not title.search(bad), bad
+    job = doc("templates/ci/story-id.yml")
+    assert ci_pattern(job, "grep -Eq") == ci_pattern(text, "grep -Eq"), "the two story-id rules differ"
     secret = re.compile(ci_pattern(text, "grep -rEn"))
     for leak in ("-" * 5 + "BEGIN RSA PRIVATE " + "KEY-----", "AKIA" + "Q" * 16, "ghp" + "_" + "a" * 36):
         assert secret.search(leak), leak[:8]

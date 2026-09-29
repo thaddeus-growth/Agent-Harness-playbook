@@ -232,6 +232,19 @@ Install these before the first feature; each costs an hour now and saved days in
 
 ---
 
+## Build the next harness faster
+
+The checklist above, already built: a new harness starts from these instead of from a blank folder. [BUILD.md](BUILD.md) says which step uses which.
+
+- [`kit/`](kit/): the shared harness modules (the gate, human tables, the write guard, message codes, the `--json` contract, the verb table and dispatcher, doctor, the guards), vendored into each harness as `scripts/kit/`. *Test:* `python3 kit/tests/run.py`, with `kit/tests/test_e2e_shop.py` proving the gate together with the console.
+- [`hosts/zylos/`](hosts/zylos/): a host adapter driven by one manifest: install, configure, scheduled tasks and the console as a service. *Test:* `python3 hosts/zylos/tests/run.py`.
+- [`scaffold/`](scaffold/): `scaffold/new_harness.py` renders the templates, writes the skeleton, vendors the kit and the console, and generates the nine day-one tests; the result is green before its first feature. *Test:* `python3 scaffold/tests/run.py` (`scaffold/tests/test_new_harness.py`).
+- [`build/`](build/): the build-time tools: check meeting intakes, turn items into console asks, apply the answers, write the digest. *Test:* `python3 build/tests/run.py`.
+- [BUILD.md](BUILD.md): the step-by-step workflow, B0 to B10: what each step produces, what fans out, who signs which gate. *Test:* `python3 tests/run.py` (`tests/test_docs_build.py`).
+- [`skills/build-harness/`](skills/build-harness/SKILL.md): the skill an agent loads to follow BUILD.md from the files alone. *Test:* `tests/test_docs_build.py` holds it to the same steps.
+
+---
+
 ## Stories that prove themselves
 
 The owner can't read code, so "approved" and "done" must rest on checks a machine already ran.
@@ -452,3 +465,13 @@ Proven here: the core and the process; the paid-ads rules on one marketplace pla
 | [`templates/triage-checklist.md`](templates/triage-checklist.md) | 10 | Judging an agent-filed issue; the triage line |
 | [`templates/verify-challenge.md`](templates/verify-challenge.md) | 10 | Reader and skeptic prompts for an outside report |
 | [`templates/install-checklist.md`](templates/install-checklist.md) | 9 | The install message, the host report, and what a host agent can read |
+| [`templates/intake.schema.json`](templates/intake.schema.json) | 0 | The shape of one meeting's intake; `build/check_intake.py` reads it |
+| [`templates/prior-art-scan.md`](templates/prior-art-scan.md) | 0, 4, 8 | When and how to scan what already exists, each claim with its link and date |
+| [`templates/team-review.md`](templates/team-review.md) | 0, 10 | Deciders and advisers, the digest, and how a dissent becomes a new ask |
+| [`templates/harness.toml`](templates/harness.toml) | 3 | The harness declares itself once: names, languages, scopes, layers, what a release ships |
+| [`templates/gitlab-ci.yml`](templates/gitlab-ci.yml) | 3, 9 | Secret scan, story id in the title, the RESULT-gated test job |
+| [`templates/gitignore`](templates/gitignore) | 3 | Secrets, the console's log and client data never enter the repository |
+| [`templates/SKILL.md`](templates/SKILL.md) | 9 | The agent's rules and the skill's scope: read, pending writes, out of scope |
+| [`templates/README-operator.md`](templates/README-operator.md) | 9 | The operator guide: install, configure, the daily loop, what needs a human |
+| [`templates/workflows.md`](templates/workflows.md) | 9, 10 | Recipes: the daily check, why a number moved, a client meeting |
+| [`templates/README.md`](templates/README.md) | all | Every template, the step that uses it and its target in a harness; the nine tests a new harness starts with |
