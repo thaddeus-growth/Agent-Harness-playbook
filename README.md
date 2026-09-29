@@ -145,6 +145,10 @@ flowchart TB
 
 Cache tables can always be rebuilt from raw; human tables never can, so they are kept apart, backed up before each ingest and written by one verb each.
 
+The guards are code you copy: [`core/store.py`](core/store.py) (human tables, rebuilds, the version stamp) and [`core/raw.py`](core/raw.py) (raw that only grows, atomic writes, one run at a time, throttling recorded as gaps). Each of their tests was shown failing on a broken copy of its guard.
+
+*Paid for:* a rolling window moved between a schema change and the ingest, so raw held as many days as the table, but later ones. The count matched and the rebuild dropped the oldest days. Compare the set of days, not the count.
+
 ---
 
 ## Stage 0 and the ten stages, one line each
@@ -174,7 +178,7 @@ The owner decides less, but every decision is real.
 1. **Decision rights live in the repo**, enforced by protected paths, not by an agent's memory.
 2. **Trust lives in the data.** Values are pending or confirmed with a source; anyone may lower trust, only a human raises it; every rule reads confirmed first.
 3. **Each story names its human step** (none / confirm / approve). Anything that can spend money is never "none".
-4. **One gate for every channel**, bound to exactly what was shown, single use, logged, no bypass flag.
+4. **One gate for every channel**, bound to exactly what was shown, single use, logged, no bypass flag ([code](core/gate.py)). *Paid for:* two rounds. The first guard only checked that stdin was a terminal, so an agent wrapped the call in a pseudo-terminal, confirmed live values and signed them as the owner with a free-text source; then a relayed code approved a different pair of items than the one shown, confirmed another entity's value, and worked twice inside its window.
 5. **Approve is the last human act before money moves.** A second confirm at execute only trains rubber-stamping.
 6. **Business "not yet" beats technically ready.** Client writes and paid calls stay off until the owner says so in writing, with a cap.
 7. **Budget the owner's attention:** at most 10 asks, each with evidence, a recommendation and what "no" means. Inputs are picked from a list; the one thing typed is a value the harness validates.
@@ -211,23 +215,45 @@ flowchart LR
 Install these before the first feature; each costs an hour now and saved days in the source project.
 
 - [ ] Meeting intake: consent, recording, transcript in the client's data folder, the organizer prompt ([template](templates/meeting-intake.md))
-- [ ] A test runner that fails any test file without its RESULT line; every rule in the agent instructions names its test ([template](templates/AGENT_INSTRUCTIONS.md))
+- [ ] The test kit before the first feature: a runner that fails a missing RESULT line, a reported failure, `0 passed` or a leaked temp file; one clock; layering rules; a release-archive test ([kit](templates/tests/)). Every rule in the agent instructions names its test ([template](templates/AGENT_INSTRUCTIONS.md))
 - [ ] An empty registry index with its lint test; ids are never reused; owner files linted for engineering words ([template](templates/ssot/))
-- [ ] A CI check that every MR title names its story or policy ([template](templates/ci/story-id.yml)), plus a few guarantee stories for refactors to name
+- [ ] CI from the first commit: one pipeline per change with every job in the MR pipeline, the story-id check on every MR title, the offline suite, a secret scan ([template](templates/ci/gitlab-ci.yml)), plus a few guarantee stories for refactors to name
 - [ ] A story-check registry and a read-only runner: pass, fail, or skip when the data is missing ([template](templates/ssot/story_checks.tsv))
-- [ ] "Declare it or refuse": a required data root, one init command to declare scope, a doctor, no defaults
-- [ ] Raw that only grows, fixtures copied from real API responses, tests for ingesting twice and for row counts
-- [ ] Human tables apart from the cache: triggers, a backup before rebuilds, refusal of lossy rebuilds, a version stamp
+- [ ] "Declare it or refuse": a required data root, one init command to declare scope, a doctor, no defaults ([doctor checks](templates/doctor-checks.md))
+- [ ] Raw that only grows, fixtures copied from real API responses, tests for ingesting twice and for row counts ([`core/raw.py`](core/raw.py))
+- [ ] One fixture test per data bug class before the first report: zero vs missing, sparse days, matched windows, stable picks, validated raw, units and ids ([table](templates/bug-classes.md)); the triage line's `Class:` counts repeats
+- [ ] Human tables apart from the cache: triggers, a backup before rebuilds, refusal of lossy rebuilds, a version stamp ([`core/store.py`](core/store.py))
 - [ ] The `--json` contract from the first report: `meta`, one error document, message codes on every verb, tested both ways ([template](templates/ssot/message_codes.tsv))
+- [ ] Copy [`core/`](core/): the human gate, message codes with their contract test pointed at your own verb table, and the runner that starts a child verb in its own PEP 723 environment
 - [ ] Typed keys: every key a human or agent can set has a unit, bounds or a domain; a fact always needs a human confirm, a decision key says whether it does ([facts](templates/ssot/fact_keys.tsv), [decisions](templates/ssot/decision_keys.tsv))
-- [ ] Boundary and layering tests before the first adapter or console exists; the console's UI rules as an owner file with its lint ([template](templates/console/ui_rules.tsv))
-- [ ] A golden-diff tool committed before the first refactor: every `--json` read and every page, BASE vs HEAD ([spec](templates/AGENT_INSTRUCTIONS.md#golden-diff))
+- [ ] Boundary and layering tests before the first adapter or console exists ([template](templates/tests/test_layering.py)); the console's UI rules as an owner file with its lint ([template](templates/console/ui_rules.tsv))
+- [ ] A golden-diff tool committed before the first refactor: every `--json` read and every page, BASE vs HEAD, its self-checks run once ([spec](templates/AGENT_INSTRUCTIONS.md#golden-diff), [engine](templates/tests/golden/))
 - [ ] The owner's inbox before the first ask: one log, at most 10 open asks, answers signed ([`console/`](console/))
 - [ ] Writes and paid calls off: dry run, allowlist, kill switch, no retries, caps
 - [ ] Protected paths for the risky list ([template](templates/CODEOWNERS)) and one release owner
-- [ ] Git rules: never squash; one "Fixes #N" per line; every commit names its story; the CI home chosen on day 1
+- [ ] Git rules: never squash; one "Fixes #N" per line; every commit names its story; the forge chosen by three questions and every token proved on day 1 ([below](#forge-and-access))
 - [ ] Releases are a `git archive` of the tag with an archive test; install messages written from the version the host runs ([install checklist](templates/install-checklist.md))
 - [ ] Before the first hosted client: decide where the logic and the keys live
+
+### Forge and access
+
+Settle where the code lives, and who holds which token, before the first commit. Moving later means migrating issues, rewriting CI, living with two issue-numbering schemes and rebuilding the host's install path.
+
+Ask three questions of the forge:
+
+1. **Can a CI quota or spending limit stop builds mid-project?** If so, raise it or pick another forge now.
+2. **Can the hosting platform install a private release from it?** Some install by repo name from one forge only; anywhere else, the install becomes deploy token → clone → archive.
+3. **Can every agent reach it from the network it runs on?** SSH is often blocked behind a proxy where HTTPS works.
+
+| Role | Token | Scopes | Day-one proof call |
+| --- | --- | --- | --- |
+| Builder agent, forge CLI | Its own access token, stored by the CLI | Issues, merge requests, pipelines, job logs (read), tags, labels | Open a merge request from a scratch branch, read a failed job's log, add and remove a label |
+| Builder agent, git | HTTPS push, with the OS keychain as credential helper | Repository write | Push a scratch branch and delete it |
+| Host | A read-only deploy token | Repository read | Clone a release tag and `git archive` it; a push with the token is refused |
+| Owner | The owner's own token | All | None: it never passes through an agent. The owner's merges on the risky list are clicks in the forge |
+| Public repo | A repo-local commit identity (`git config user.name` and `user.email` inside the clone) | None | `git log -1 --format='%an <%ae>'` shows the public identity, not a work address |
+
+*Paid for:* CI stopped on a spending limit on day 5 and forced a forge move: 39 issues migrated, and the agent instructions still explain two numbering schemes. The CLI token could not read job logs, so seven failed pipelines were debugged blind. Jobs with no rules ran only in branch pipelines, so a merge request pipeline could turn green with no test run ([CI template](templates/ci/gitlab-ci.yml)).
 
 ---
 
@@ -284,7 +310,7 @@ flowchart TB
     classDef owner fill:#e8f0fe,stroke:#1a73e8,stroke-width:2px,color:#202124
 ```
 
-1. **Code every message and close the registry both ways, on every verb** ([how](templates/ssot/README.md#message-codes)). *Paid for:* the gate and write verbs sat outside the test, so their refusals reached the owner's page as "unclassified" until about 40 were coded.
+1. **Code every message and close the registry both ways, on every verb** ([how](templates/ssot/README.md#message-codes)). *Paid for:* the gate and write verbs sat outside the test, so their refusals reached the owner's page as "unclassified" until about 40 were coded. The reader and the checks are [`core/messages.py`](core/messages.py) and [`core/contract.py`](core/contract.py).
 2. **A threshold enters only with a reader and is renamed only through a map** ([how](templates/ssot/README.md#thresholds)). *Paid for:* one owner audit merged 4 duplicates, dropped 3 that nothing read and renamed 3; no client folder needed a migration.
 3. **Type every key a human or agent can set** ([how](templates/ssot/README.md#facts-and-decisions)). *Paid for:* a percentage typed as 15, .15 or 150 silently changed every margin. Bounds now refuse 150 on a 0–100 percentage and 80 on a 0–1 ratio; 15 and .15 both still pass, so state the unit where it is typed.
 4. **`meta` is the truth label, scoped to exactly what the report covers:** window asked vs found, missing days per source, stale sources, what-if values in effect. Queue and execute read it to refuse.
@@ -348,8 +374,37 @@ flowchart TB
 2. *Seen once:* **check every outside report twice: a reader, then a skeptic** ([prompts](templates/verify-challenge.md)). Of the client's agent's 6 points, 2 were by design; the skeptic corrected 2 verdicts, and probing plus the golden diff found 3 more bugs. All 7 fixes merged the same day, one by the owner because it sat next to the gate relay.
 3. **A batch that breaks the invariants is one owner decision, not N fixes.** *Paid for:* an outside team proposed a parallel app with its own config and data files in 20 issues, several writing values back around the gate. The owner closed all 20 as superseded: confirm-from-the-page already existed, built with one additive harness change.
 4. **Auto-merge on green CI, except the risky list** ([protected paths](templates/CODEOWNERS)). On the forge's free tier nothing blocks the merge: the agent reads the list before setting auto-merge. A refactor that moves risky code adds the new file to the list in the same MR; this was missed once.
-5. **Refactors pass a committed golden diff** ([spec](templates/AGENT_INSTRUCTIONS.md#golden-diff)). *Paid for:* the first golden scripts lived in a session's scratch space and vanished with it; on real data the committed tool caught a report that differed in 45 places between two runs of the same code.
+5. **Refactors pass a committed golden diff** ([spec](templates/AGENT_INSTRUCTIONS.md#golden-diff), [engine](templates/tests/golden/)). *Paid for:* the first golden scripts lived in a session's scratch space and vanished with it; on real data the committed tool caught a report that differed in 45 places between two runs of the same code. Before its 0 could be trusted, it needed clocks pinned in the verbs' own child processes, only real noise masked, an untorn copy of a live folder, and worktrees removed on a kill.
 6. **Nothing a later session needs lives only in a session** ([rules](templates/AGENT_INSTRUCTIONS.md#what-lives-here)). *Paid for:* a scratch directory was wiped once, and the queue page's database still held all 213 review rows; one session left 108 worktrees.
+
+---
+
+## Building with many agents
+
+The source project built most of its changes with workflow scripts: many agents, one branch each, and one orchestrating session that pushes. About half of its runs rewrote the same script, schemas and prompt rules, and the early copies were missing rules that later cost rework. The loop, its result schemas and its rules are in [`templates/workflows/`](templates/workflows/). Copy them on day one. *(untried as copied here: the scripts are the source project's made generic, and they are tested under a simulator, not yet run live in this form.)*
+
+```mermaid
+flowchart LR
+    I["Items as data<br/>key · branch · pinned base<br/>story · spec"] --> B["Builder<br/>own worktree"]
+    B -. "not mechanical" .-> Q["Owner queue<br/>one question + recommendation"]:::owner
+    B --> R1["Reviewer: correctness<br/>read-only"] & R2["Reviewer: invariants, scope<br/>read-only"]
+    R1 & R2 --> F["Fixer<br/>same branch · declines<br/>only with evidence"]
+    F --> V{"Verify gate, read-only<br/>ref · clean tree<br/>suite · golden diff"}
+    V -->|"red, once"| RP["One repair"] --> V
+    V -->|green| RC["Ref check<br/>reported head = branch ref?"] --> P["Orchestrator pushes<br/>the checked commit"]
+    classDef owner fill:#e8f0fe,stroke:#1a73e8,stroke-width:2px,color:#202124
+```
+
+1. **Items are data, and the base is a pinned commit.** Each item names its key, branch, story and spec. Every prompt names the base SHA and an in-flight map: other branches and sessions, the files not to touch, and the one item that may bump a schema in this run. *Paid for:* two branches built at the same time both bumped the schema version to the same number.
+2. **Show each new test red on the base, then green. Write each safety check both ways: the bad case refused AND the good one accepted.** *Paid for:* a reviewer found a new check that could not fail on the base, although the builder had reported that it did.
+3. **Give each agent its own temp dir, port block and store, and run golden cases alone.** *Paid for:* test sandboxes leaked into the system temp dir while many agents ran the suite, and a timing check failed only while a golden compare ran beside it.
+4. **A builder that meets a question of meaning stops.** It commits nothing and returns one question with its recommendation. *Paid for:* early scripts had no way to stop, so a builder guessed, and the owner's answer cost a rework.
+5. **The fixer writes only where it may, and nobody trusts a reported commit.** A later agent cannot edit another agent's worktree. It enters that worktree first, or it fixes in its own detached worktree and moves the branch with a compare-and-swap, `git update-ref refs/heads/B NEW OLD`. Results carry `head_sha`, and the gate and the [ref check](templates/workflows/refcheck.py) compare it with the branch ref before any push. *Paid for:* this write-hook trap came back run after run. Once a fix was left on a detached HEAD while the branch kept the unreviewed commit, and it was reported as done.
+6. **Every item ends at a read-only gate with at most one repair round.** *Paid for:* early scripts ended at the fix pass, so "green" was only the fixer's word. The gate was cheap, and in later runs it never needed its repair round.
+7. **Before a clean-up round, sweep read-only and send a skeptic after each candidate** ([`sweep-skeptic-plan.js`](templates/workflows/sweep-skeptic-plan.js)). A finding nobody reproduced is not a finding. Accepted limits are listed up front, so they stop coming back. *Paid for:* in one refactor sweep the skeptics refuted several candidates before anyone built them. The survivors became small MRs with one reason each.
+8. **Plan for restarts.** Copy the run's journal and script into the new session and resume. Finish a cut-off builder in its existing worktree ([how](templates/workflows/README.md#after-a-restart)). *Paid for:* the orchestrating session restarted mid-run, and the running workflows were marked stopped.
+
+The full rules table, with what each rule prevented, is in [`templates/workflows/README.md`](templates/workflows/README.md#the-rules-pasted-into-prompts).
 
 ---
 
@@ -405,8 +460,8 @@ flowchart TB
 
 | Part | Paid ads: Google · Meta · TikTok | SEO · GEO · KOL |
 | --- | --- | --- |
-| Gate, message codes, test runner, release archive | Reuse | Reuse |
-| Registries, `--json` and `meta`, human tables, queue, story checks, console, host adapter | Port | Port |
+| Gate, message codes, test runner, release archive, human-table and raw guards (`core/store.py`, `core/raw.py`), one clock ([`core/`](core/), [`templates/tests/`](templates/tests/)) | Reuse | Reuse |
+| Registries, `--json` and `meta`, the harness's own tables and schema, queue, story checks, console, host adapter | Port | Port |
 | Process: stories and policies, owner queue, triage, golden diff, install flow | Reuse | Reuse |
 | Meeting intake *(untried)* | Reuse | Reuse |
 | Judge settled days only; a missing day makes a total "unknown" | Adapt | Unknown |
@@ -417,9 +472,9 @@ flowchart TB
 | Alerts: each entity's latest settled day against a multiple of its own prior 7-day mean | Adapt | Unknown |
 | Channel pack: scope, entity types, API client, pull, ingest, glossary, policies, thresholds | Rebuild | Rebuild |
 
-Proven here: the core and the process; the paid-ads rules on one marketplace platform with 7- and 14-day attribution windows; the writer tested and dry-run on real data, never used on a live account. Untried anywhere: the transfer itself, and goals other than sales (leads, app installs, awareness).
+Proven here: the core's rules and the process; the paid-ads rules on one marketplace platform with 7- and 14-day attribution windows; the writer tested and dry-run on real data, never used on a live account. Untried anywhere: the transfer itself, and goals other than sales (leads, app installs, awareness).
 
-1. **Copy the channel-free modules; port the rest of the core.** The gate, message codes, test runner and release archive name no channel. The queue, `meta`, console pages and adapter prompts name markets, campaigns, keywords and product groups: expect to rewrite them with the pack. The scope word is `market` throughout, even in the gate's subject.
+1. **Copy the channel-free modules; port the rest of the core.** The gate, message codes, clock, data guards, test runner and release archive name no channel. The queue, `meta`, console pages and adapter prompts name markets, campaigns, keywords and product groups: expect to rewrite them with the pack. [`core/`](core/) ships seven modules: the human gate (`gate.py`), coded messages (`messages.py`) and their contract test (`contract.py`), the child-verb runner (`runner.py`), one clock (`dates.py`), and the database and raw guards (`store.py`, `raw.py`); [`templates/tests/`](templates/tests/) ships the test runner and the release-archive test. The gate's subject says `scope` where the source project said `market`. *(untried as copied here: the rules and their tests come from the source project, where the original code ran on real data; these files have run only against their own tests and a toy harness)*
 2. **Put every number an agent will be asked for in the harness.** *Paid for:* asked for the top actions by money per day, the host agent found no such number and invented its own formula; the formula moved into the harness so every agent returns the same number.
 3. **Verify each platform's facts before trusting a number:**
    - the attribution window per ad type
@@ -441,13 +496,21 @@ Proven here: the core and the process; the paid-ads rules on one marketplace pla
 | --- | --- | --- |
 | [`templates/meeting-intake.md`](templates/meeting-intake.md) | 0 | The organizer prompt and its output shape |
 | [`templates/decision-rights.md`](templates/decision-rights.md) | 1 | The three lanes and the risky list |
-| [`templates/ssot/`](templates/ssot/) | 1–2, 5–7 | Registry index, glossary, user stories and policies (owner file + agent sibling), thresholds, message codes, fact and decision keys, alert rules, story checks |
-| [`templates/ci/story-id.yml`](templates/ci/story-id.yml) | 2, 10 | CI job: every MR title names its story or policy |
-| [`templates/console/ui_rules.tsv`](templates/console/ui_rules.tsv) | 8 | UI rules as an owner file, each checked by name |
-| [`templates/AGENT_INSTRUCTIONS.md`](templates/AGENT_INSTRUCTIONS.md) | 3 | Invariants-only instructions for the coding agent (a `CLAUDE.md`) |
 | [`templates/CODEOWNERS`](templates/CODEOWNERS) | 1, 10 | Protected paths for the risky list |
+| [`templates/ssot/`](templates/ssot/) | 1–2, 5–7 | Registry index, glossary, user stories and policies (owner file + agent sibling), thresholds, message codes, fact and decision keys, alert rules, story checks |
+| [`templates/ci/story-id.yml`](templates/ci/story-id.yml) | 2, 10 | The story-id job on its own (folded into `gitlab-ci.yml`); a note for GitHub Actions |
+| [`templates/ci/gitlab-ci.yml`](templates/ci/gitlab-ci.yml) | 2–3, 10 | Full CI from the first commit: one pipeline per change, story id, offline tests with a cache, adapter smoke, secret scan with a placeholder convention |
+| [`templates/AGENT_INSTRUCTIONS.md`](templates/AGENT_INSTRUCTIONS.md) | 3 | Invariants-only instructions for the coding agent (a `CLAUDE.md`) |
+| [`core/`](core/) | 3, 6, 8 | A module, not a template: the human gate, message codes with their contract test, the child-verb runner, one clock, and the raw and database guards, copied as is *(untried as copied here: the rules and their tests come from the source project, where the original code ran on real data; these files have run only against their own tests and a toy harness)* |
+| [`templates/tests/`](templates/tests/) | 3, 9 | The test kit: a runner with a temp-leak gate, a one-clock lint, an import-graph layering engine with rules in a table, and a release-archive test; `selftest/` breaks each gate on the case it exists to catch *(untried as copied here)* |
+| [`templates/tests/golden/`](templates/tests/golden/) | 3, 10 | A module to copy: the golden-diff engine, the cases hook your harness fills from its verb table, and the tests that prove it can say 1 *(untried as copied here)* |
+| [`templates/workflows/`](templates/workflows/) | 3–10 | Workflow scripts for building with many agents (build → review → fix → verify; sweep → skeptic → plan), the ref check to run before any push, and the prompt rules with what each one prevented |
+| [`templates/bug-classes.md`](templates/bug-classes.md) | 4, 7, 10 | Data bug classes, each with the fixture test that pins it; the ids for the triage line's `Class:` |
+| [`templates/doctor-checks.md`](templates/doctor-checks.md) | 4–5, 9 | What the doctor checks: when each warns, the fix it names, the bug it caught |
+| [`templates/console/ui_rules.tsv`](templates/console/ui_rules.tsv) | 8 | UI rules as an owner file, each checked by name |
+| [`templates/gitattributes`](templates/gitattributes) | 9 | Copied to the root as `.gitattributes`: the internal files every release leaves out |
+| [`templates/install-checklist.md`](templates/install-checklist.md) | 9 | The install message, the host report, and what a host agent can read |
 | [`templates/owner-queue-item.md`](templates/owner-queue-item.md) | 10 | The shape of one owner ask |
 | [`console/`](console/) | 10 | A module, not a template: the agent's ask CLI and the owner's one-page console |
 | [`templates/triage-checklist.md`](templates/triage-checklist.md) | 10 | Judging an agent-filed issue; the triage line |
 | [`templates/verify-challenge.md`](templates/verify-challenge.md) | 10 | Reader and skeptic prompts for an outside report |
-| [`templates/install-checklist.md`](templates/install-checklist.md) | 9 | The install message, the host report, and what a host agent can read |

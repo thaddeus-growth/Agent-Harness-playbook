@@ -1,4 +1,3 @@
 code	meaning_en	meaning_es	params
 days_missing	{source} has no data for {days} between {start} and {end}; the total is a lower bound	{source} no tiene datos de {days} entre {start} y {end}; el total es un mínimo	source,days,start,end
 verb_failed	{verb} failed: {error}	{verb} falló: {error}	verb,error
-unclassified_error	Unclassified error: {detail}	Error sin clasificar: {detail}	detail

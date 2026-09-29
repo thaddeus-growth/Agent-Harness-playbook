@@ -31,6 +31,8 @@ A threshold enters only when code reads it or an approved policy names it. A ren
 
 Every sentence in `--json` is a code plus params. The test fails on a code emitted but not registered, registered but never emitted, a call with the wrong params, or prose with no code beside it, in every verb. Add one `meaning_<lang>` column per language your clients read.
 
+Core's own codes (the gate's refusals and `unclassified_error`) live in [`core/message_codes.tsv`](../../core/message_codes.tsv); this file holds the harness's. A code in both is refused. The checks are [`core/contract.py`](../../core/contract.py): a harness's contract test calls `lint_registry`, `closed` and `check_verbs` on its own sources and verb table.
+
 ## Alert rules
 
 Each rule compares an entity's latest settled day with its own recent settled days; `threshold` is the multiple (`ge`) or fraction (`le`) that fires it. A new grain, metric or comparison still needs code; the row makes the rule visible, named and tunable. The send verb pushes from the report's output and writes only its own cooldown table.
