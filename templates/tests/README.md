@@ -27,7 +27,7 @@ flowchart LR
 | `archtest.py`, `test_layering.py` | A module reaches what its layer may not (eager, lazy, relative or re-exported imports); a rule's layer matches nothing; the core names the console or the adapter; the console runs a write verb, as shell text or as argv; a text rule's pattern misses its own samples |
 | `test_release_archive.py`, `gitattributes` | An internal file would ship; an export-ignore entry or `INTERNAL` path names nothing; a registry the index or the code needs is left out; runtime code is left out |
 
-- **Runner.** *Paid for:* failures were reported with exit 0, from a file that ended `main()` instead of `sys.exit(main())`. Later, every full run left hundreds of sandboxes in the temp dir, and a day of unattended agent work filled the host's disk to 99%.
+- **Runner.** *Paid for:* a test file with no entry point ran none of its checks and exited 0, so the guard of a recovery path was green without running; the runner then stopped trusting exit 0 over a file's own failed count. Later, every full run left hundreds of sandboxes in the temp dir, and a day of unattended agent work filled the host's disk to 99%.
 - **One clock.** *Paid for:* retrofitting one clock took five merge requests; until then no single patch could pin a test or a golden diff to one instant.
 - **Layering.** *Seen once:* the import-graph test went in before a refactor moved code between modules, and the moves added two rules to it.
 - **Release archive.** *Paid for:* before it, a host install copied the whole repository, agent instructions and the owner's files included.

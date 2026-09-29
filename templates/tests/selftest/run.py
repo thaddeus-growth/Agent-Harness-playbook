@@ -15,6 +15,7 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.dont_write_bytecode = True                     # no __pycache__ left in the checkout
 spec = importlib.util.spec_from_file_location("kit_run", os.path.join(HERE, "..", "run.py"))
 run = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(run)
