@@ -1,0 +1,15 @@
+code	params	meaning_en	meaning_zh
+unclassified_error	detail	An error the harness has no finer code for; {detail} is its raw English text	未分类的错误：{detail}
+joined	parts	Several notes; render each of {parts} in order	多条说明：{parts}
+reason_required		--reason is required and must not be empty: it says why, and is kept with the change	需要写明原因（不能为空），原因会和这次改动一起记下
+data_dir_unset	var	{var} is not set — set it to the directory that holds this client's .env and database. The current directory is never used as a default: agent shells reset it, and a wrong one lands credentials and data in the wrong place	还没有设置 {var}：请把它设为存放这个客户 .env 和数据库的目录。不会默认使用当前目录——助手的终端会切换目录，用错目录会把凭据和数据放错地方
+data_dir_not_absolute	var,value	{var}={value} is a relative path — set it to an absolute path; the current directory is never used	{var}={value} 是相对路径，请改成绝对路径（不会使用当前目录）
+no_db	path	No database at {path}	{path} 没有数据库
+env_required	name,searched	{name} is required — set it in the process environment or in one of the env files searched: {searched}	缺少 {name}：请在进程环境变量里设置，或写进已查找的 env 文件之一：{searched}
+raw_would_overwrite	source,name	raw/{source}/{name} already holds different bytes; a raw file is written once and never replaced — save the new data under a new name. Nothing was written	原始数据 raw/{source}/{name} 已存在且内容不同；原始数据只写一次、从不覆盖，请用新名字保存。未写入任何内容
+raw_bad_name	name	{name} is not a plain file or folder name (no path separator, no leading dot, not empty)	{name} 不是合法的文件名或目录名（不能含路径分隔符、不能以点开头、不能为空）
+raw_import_missing	path	Nothing to import: {path} is not a readable file	无法导入：{path} 不是可读取的文件
+contract_stale_data	stale	STALE DATA — {stale} (each: table, last day, days behind, most days allowed) — refresh the data before acting on this	数据过期：{stale}（每项：表、最后一天、落后天数、允许的最多天数）——请先更新数据再据此行动
+contract_assumed_thresholds	assumed	ASSUMED (not stored): this run uses {assumed} instead of the values in effect	假设值（未保存）：本次运行使用 {assumed}，而不是当前生效的值
+contract_short_window	days_found,days_requested,start,end,missing,gaps,next	SHORT WINDOW — only {days_found} of {days_requested} requested days ({start}..{end}) have data, so results rest on {days_found} day(s); no rows for {missing}; per source: {gaps}; backfill: {next}	数据天数不足：请求的 {days_requested} 天（{start} 至 {end}）里只有 {days_found} 天有数据，结果只基于这 {days_found} 天；缺少：{missing}；各数据源缺少：{gaps}；补数据命令：{next}
+contract_partial_source	gaps,next	PARTIAL SOURCE — some sources have no rows for some requested days: {gaps}; backfill: {next}	部分数据源缺天：{gaps}；补数据命令：{next}

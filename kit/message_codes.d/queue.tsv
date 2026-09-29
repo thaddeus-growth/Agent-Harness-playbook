@@ -1,0 +1,19 @@
+code	params	meaning_en	meaning_zh
+queue_snapshot_unreadable	path,detail	cannot read the snapshot {path}: {detail}. Nothing was written	无法读取快照 {path}：{detail}。未写入任何内容
+queue_snapshot_invalid	problem	not a proposal document ({problem}): expected {{meta, proposals: [...]}}. Nothing was written	不是提案文档（{problem}）：应为 meta 加 proposals 列表。未写入任何内容
+queue_proposal_invalid	index,problem	proposal {index}: {problem}. Nothing was written	第 {index} 条提案：{problem}。未写入任何内容
+queue_snapshot_market	market,found	a proposal is for market {found}, not {market}. Nothing was written	有提案属于市场 {found}，不是 {market}。未写入任何内容
+queue_snapshot_assumed	assumed	the snapshot ran with --assume ({assumed}): a what-if, not the live state. Confirm the threshold or rerun without --assume. Nothing was written	快照是用 --assume（{assumed}）算出的假设情景，不是实际状态。请先确认阈值，或不带 --assume 重算。未写入任何内容
+queue_superseded	target_ref	superseded: a newer snapshot proposes something else for {target_ref}	已被取代：新的快照对 {target_ref} 提出了别的操作
+queue_revived	status	proposed again by a newer snapshot (was {status})	新的快照再次提出了这项操作（原状态 {status}）
+queue_snapshot_stale	stale	the snapshot's data is stale ({stale}); refresh it before approving: execute refuses an item whose basis has moved	快照数据已过期（{stale}）；批准前请先刷新数据：依据变了的操作在执行时会被拒绝
+queue_added	queued,known,rejected,superseded,revived	queued {queued} new, {known} already queued, {rejected} rejected by validation, {superseded} superseded, {revived} proposed again	新加入 {queued} 项，已在队列 {known} 项，校验拒绝 {rejected} 项，被取代 {superseded} 项，重新提出 {revived} 项
+queue_item_not_found	id	no queue item #{id}. Nothing was written	没有队列项 #{id}。未写入任何内容
+queue_item_superseded	id	#{id} was superseded; approve the newer proposal instead. Nothing was written	#{id} 已被取代，请批准新的提案。未写入任何内容
+queue_item_expired	id,decided_at,ttl_hours	#{id}: its approval of {decided_at} is older than {ttl_hours}h; a fresh queue add proposes it again. Nothing was written	#{id}：{decided_at} 的批准已超过 {ttl_hours} 小时；重新加入队列后会再次提出。未写入任何内容
+queue_item_wrong_status	id,status,allowed	#{id} is {status}, not {allowed}. Nothing was written	#{id} 的状态是 {status}，不是 {allowed}。未写入任何内容
+queue_item_changed	id	#{id} changed while it was being decided; list it again. Nothing was written	#{id} 在决定过程中被改动了，请重新查看。未写入任何内容
+queue_reason_code_invalid	reason_code	--reason-code {reason_code}: one snake_case word (a-z, 0-9, _), at most 64 characters. Nothing was written	--reason-code {reason_code}：须为一个小写下划线单词（a-z、0-9、_），最多 64 个字符。未写入任何内容
+queue_reason_code_unknown	reason_code,allowed	--reason-code {reason_code}: not one of {allowed}. Nothing was written	--reason-code {reason_code} 不在允许的列表 {allowed} 中。未写入任何内容
+queue_approved	ids,by	approved {ids} by {by}	{by} 已批准 {ids}
+queue_rejected	ids,reason_code	rejected {ids} ({reason_code})	已拒绝 {ids}（{reason_code}）

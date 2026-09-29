@@ -1,0 +1,17 @@
+code	params	meaning_en	meaning_zh
+execute_go		go	可以执行
+execute_unknown_effect_blocks	id,target_ref,blocker,state	#{id}: #{blocker} on {target_ref} is {state}: it may have been written. Nothing goes to this target until execute reconcile {blocker} reads it back	#{id}：同一目标 {target_ref} 上的 #{blocker} 状态为 {state}，可能已经写入。在 execute reconcile {blocker} 回读确认之前，不会再向这个目标发送任何操作
+execute_expired	id,decided_at,ttl_hours	#{id}: approved {decided_at}, older than {ttl_hours}h; approve it again after a fresh queue add	#{id}：批准时间 {decided_at} 已超过 {ttl_hours} 小时；请重新加入队列后再批准
+execute_basis_changed	id,saved,current	#{id}: the data it was approved on moved (basis {saved} is now {current}); a fresh queue add proposes it again	#{id}：批准时依据的数据已经变了（依据 {saved} 现在是 {current}）；重新加入队列会再次提出
+execute_cap_items_deferred	id,max	#{id}: deferred, this run already sends the most items allowed ({max})	#{id}：推迟到下次执行，本次已达到单次最多 {max} 项
+execute_delta_unknown	id	#{id}: no delta, so it cannot be proven within the run cap	#{id}：没有变化量，无法证明在单次上限之内
+execute_cap_delta_deferred	id,total,cap	#{id}: deferred, the run's total change would be {total} > {cap}	#{id}：推迟到下次执行，本次总变化量会是 {total}，超过上限 {cap}
+execute_item_changed	id	#{id} changed before it was sent; not sent	#{id} 在发送前被改动了，未发送
+execute_stopped	id,reason	#{id}: not sent, the run stopped: {reason}	#{id}：未发送，本次执行已停止：{reason}
+execute_dry_run	go,total	dry run: {go} of {total} approved item(s) would be sent; nothing was written or called. --apply sends them	试运行：{total} 个已批准项中有 {go} 个会被发送；未写入也未调用任何接口。加 --apply 才会发送
+execute_applied	total,confirmed,failed,unknown,skipped	sent the go items of {total} approved item(s): {confirmed} confirmed, {failed} failed, {unknown} unknown, {skipped} not sent	已处理 {total} 个已批准项：{confirmed} 个已确认，{failed} 个失败，{unknown} 个结果不明，{skipped} 个未发送
+execute_busy	lock	another execute run holds {lock}; nothing was written	另一个执行进程正在运行（{lock}）；未写入任何内容
+execute_item_not_found	id	no queue item #{id}	没有队列项 #{id}
+execute_reconcile_nothing	id,state	#{id}: its latest effect is {state}, not sent or unknown; nothing to reconcile	#{id}：最新的执行状态是 {state}，不是已发送或不明，无需核对
+execute_reconcile_unsure	id	#{id}: the read-back cannot tell whether it was written; it stays blocked. Check the target by hand	#{id}：回读仍无法判断是否已写入，目标继续锁定。请人工检查
+execute_reconciled	id,state	#{id}: read back, {state}; its target is no longer blocked	#{id}：已回读，结果为 {state}；目标已解除锁定

@@ -1,0 +1,13 @@
+code	params	meaning_en	meaning_zh
+auth_bad_token_source	var,value,allowed	{var}={value} is not a token source; use one of: {allowed}	{var}={value} 不是有效的令牌来源，请用其中之一：{allowed}
+auth_no_env_source	prefix,var,command_var	{prefix} tokens come only from a host command: set {var}=command and provide {command_var}	{prefix} 的令牌只能由宿主命令提供：请设置 {var}=command 并提供 {command_var}
+auth_command_missing	var,source_var,searched	{var} is required when {source_var}=command (a command that prints one JSON object with access_token and expires_at); searched: {searched}	{source_var}=command 时必须提供 {var}（一个输出单个 JSON 对象、含 access_token 和 expires_at 的命令）；已查找：{searched}
+auth_command_invalid	var,detail	{var} is not a valid command line: {detail}	{var} 不是有效的命令行：{detail}
+auth_command_timeout	var,seconds	{var} did not finish within {seconds} seconds	{var} 在 {seconds} 秒内没有完成
+auth_command_not_started	var,program,detail	{var} could not start {program}: {detail}	{var} 无法启动 {program}：{detail}
+auth_command_exit	var,status,stderr	{var} exited with status {status}; its error output: {stderr} (its standard output is never shown: it may hold a token)	{var} 以状态 {status} 退出；错误输出：{stderr}（标准输出从不显示，因为其中可能有令牌）
+auth_command_not_json	var	{var} did not print exactly one JSON object on its standard output	{var} 没有在标准输出上打印恰好一个 JSON 对象
+auth_no_access_token	source	{source} gave no access_token	{source} 没有给出 access_token
+auth_token_expired	source	{source} gave a token that has already expired	{source} 给出的令牌已经过期
+auth_bad_expiry	source,value	{source}: expires_at {value} is neither epoch seconds (or milliseconds) nor an ISO 8601 time	{source}：expires_at {value} 既不是纪元秒数（或毫秒数），也不是 ISO 8601 时间
+auth_token_no_expiry	source	{source} gave a token with no expires_at, and this API needs one: its tokens lapse, and a token with no known expiry would be reused until the API refuses it	{source} 给出的令牌没有 expires_at，而这个接口需要：它的令牌会过期，没有已知过期时间的令牌会一直被重复使用，直到接口拒绝

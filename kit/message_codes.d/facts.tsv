@@ -1,0 +1,31 @@
+code	params	meaning_en	meaning_zh
+fact_key_malformed	key	Key {key} must be snake_case and carry no units (e.g. unit_cost, not cost_4_2)	{key} 不是合法的设置名（只能用小写字母、数字和下划线，也不要把单位或数值写进名字）
+fact_not_found	key,market	No fact {key} for market {market}	市场 {market} 没有 {key} 这项设置
+fact_source_required		--source is required: where the value came from (e.g. owner_interview_<date>), not who typed it; history records who	需要写明来源：这个数值是从哪里来的（例如某天和老板的访谈），不是谁输入的；输入人会自动记录
+fact_market_ambiguous	markets	Several markets are declared or waiting for confirmation ({markets}) — pass --market to say which	有多个市场（{markets}，含等待确认的），需要指定一个
+fact_changed_meanwhile	key,market	{key} [{market}] changed while the person was being asked, so the confirmation no longer matches it. Nothing was written	在等待本人确认期间，{key}（{market}）被改动了，这次确认已经对不上。未写入任何内容
+fact_history_not_found	id	No history row #{id}	没有第 {id} 条历史记录
+fact_history_other	id,key,market,row_key,row_market	History row #{id} is {row_key} [{row_market}], not {key} [{market}]. Nothing was written	第 {id} 条历史记录属于 {row_key}（{row_market}），不是 {key}（{market}）。未写入任何内容
+fact_history_no_value	id	History row #{id} wrote no value, so there is nothing to go back to. Nothing was written	第 {id} 条历史记录没有写入数值，无法回退到它。未写入任何内容
+fact_usage	detail	The command is not written the way the facts verb takes it: {detail}	命令格式不对：{detail}
+fact_backup_missing	path	No such file: {path}	找不到文件：{path}
+fact_backup_unusable	path,detail	{path} is not a usable backup (a SQLite file or a SQL dump holding the human tables): {detail}	{path} 不是可用的备份（应为包含人工数据表的 SQLite 文件或 SQL 导出）：{detail}
+fact_restore_moved	path	The database changed while the person was reading the restore from {path}; what they confirmed no longer matches. Nothing was written	在本人查看从 {path} 恢复的改动期间，数据库发生了变化，确认的内容已经对不上。未写入任何内容
+fact_init_eof		Onboarding aborted: no answer to the last question (end of input). Nothing was written	设置已中止：最后一个问题没有收到回答（输入已结束）。未写入任何内容
+fact_init_interrupted		Onboarding aborted at the keyboard. Nothing was written	设置已在键盘上中止。未写入任何内容
+fact_init_no_market		Onboarding aborted: no market given. Nothing was written	设置已中止：没有给出市场。未写入任何内容
+fact_init_bad_market	attempts,markets	Onboarding aborted: no valid market after {attempts} attempts (valid: {markets}). Nothing was written	设置已中止：试了 {attempts} 次都不是有效的市场（可用的：{markets}）。未写入任何内容
+fact_init_bad_answer	key,attempts	Onboarding aborted: no valid answer for {key} after {attempts} attempts. Nothing was written	设置已中止：{key} 试了 {attempts} 次都不是有效的回答。未写入任何内容
+fact_init_would_overwrite	key,market,current,typed	{key} is already {current} for market {market}; onboarding never overwrites it with {typed}. Nothing was written; change it deliberately with facts set	市场 {market} 的 {key} 已经是 {current}，设置向导不会把它改成 {typed}。未写入任何内容；如需修改，请用单独的修改命令
+fact_set_new	key,market,value	Recorded {key} [{market}] = {value}, pending until a person confirms it	已记录 {key}（{market}）= {value}，等待本人确认后生效
+fact_set_changed	key,market,old,new	Changed {key} [{market}] from {old} to {new}, pending until a person confirms it	已把 {key}（{market}）从 {old} 改为 {new}，等待本人确认后生效
+fact_set_unchanged	key,market,value	{key} [{market}] is already {value}: no change recorded (only a different source, if given, was kept)	{key}（{market}）已经是 {value}，没有记录改动（如给了新的来源，只更新了来源）
+fact_confirmed	key,market,value,was	Confirmed {key} [{market}] = {value} (the value before: {was})	已确认 {key}（{market}）= {value}（之前的值：{was}）
+fact_already_confirmed	key,market,value	{key} [{market}] = {value} is already confirmed	{key}（{market}）= {value} 已经确认过
+fact_unconfirmed	key,market,value	{key} [{market}] = {value} is pending again; only a person's confirmation puts it back in effect	{key}（{market}）= {value} 已改回待确认；只有本人再次确认后才生效
+fact_already_pending	key,market,value	{key} [{market}] = {value} is already pending	{key}（{market}）= {value} 本来就在等待确认
+fact_rolled_back	key,market,old,new,id	Rolled {key} [{market}] back from {old} to {new} (history row #{id}), pending until a person confirms it	已把 {key}（{market}）从 {old} 回退到 {new}（第 {id} 条历史记录），等待本人确认后生效
+fact_rollback_nothing	key,market,value,id	{key} [{market}] is already {value} (history row #{id}); nothing was written	{key}（{market}）已经是 {value}（第 {id} 条历史记录的值），未写入任何内容
+fact_init_done	market,recorded,declaration	Onboarding of market {market} done: {recorded} fact(s) recorded; the market declaration is {declaration}	市场 {market} 设置完成：记录了 {recorded} 项；市场声明的状态：{declaration}
+fact_restore_nothing	path	Nothing to restore: this database already holds everything in {path}	无需恢复：数据库里已经有 {path} 中的全部内容
+fact_restored	tables	Restored from the backup: {tables} (rows added or changed, history rows appended, per table)	已从备份恢复：{tables}（每张表新增或修改的行数，以及追加的历史记录数）

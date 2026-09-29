@@ -1,0 +1,3 @@
+code	params	meaning_en	meaning_zh
+shop_price_missing	sku	No price on file for {sku}	{sku} 没有价格
+shop_stock_low	sku,units	{sku} has only {units} unit(s) left	{sku} 只剩 {units} 件
