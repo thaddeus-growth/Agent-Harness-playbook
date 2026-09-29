@@ -20,6 +20,9 @@
   8. The ledger: charge appends a line with who approved, spent() sums it,
      sub-cent prices are not rounded to free, an unreadable line is refused.
   9. takes.py's msg() calls are closed over its fragment.
+ 10. An unconfirmed price: an item is confirmed unless the plan says not;
+     the allowance never covers a plan with an unconfirmed paid price (the
+     gate asks), and the gate's prompt and the approval name how many.
 """
 
 import io
@@ -293,6 +296,49 @@ def test_closure() -> None:
           "and every code of takes.tsv is emitted", problems == [], problems)
 
 
+def test_unconfirmed_prices() -> None:
+    print("\n[10] an unconfirmed price never rides the allowance")
+    s = store()
+    items = s.plan([({"n": 1}, True, 2.0), ({"n": 2}, True, 1.0, False),
+                    ({"n": 3}, False, 0.0, False)])
+    check("an item is confirmed unless the plan says not (Item keeps its "
+          "four-field form)",
+          [i.confirmed for i in items] == [True, False, False]
+          and takes.Item("k", 1.0, True, False).confirmed, items)
+    kw = {"cap": 20, "scope": "p", "currency": "CNY", "allowance": 10}
+    check("under the allowance, one unconfirmed paid price sends the plan to "
+          "the gate", code_of(lambda: s.approve(items, reason="r", **kw))
+          == "confirm_needs_human")
+    check("the same plan with every price confirmed passes by allowance",
+          s.approve(s.plan([({"n": 1}, True, 2.0), ({"n": 2}, True, 1.0)]),
+                    reason="r", **kw)["approved_by"].startswith(
+              "owner, standing allowance"))
+    check("an unconfirmed item that is kept already costs nothing and does "
+          "not block the allowance",
+          s.approve([takes.Item("k" * 64, 0.0, False, True, False),
+                     *s.plan([({"n": 1}, True, 2.0)])], reason="r", **kw)
+          is not None)
+    os.environ[SECRET] = "test-secret"
+    try:
+        e = raises(lambda: s.approve(items, reason="r", **kw),
+                   human.CodeRequired)
+        check("the gate's prompt names how many prices are unconfirmed",
+              e and "1 of these prices are unconfirmed"
+              in e.message.params["summary"]
+              and "allowance does not cover" in e.message.params["summary"],
+              e and e.message.params["summary"])
+        ok = s.approve(items, reason="r", code=e.confirm_code, **AUDIT, **kw)
+        check("a person approves it, and the reason on the ledger says so",
+              ok["approved_by"].endswith("@relay")
+              and ok["reason"].endswith("[1 prices unconfirmed]"), ok)
+    finally:
+        os.environ.pop(SECRET, None)
+    ok = at_tty("3", lambda: s.approve(items, reason="r", cap=20, scope="p",
+                                       currency="CNY"))
+    check("at the terminal the retype still approves it",
+          ok and ok["approved_by"].endswith("@tty"), ok)
+
+
 if __name__ == "__main__":
     test_made_once_and_kept()
     test_broken_take()
@@ -303,4 +349,5 @@ if __name__ == "__main__":
     test_standing_allowance()
     test_ledger()
     test_closure()
+    test_unconfirmed_prices()
     raise SystemExit(finish())
