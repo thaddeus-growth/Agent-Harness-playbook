@@ -1,0 +1,10 @@
+code	meaning_en	meaning_es	params
+bad_request	The command was not understood: {detail}	No se entendió el comando: {detail}	detail
+store_unset	No store is named; nothing was guessed	No se indicó ningún almacén; no se supuso nada	
+no_store	There is no store at {path} yet; declare its scope first	Todavía no hay almacén en {path}; declare primero su ámbito	path
+store_exists	{path} already declares its scope; a scope is declared once	{path} ya declara su ámbito; un ámbito se declara una sola vez	path
+store_declared	Scope {scope} is declared	El ámbito {scope} está declarado	scope
+pending_written	{item} = {value} is pending until a person confirms it	{item} = {value} queda pendiente hasta que una persona lo confirme	item,value
+value_needs_one_id	A typed value confirms one item at a time; nothing was written	Un valor escrito confirma un elemento a la vez; no se escribió nada	
+nothing_to_confirm	Nothing was confirmed: unknown {entity_type} ids {missing}, nothing pending for {idle}	No se confirmó nada: {entity_type} desconocidos {missing}, nada pendiente para {idle}	entity_type,missing,idle
+confirmed	Confirmed: {summary}	Confirmado: {summary}	summary
