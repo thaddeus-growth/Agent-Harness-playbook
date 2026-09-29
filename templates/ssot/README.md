@@ -63,7 +63,7 @@ A threshold enters only when code reads it or an approved policy names it. A ren
 
 Every sentence in `--json` is a code plus params. The test fails on a code emitted but not registered, registered but never emitted, a call with the wrong params, or prose with no code beside it, in every verb. Add one `meaning_<lang>` column per language your clients read, and list the language in `harness.toml`. The kit's own codes (`unclassified_error` for a failure with no finer code, the gate's, the facts verbs' …) live in the vendored kit; a code defined in both is refused.
 
-During a fan-out, each worker adds only codes with its own prefix (`<unit>_`), which the integrator gives out. See BUILD.md, "Fan-out rules".
+During a fan-out, each worker writes its codes to its own fragment, `message_codes.d/<unit>.tsv` (the same columns), with its own prefix (`<unit>_`); the integrator gives out both. The kit loads `message_codes.tsv` and then every fragment in name order, and refuses a code defined twice anywhere. Fragments need no row of their own in `index.tsv`: the `message_codes.tsv` row covers them. See BUILD.md, "Fan-out rules".
 
 ## Alert rules
 

@@ -6,6 +6,11 @@
     malformed row = error at load;
   * a Msg is its text, with a registered code and exactly its params;
   * coded() / failure() / relayed() / joined() place codes one way;
+  * a harness's fragments (<ssot dir>/message_codes.d/*.tsv, sorted) load
+    beside [ssot].message_codes, same rules: a code defined twice anywhere
+    (two fragments, a fragment and the registry, a fragment and the kit) is
+    an error naming both files; the ssot index row of the registry covers
+    them;
   * check_registry_closed() finds a non-literal code, an unknown code, a
     params mismatch, `**params`, and a harness code nobody emits (planted
     bad calls), and passes the shop harness and the kit's foundation.
@@ -51,6 +56,88 @@ def load_error(toml_extra: str, codes: str) -> Exception | None:
         return raises(messages.registry, messages.RegistryError)
     finally:
         _shop.use()
+
+
+def fragment_harness(frags: dict[str, str], codes: str = HEAD,
+                     declared: bool = True) -> Path:
+    d = Path(tmp_dir("hf-")).resolve()
+    (d / "ssot" / "message_codes.d").mkdir(parents=True)
+    (d / "harness.toml").write_text(
+        '[harness]\nname = "t"\ncli = "t"\nenv_prefix = "T"\n[ssot]\n'
+        'dir = "ssot"\n' + ('message_codes = "ssot/message_codes.tsv"\n'
+                            if declared else ""), encoding="utf-8")
+    (d / "ssot" / "message_codes.tsv").write_text(codes, encoding="utf-8")
+    for name, text in frags.items():
+        (d / "ssot" / "message_codes.d" / name).write_text(text,
+                                                          encoding="utf-8")
+    return d
+
+
+def frag_load(d: Path):
+    config.use(d)
+    try:
+        return raises(messages.registry, messages.RegistryError), \
+            (messages.harness_files(), dict(messages.registry())
+             if raises(messages.registry) is None else {})
+    finally:
+        _shop.use()
+
+
+def test_harness_fragments() -> None:
+    d = fragment_harness({"steer.tsv": HEAD + "steer_low\tsku\tLow {sku}\t低 {sku}\n",
+                          "alerts.tsv": HEAD + "alerts_spike\t\tSpike\t激增\n",
+                          "notes.txt": "not a registry\n"},
+                         HEAD + "t_main\t\tMain\t主\n")
+    err, (files, reg) = frag_load(d)
+    check("fragments load after the registry, sorted by name, .tsv only",
+          err is None and [f.relative_to(d).as_posix() for f in files]
+          == ["ssot/message_codes.tsv", "ssot/message_codes.d/alerts.tsv",
+              "ssot/message_codes.d/steer.tsv"], (err, files))
+    check("their codes are harness codes, with their own file",
+          reg["steer_low"]["origin"] == "harness"
+          and reg["steer_low"]["params"] == ("sku",)
+          and reg["steer_low"]["file"].endswith("message_codes.d/steer.tsv")
+          and reg["t_main"]["origin"] == "harness"
+          and reg["no_db"]["origin"] == "kit")
+    for label, frags, codes, needles in (
+            ("two fragments", {"a.tsv": HEAD + "dup_x\t\ta\tb\n",
+                               "b.tsv": HEAD + "dup_x\t\ta\tb\n"}, HEAD,
+             ("dup_x", "a.tsv", "b.tsv")),
+            ("a fragment and the registry",
+             {"a.tsv": HEAD + "dup_x\t\ta\tb\n"},
+             HEAD + "dup_x\t\ta\tb\n", ("dup_x", "message_codes.tsv",
+                                          "a.tsv")),
+            ("a fragment and the kit", {"a.tsv": HEAD + "no_db\tpath\ta\tb\n"},
+             HEAD, ("no_db", "a.tsv"))):
+        err, _ = frag_load(fragment_harness(frags, codes))
+        check(f"a code defined twice ({label}) is an error naming both",
+              err is not None and all(n in str(err) for n in needles), err)
+    err, _ = frag_load(fragment_harness({"a.tsv": HEAD + "t_y\t\tonly en\t\n"}))
+    check("a fragment row without a declared language's meaning is an error",
+          err is not None and "meaning_zh" in str(err), err)
+    err, (files, reg) = frag_load(fragment_harness(
+        {"a.tsv": HEAD + "t_y\t\ty\t乙\n"}, declared=False))
+    check("fragments load even when [ssot].message_codes is not declared",
+          err is None and "t_y" in reg and len(files) == 1, (err, files))
+    from kit.guards import ssot as ssot_guard
+    idx = ("file\towner\treader\ttest\tid_column\tpurpose\n"
+           "ssot/index.tsv\tregistry\t—\ttests/t.py\tfile\tthe index\n"
+           "ssot/message_codes.tsv\tregistry\tkit/messages.py\ttests/t.py\t"
+           "code\tmessage codes\n")
+    d = fragment_harness({"steer.tsv": HEAD + "steer_low\t\tLow\t低\n"})
+    (d / "ssot" / "index.tsv").write_text(idx, encoding="utf-8")
+    (d / "tests").mkdir()
+    (d / "tests" / "t.py").write_text("", encoding="utf-8")
+    (d / "kit").mkdir()
+    (d / "kit" / "messages.py").write_text("", encoding="utf-8")
+    problems = ssot_guard.check_index(d)
+    check("the ssot index: the registry's row covers its fragments",
+          problems == [], problems)
+    (d / "ssot" / "index.tsv").write_text(idx.rsplit("ssot/message_codes",
+                                                     1)[0], encoding="utf-8")
+    problems = ssot_guard.check_index(d)
+    check("…and without that row the fragments are unlisted too",
+          any("message_codes.d/steer.tsv" in p for p in problems), problems)
 
 
 def main() -> int:
@@ -180,6 +267,9 @@ def main() -> int:
         r = relayed(c, "t")
         check(f"relayed: {label} -> unclassified_error",
               r.code == "unclassified_error" and r.params == {"detail": "t"})
+
+    print("\n[5b] a harness's message-code fragments")
+    test_harness_fragments()
 
     print("\n[6] check_registry_closed: planted bad calls")
     check("the shop harness is closed (kit codes exempt, both shop codes "

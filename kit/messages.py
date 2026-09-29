@@ -9,7 +9,10 @@ instead of pasting the English.
 
 The registry = the kit base (kit/message_codes.tsv, then every
 kit/message_codes.d/<module>.tsv in sorted order) + the harness's own
-(`[ssot].message_codes` in harness.toml). Columns: `code`, `params`
+(`[ssot].message_codes` in harness.toml, then every
+`<ssot dir>/message_codes.d/*.tsv` in sorted order: one fragment per unit
+of a fan-out, so parallel workers never edit the same file; `harness_files()`
+lists them). Columns: `code`, `params`
 (comma-separated names, may be empty), `meaning_<lang>`…; extra columns
 are allowed. A code defined twice (in any two files) or a row missing a
 required meaning is an error at load.
@@ -127,14 +130,33 @@ def base_registry() -> dict[str, dict]:
     return reg
 
 
+HARNESS_FRAGMENTS = "message_codes.d"
+
+
+def harness_files(cfg: _config.HarnessConfig | None = None) -> list[Path]:
+    """The bound harness's registry files in load order: `[ssot].
+    message_codes` (when declared), then every `<ssot dir>/message_codes.d/
+    *.tsv`, sorted by name."""
+    cfg = cfg or _config.config()
+    out: list[Path] = []
+    path = cfg.ssot_path("message_codes")
+    if path is not None:
+        out.append(path)
+    frag = cfg.root / cfg.ssot.get("dir", "ssot") / HARNESS_FRAGMENTS
+    if frag.is_dir():
+        out += sorted(frag.glob("*.tsv"))
+    return out
+
+
 @functools.cache
 def registry() -> dict[str, dict]:
     """code -> its row: {"code", "params": (names…), "meaning_<lang>"…,
-    "file", "origin": "kit"|"harness"}; kit base ∪ the bound harness's."""
+    "file", "origin": "kit"|"harness"}; kit base ∪ the bound harness's
+    (its registry and its fragments). A code defined twice anywhere is a
+    RegistryError naming both files."""
     reg = dict(base_registry())
     cfg = _config.config()
-    path = cfg.ssot_path("message_codes")
-    if path is not None:
+    for path in harness_files(cfg):
         _merge(reg, read_rows(path, cfg.languages), "harness")
     return reg
 

@@ -5,7 +5,9 @@ owner-file lint.
 
   * the index (`[ssot].index`, default <ssot dir>/index.tsv) has exactly
     the configured header (default `file owner reader test id_column
-    purpose`); one row per file; every <ssot dir>/**.tsv has a row;
+    purpose`); one row per file; every <ssot dir>/**.tsv has a row (a
+    message-code fragment, <ssot dir>/message_codes.d/*.tsv, is covered by
+    the `[ssot].message_codes` row);
   * each row's file exists (`path:SYMBOL` = a code-held registry: the file
     assigns SYMBOL); the owner kind is owner | agent | registry; every
     reader and test path exists and a test is named; a TSV's id column
@@ -90,6 +92,7 @@ class Rules:
     status_column: str
     proposed: tuple[str, ...]
     constants: str | None
+    message_codes: str | None = None
 
 
 def rules(root: Path | str | None = None,
@@ -111,7 +114,9 @@ def rules(root: Path | str | None = None,
         banned=dict(g.get("banned_terms", {})),
         status_column=str(g.get("status_column", "status")),
         proposed=tuple(g.get("proposed_statuses", ("proposed",))),
-        constants=constants)
+        constants=constants,
+        message_codes=(cfg.ssot.get("message_codes") or "").strip("/")
+        or None)
 
 
 def _is_none(cell: str, r: Rules) -> bool:
@@ -265,7 +270,12 @@ def check_index(root: Path | str | None = None) -> list[str]:
     ssot = r.root / r.ssot_dir
     tsvs = sorted(p.relative_to(r.root).as_posix() for p in ssot.rglob("*.tsv")
                   ) if ssot.is_dir() else []
-    unlisted = sorted(set(tsvs) - set(files))
+    # message-code fragments (kit.messages.harness_files) are rows of the
+    # [ssot].message_codes registry: its index row covers them
+    frag_dir = f"{r.ssot_dir}/message_codes.d/"
+    covered = {t for t in tsvs if t.startswith(frag_dir)} \
+        if r.message_codes in files else set()
+    unlisted = sorted(set(tsvs) - set(files) - covered)
     if unlisted:
         out.append(f"{r.index}: does not list {unlisted}")
 
