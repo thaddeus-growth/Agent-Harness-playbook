@@ -151,6 +151,8 @@ The guards are code the kit holds: [`kit/db.py`](kit/db.py) (human tables, rebui
 
 **The CLI is the only door.** Every capability the harness owns, each paid or live API call included, is a CLI verb with `--json`, a cost estimate where money is spent, and a `source` on what it writes. An agent may read through MCP or UI tools, but the result enters a workspace only through a `pull` or `import` verb. Hand-written raw files and direct API writes are violations. Otherwise the cost guard, the source tags and the network-free tests cover only the calls that happened to use the verb. *Example:* an SEO harness lets the agent read Search Console through an MCP, then lands the reply with its `import` verb, so the read is recorded like any pull.
 
+**Teach the agent from `--help` and one first call.** End every verb's `--help` with two or three example calls (minimal, typical, one with a cost or gate flag) and the top-level keys of its `--json` output, and test both. Give the agent one status verb to call first in every session: the next step, what waits on a human, how old the last ingest is, and what has been spent. Anthropic reports worked examples raised accuracy on complex parameters from 72% to 90% ([tool use](https://www.anthropic.com/engineering/advanced-tool-use)), and has long-running agents begin each session by reading the state left behind ([long-running harnesses](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents)). *Not yet proven here:* proposed, not built.
+
 ---
 
 ## Stage 0 and the ten stages, one line each
@@ -186,7 +188,8 @@ The owner decides less, but every decision is real.
 7. **Budget the owner's attention:** at most 10 asks, each with evidence, a recommendation and what "no" means. Inputs are picked from a list; the one thing typed is a value the harness validates.
 8. **Agree in advance which channel counts.** Widening what may be written counts only when typed in chat, not clicked on a page.
 9. **Remote agents never act for the owner.** They install only on the owner's own "confirm vX" and end with a checklist report.
-10. *Not yet proven:* **measure whether the gate is real.** Track how often the owner overrides each kind of ask; no override rate is computed yet. An eval counts only if it fails when its rule is removed: cut once, 5 of 9 failed as they should, and the other 4 stay only as regression guards.
+10. **Two refusals mean stop.** After two consecutive refusals from the gate or the cost cap, the verb answers with an `escalate` code; the agent stops and asks the owner and never looks for another door. Anthropic's auto-mode write-up found users approved 93% of prompts, so approvals are scarce and an agent that routes around a denial is the failure to design out ([source](https://www.anthropic.com/engineering/claude-code-auto-mode)). *Not yet proven:* no harness here counts refusals yet.
+11. *Not yet proven:* **measure whether the gate is real.** Track how often the owner overrides each kind of ask; no override rate is computed yet. An eval counts only if it fails when its rule is removed: cut once, 5 of 9 failed as they should, and the other 4 stay only as regression guards.
 
 ---
 
