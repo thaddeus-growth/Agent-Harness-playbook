@@ -43,6 +43,11 @@ What it guards:
     ..."), so the ledger shows a plan passed by allowance, not by a person
     at a terminal. The owner sets, raises and removes it; an agent never
     writes it.
+  * An unconfirmed price never rides the allowance: an item may say its
+    price is not confirmed by a person (`confirmed` False, e.g. from
+    kit.prices.estimate); a plan with any such paid item goes to the gate
+    whatever the allowance, and the gate's prompt and the approval's
+    reason name how many prices are unconfirmed.
   * Spend is charged in an append-only ledger (one fsynced JSON line per
     paid take made, with who approved it); `spent()` sums it. A ledger line
     that cannot be read is refused, never skipped: skipping would undercount
@@ -55,7 +60,8 @@ Paid for: a voice take whose voice was not installed wrote a 0.01 s file
 and exited 0; the empty take was cached and every later build reused it
 (so `check`). A re-roll that replaced a take would lose one the owner had
 already approved and paid for (so a re-roll is a new request, and nothing
-here overwrites or deletes).
+here overwrites or deletes). Every price was pending while the allowance
+approved spend against them (so `confirmed`, and kit.prices).
 
 Deviations from the source: refusals are kit.contract.HarnessError
 (TakeRefused) carrying coded messages, renamed `take_*` so a harness still
@@ -116,11 +122,13 @@ def _shown(x: float) -> str:
 @dataclass(frozen=True)
 class Item:
     """One take of a plan: its key, its cost (None = unpriced; 0 when it is
-    cached), whether it will be paid for, whether it is kept already."""
+    cached), whether it will be paid for, whether it is kept already, and
+    whether a person confirmed its price (True unless the caller says)."""
     key: str
     cost: float | None
     paid: bool
     cached: bool
+    confirmed: bool = True
 
 
 class TakeStore:
@@ -211,16 +219,16 @@ class TakeStore:
         """The sum of every charged cost."""
         return sum(float(r.get("cost") or 0) for r in self.lines())
 
-    def plan(self, requests: list[tuple[dict, bool, float | None]]
-             ) -> list[Item]:
-        """[(request, paid, cost)] -> items with their cache state; a kept
-        take costs 0 and is not paid for again."""
+    def plan(self, requests: list[tuple]) -> list[Item]:
+        """[(request, paid, cost[, confirmed])] -> items with their cache
+        state; a kept take costs 0 and is not paid for again. `confirmed`
+        (default True) says a person confirmed the price."""
         out = []
-        for req, paid, cost in requests:
+        for req, paid, cost, *rest in requests:
             k = key(req)
             cached = self.get(k) is not None
             out.append(Item(k, 0.0 if cached else cost, paid and not cached,
-                            cached))
+                            cached, bool(rest[0]) if rest else True))
         return out
 
     def approve(self, items: list[Item], *, cap: float | None, scope: str,
@@ -233,7 +241,7 @@ class TakeStore:
         each ledger line (charge), or None when nothing in it is paid.
         `scope` names what the plan is for (a project); it is the subject's
         market slot. `allowance` is the owner's standing allowance, if they
-        declared one."""
+        declared one; it never covers a plan with an unconfirmed price."""
         paid = [i for i in items if i.paid]
         if not paid:
             return None
@@ -260,13 +268,21 @@ class TakeStore:
                 currency=currency))
         why = human.why(reason)
         after = spent + total
-        if allowance is not None and after <= float(allowance) + EPSILON:
+        unconfirmed = sum(1 for i in paid if not i.confirmed)
+        if (allowance is not None and not unconfirmed
+                and after <= float(allowance) + EPSILON):
             note = f" ({allowance_note})" if allowance_note else ""
             return {"approved_by": f"owner, standing allowance "
                                    f"{_amount(float(allowance))} {currency}"
                                    f"{note}",
                     "reason": f"{why} [plan {_amount(total)} {currency}, "
                               f"ledger after {_amount(after)} {currency}]"}
+        warn = ""
+        if unconfirmed:
+            off = ("; the standing allowance does not cover them"
+                   if allowance is not None else "")
+            warn = (f" {unconfirmed} of these prices are unconfirmed (no "
+                    f"person confirmed them{off}).")
         expected = _shown(total)
         subj = human.subject("approve spend", scope, "takes",
                              {i.key: i.cost for i in paid},
@@ -274,8 +290,9 @@ class TakeStore:
         channel = human.confirm(
             "approve spend",
             f"{len(paid)} paid takes for {scope}: {expected} {currency} "
-            f"({_amount(left)} {currency} left of the cap). Retype the total "
-            f"to approve: ", expected, subj=subj, code=code)
+            f"({_amount(left)} {currency} left of the cap).{warn} Retype the "
+            f"total to approve: ", expected, subj=subj, code=code)
         audit = human.relay_audit(channel, relay_user, relay_at)
+        note = f" [{unconfirmed} prices unconfirmed]" if unconfirmed else ""
         return {"approved_by": human.changed_by(channel),
-                "reason": why + audit}
+                "reason": why + audit + note}
