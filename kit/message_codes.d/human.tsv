@@ -9,3 +9,4 @@ confirm_no_terminal		No controlling terminal (/dev/tty) to ask the person at. No
 confirm_tty_eof		No answer at the terminal (end of input). Nothing was written	终端没有收到回答（输入已结束）。未写入任何内容
 confirm_aborted		Aborted at the keyboard. Nothing was written	已在键盘上中止。未写入任何内容
 confirm_code_unavailable	var	{var} is not set, so no confirm code can be issued or checked; a person at an interactive terminal can still confirm directly	没有设置 {var}，无法签发或核对确认码；本人仍可以在终端直接确认
+client_name_empty		--for-client needs the client name (history records client:<name>). Nothing was written	--for-client 需要客户的名字（历史记录为 client:<名字>）。未写入任何内容

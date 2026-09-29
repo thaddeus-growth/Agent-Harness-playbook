@@ -27,11 +27,11 @@
 
 import argparse
 import contextlib
-import getpass
 import io
 import json
 import os
 import pty
+import pwd
 import select
 import shlex
 import signal
@@ -523,9 +523,41 @@ def test_small_helpers() -> None:
               e is not None and messages.code(e.message) == {
                   "code": "reason_required", "params": {}})
     check("why() strips", human.why("  because  ") == "because")
+    me = pwd.getpwuid(os.geteuid()).pw_name
     check("changed_by: <OS user>@<channel>, derived",
-          human.changed_by("cli") == f"{getpass.getuser()}@cli"
-          and human.changed_by("tty") == f"{getpass.getuser()}@tty")
+          human.changed_by("cli") == f"{me}@cli"
+          and human.changed_by("tty") == f"{me}@tty")
+    with mock.patch.dict(os.environ, {"LOGNAME": "client:Acme", "USER": "client:Acme"}):
+        by = human.changed_by("relay")
+    check("changed_by: the passwd entry, never LOGNAME/USER (no forged client: author)",
+          by == f"{me}@relay" and human.client_of(by) is None, by)
+    with mock.patch.object(pwd, "getpwuid", side_effect=KeyError):
+        check("changed_by: no passwd entry (arbitrary-UID container) = uid:<euid>",
+              human.changed_by("tty") == f"uid:{os.geteuid()}@tty")
+    check("client: --for-client is the only client author",
+          human.changed_by("relay", "Acme") == "client:Acme"
+          and human.client_of("client:Acme") == "Acme"
+          and human.client_audit("relay", "Acme") == f" [operator={me}@relay]"
+          and human.client_audit("relay", None) == ""
+          and human.client_name("  Acme   Pumps ") == "Acme Pumps" and human.client_name(None) is None
+          and human.typed_source("Acme").startswith("client:Acme ")
+          and "Acme" in human.client_prompt("Acme") and human.client_prompt(None) == "")
+    e = raises(lambda: human.client_name("   "), human.Refused)
+    check("client_name: blank refused, coded",
+          e is not None and messages.code(e.message)["code"] == "client_name_empty")
+    op = human.subject("facts confirm", "US-en", "fact", {"k": "v"}, 1)
+    cl = human.subject("facts confirm", "US-en", "fact", {"k": "v"}, 1, "Acme")
+    with mock.patch.dict(os.environ, {SECRET: "s3cret"}):
+        check("client: the operator's code never passes for the client's, nor back; another client's neither",
+              op != cl and cl != human.subject("facts confirm", "US-en", "fact", {"k": "v"}, 1, "Other")
+              and human.check_code(op, human.issue_code(op)) and not human.check_code(cl, human.issue_code(op))
+              and not human.check_code(op, human.issue_code(cl)))
+    ap = argparse.ArgumentParser()
+    human.add_gate_args(ap, for_client=True)
+    check("add_gate_args(for_client=True) adds --for-client; off by default",
+          ap.parse_args(["--for-client", "Acme"]).for_client == "Acme"
+          and not hasattr(argparse.ArgumentParser(), "for_client")
+          and "--for-client" not in (lambda q: (human.add_gate_args(q), q.format_help())[1])(argparse.ArgumentParser()))
     fixed = datetime(2026, 9, 28, 23, 59, 58, 123456, tzinfo=timezone.utc)
     with mock.patch.object(dates, "now", lambda: fixed):
         check("typed_source / now read kit.dates.now",
