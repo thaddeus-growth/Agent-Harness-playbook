@@ -35,7 +35,18 @@ module guards:
                      The user is one token (no space, no bracket) and the
                      time is ISO 8601 with its zone, so what a caller
                      types cannot close the suffix and forge another one.
-  * changed_by()     `<OS user>@tty|relay|cli`: derived, never typed.
+  * changed_by()     `<OS user>@tty|relay|cli`: derived, never typed. The OS
+                     user is the account the process runs as (its passwd
+                     entry, `uid:<euid>` without one), never LOGNAME/USER,
+                     which whatever launched the process can set to anything.
+  * client_name() / client_of() / client_audit() / client_prompt()
+                     a third party (the client) confirming their own values
+                     through the operator's channel: `--for-client NAME`
+                     puts the name in the code's subject (the operator's
+                     code never passes for the client's, nor back), writes
+                     `client:<name>` as changed_by, and keeps who passed the
+                     gate in the reason (` [operator=…]`). Only this path
+                     can write a `client:` author.
   * why()            the required, non-blank --reason (reason_required).
   * json_refusal()   the one --json document of a refused gate verb:
                      {error, next, code, params[, subject]}; a challenge is
@@ -69,11 +80,11 @@ Test: kit/tests/test_human.py.
 from __future__ import annotations
 
 import argparse
-import getpass
 import hashlib
 import hmac
 import json
 import os
+import pwd
 import re
 import stat
 import sys
@@ -223,17 +234,20 @@ def _code_secret() -> bytes:
 
 
 def subject(verb: str, market: str, entity_type: str, items: dict,
-            version: object) -> str:
+            version: object, client: str | None = None) -> str:
     """The exact payload a relayed --code confirms, canonical so the
     issuing run and the checking run derive the same string: `items` maps
     every entity id to the value(s) confirmed for it (ids sorted, so their
     order on the command line does not matter); `version` is whatever the
     confirmed write itself moves (the last history id, a row's
-    decided_at), which makes a used code stale."""
+    decided_at), which makes a used code stale. `client` (--for-client)
+    is in the subject of the client's own confirmation only, so the
+    operator's code never passes for it, nor back."""
     return json.dumps({"verb": verb, "market": market,
                        "entity_type": entity_type,
                        "items": {str(k): v for k, v in items.items()},
-                       "version": version},
+                       "version": version,
+                       **({"client": client} if client else {})},
                       sort_keys=True, separators=(",", ":"), default=str)
 
 
@@ -336,20 +350,60 @@ def _iso_with_zone(text: str) -> bool:
 
 # ---- attribution -----------------------------------------------------------
 
-def changed_by(channel: str) -> str:
-    """Who wrote a history row, derived, never typed: the OS user plus the
-    channel that passed the challenge (`tty`, `relay`) or `cli` when
-    nothing gated the write."""
+CLIENT = "client:"
+
+
+def client_name(name: str | None) -> str | None:
+    """--for-client NAME, whitespace collapsed; None when not given. A blank
+    one is refused: it would be nobody's confirmation."""
+    if name is None:
+        return None
+    name = " ".join(name.split())
+    if not name:
+        raise Refused(msg("client_name_empty",
+                          "--for-client needs the client's name (history "
+                          "records client:<name>). Nothing was written."))
+    return name
+
+
+def client_of(by: str | None) -> str | None:
+    """The name in a `client:<name>` changed_by; None for anyone else."""
+    return by[len(CLIENT):] if by and by.startswith(CLIENT) else None
+
+
+def client_audit(channel: str, client: str | None) -> str:
+    """Empty unless --for-client; then the history-reason suffix that keeps
+    who passed the gate for the client, since changed_by names the client."""
+    return f" [operator={changed_by(channel)}]" if client else ""
+
+
+def client_prompt(client: str | None) -> str:
+    """Empty unless --for-client; then the challenge's first line, so the
+    person retyping or relaying it sees whose confirmation it records."""
+    return (f"The client's own confirmation (history: {CLIENT}{client}).\n"
+            if client else "")
+
+
+def changed_by(channel: str, client: str | None = None) -> str:
+    """Who wrote a history row, derived, never typed: the OS account the
+    process runs as (its passwd entry, `uid:<euid>` without one, never an
+    environment variable) plus the channel that passed the challenge (`tty`,
+    `relay`) or `cli` when nothing gated the write. With `client`
+    (--for-client, a gated write only): `client:<name>`; the operator is in
+    client_audit()."""
+    if client:
+        return f"{CLIENT}{client}"
     try:
-        user = getpass.getuser()
-    except (OSError, KeyError):
-        user = "unknown"
+        user = pwd.getpwuid(os.geteuid()).pw_name
+    except (KeyError, OSError):
+        user = f"uid:{os.geteuid()}"
     return f"{user}@{channel}"
 
 
-def typed_source() -> str:
-    """The `source` of a value a human typed at a confirm (`--value`)."""
-    return f"human_confirmed_{now()[:10]}"
+def typed_source(client: str | None = None) -> str:
+    """The `source` of a value a human typed at a confirm (`--value`); the
+    client's own (--for-client) is `client:<name> <date>`."""
+    return f"{CLIENT}{client} {now()[:10]}" if client else f"human_confirmed_{now()[:10]}"
 
 
 def why(text: str | None) -> str:
@@ -370,7 +424,7 @@ def json_refusal(e: BaseException, cmd: list[str]) -> dict:
 
 
 def add_gate_args(parser: argparse.ArgumentParser, *,
-                  reason: bool = True) -> None:
+                  reason: bool = True, for_client: bool = False) -> None:
     """--code, --relay-user, --relay-at (and --reason unless the verb
     declares its own). argparse accepts the `--name=value` form the
     console sends, so a code starting with `-` stays one argument."""
@@ -383,6 +437,11 @@ def add_gate_args(parser: argparse.ArgumentParser, *,
     parser.add_argument(
         "--relay-at", help="ISO 8601 time the human's reply arrived — "
         "required with --code")
+    if for_client:
+        parser.add_argument(
+            "--for-client", metavar="NAME", help="the client's own "
+            "confirmation (history: client:<name>); the operator passes the "
+            "gate for them")
     if reason:
         parser.add_argument("--reason", help="why (required; kept in history)")
 
