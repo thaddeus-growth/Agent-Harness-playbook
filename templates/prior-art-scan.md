@@ -28,6 +28,12 @@ Rules:
 - Never copy code or text from a source into the harness; write down the idea and where it came from.
 - Record what to **avoid** as carefully as what to borrow.
 - A borrowed idea names the module it changes (a report, a rule, the gate, a registry). An idea with no module is a note, not a change.
+- **Verify mechanically before trusting a README.** `gh api repos/O/R --jq '[.full_name,.stargazers_count,.pushed_at,.license.spdx_id,.archived]'` catches renames and archives. Then read LICENSE itself: custom terms hide there ("non-commercial", "company licence above 3 staff"). Mark anything not confirmed UNVERIFIED; never fill a gap from memory.
+- **Read the vendor's product pages, not only its docs index.** Workflow, model and marketplace pages often hold the endpoint list, the parameters and the price; pin the API down with [vendor-api-discovery.md](vendor-api-discovery.md).
+- **Stop a lens** when two new searches in a row surface nothing better than its top three, or at about 20–30 tool calls.
+- **Prices and limits enter as pending facts** with their source and date; code never hard-codes a number read on a web page. A decision names what would change it ("if the gateway accepts `data:` URIs, drop the hosting layer").
+
+*Seen once, in a video-ad harness:* the scan replaced a planned renderer whose licence needed a company licence, found that the target editor's drafts are encrypted on read, and found that the client's "model API" key belonged to a gateway serving the model's open weights as ComfyUI workflows, with a lip-sync workflow the vendor's own API lacked. None of this was in the brief.
 
 ## Output
 

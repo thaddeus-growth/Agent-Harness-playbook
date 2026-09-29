@@ -1,0 +1,20 @@
+code	params	meaning_en	meaning_zh
+consent_missing	path	No consent record at {path}	{path} 没有授权记录
+consent_unreadable	path,detail	{path} is not a consent record (a JSON object): {detail}	{path} 不是有效的授权记录（应为 JSON 对象）：{detail}
+consent_log_unreadable	path,line	Line {line} of the consent log {path} is not a log row, so no confirmation in it can be proven and none counts	授权日志 {path} 第 {line} 行无法读取，其中的确认都无法证明，因此一概不算
+consent_unconfirmed		Not confirmed by a person, through the gate, for this exact content (a hand-set status, or any edit since the last confirmation, does not count)	这份授权的当前内容没有经本人通过确认流程确认（手动改状态、或确认后又改过内容，都不算）
+consent_person_blank		The record names nobody: person is blank	记录没有写明授权人（person 为空）
+consent_relation_unknown	relation,relations	Relation {relation} is not one of {relations}	与广告主的关系 {relation} 不在允许的范围内：{relations}
+consent_uses_invalid	uses,allowed	Uses {uses} must be a non-empty subset of {allowed}	授权用途 {uses} 必须是 {allowed} 中的一项或几项
+consent_scope_invalid	detail	The scope is not valid: {detail}	授权范围写得不对：{detail}
+consent_dates_invalid	valid_from,valid_until	{valid_from}..{valid_until} is not a valid date range (ISO dates, the start not after the end)	{valid_from} 至 {valid_until} 不是有效的日期区间（需为 ISO 日期，且开始不晚于结束）
+consent_revoked		The consent was revoked	这份授权已被撤回
+consent_not_in_force	today,valid_from,valid_until	Not in force today ({today}): valid {valid_from}..{valid_until}	今天（{today}）不在授权有效期内：{valid_from} 至 {valid_until}
+consent_uses_uncovered	missing	The consent does not cover {missing}	这份授权不包括 {missing}
+consent_scope_uncovered	key,value,allowed	The scope {key} ({allowed}) does not allow {value}	授权范围 {key}（{allowed}）不包括 {value}
+consent_document_missing	document	The signed document {document} is not a file under the harness root	签字文件 {document} 不在项目目录中
+consent_document_changed	document	The signed document {document} is not the one recorded (document_sha256)	签字文件 {document} 与记录的不是同一份（document_sha256 不符）
+consent_incomplete	record,detail	{record}: fix the record before a person confirms it: {detail}. Nothing was written	{record}：请先把授权记录填完整再请本人确认：{detail}。未写入任何内容
+consent_changed_meanwhile	record	{record} changed while the person was being asked, so the confirmation no longer matches it. Nothing was written	在等待本人确认期间，{record} 被改动了，这次确认已经对不上。未写入任何内容
+consent_confirm_done	record,by	{record} is confirmed by {by} for this exact content; any edit needs a new confirmation	{record} 已由 {by} 确认（仅限当前内容）；之后任何改动都需要重新确认
+consent_revoke_done	record	{record} is revoked: nothing may use it until a person confirms it again through the gate	{record} 已撤回：在本人重新确认之前，任何内容都不能再使用它

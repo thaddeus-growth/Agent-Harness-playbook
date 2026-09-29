@@ -52,7 +52,7 @@ Follow [templates/prior-art-scan.md](templates/prior-art-scan.md): one agent per
 
 ```
 python3 scaffold/new_harness.py --dir ../acme-harness \
-  --name acme-harness --cli acme --prefix ACME --markets HK,TW \
+  --name acme-harness --cli acme --prefix ACME --markets AA,BB \
   --langs en,zh --owner @handle --repo-home <where the repository lives>
 ```
 

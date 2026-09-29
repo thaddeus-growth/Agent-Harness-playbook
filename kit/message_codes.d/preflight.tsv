@@ -1,0 +1,16 @@
+code	params	meaning_en	meaning_zh
+preflight_refused	what,count,problems	{what}: {count} problem(s) with the request body against the vendor's published schema; nothing was sent	{what}：请求内容有 {count} 处不符合服务商公开的输入规则，没有发送（未产生费用）
+preflight_body_not_object	got	The request body must be an object, got {got}	请求内容必须是一个对象（键值表），实际是 {got}
+preflight_field_unknown	field,known	{field} is not an input of this request (known: {known})	{field} 不是这个请求的输入项（可用的有：{known}）
+preflight_field_required	field	{field} is required and missing	缺少必填项 {field}
+preflight_type_unknown	field,type	{field}: the schema type {type} is not one the kit checks; map it before sending	{field} 的类型 {type} 无法检查，请先把它对应到已知类型再发送
+preflight_enum_not_string	field,got	{field} takes a string label from its options, got {got}	{field} 只能填选项里的文字标签，实际填的是 {got}
+preflight_enum_not_option	field,got,options	{field}: {got} is not one of {options}	{field} 填的 {got} 不在可选项 {options} 之中
+preflight_not_boolean	field,got	{field} must be true or false, got {got}	{field} 只能是 true 或 false，实际是 {got}
+preflight_not_integer	field,got	{field} must be an integer, got {got}	{field} 必须是整数，实际是 {got}
+preflight_not_number	field,got	{field} must be a finite number, got {got}	{field} 必须是数字，实际是 {got}
+preflight_out_of_range	field,got,min,max	{field}: {got} is outside {min}..{max}	{field} 的值 {got} 超出允许范围 {min}..{max}
+preflight_not_string	field,got	{field} must be a string, got {got}	{field} 必须是文字，实际是 {got}
+preflight_length_out_of_range	field,length,min,max	{field}: {length} characters, outside {min}..{max}	{field} 有 {length} 个字符，超出允许的长度 {min}..{max}
+preflight_media_not_uri	field,type,got	{field}: a {type} must be an http(s) URL or a data: URI, got {got}	{field}（{type}）必须是 http(s) 链接或 data: URI，实际是 {got}
+preflight_media_type_not_accepted	field,mime,accept	{field}: data URI typed {mime} is not one of {accept}	{field} 的文件类型 {mime} 不在服务商接受的类型 {accept} 之中

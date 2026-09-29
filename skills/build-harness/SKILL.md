@@ -33,7 +33,7 @@ Read BUILD.md's table first. Then, one step at a time:
 12. **B9 Release**: one release owner; the client owner types "confirm vX".
 13. **B10 Operate**: every new meeting goes back to B0.
 
-Before each step, check its `after` steps are signed in `ssot/stages.agent.tsv`. After it, record who signed and the reference. Some paths above are still being built: BUILD.md lists them in one place.
+Before each step, check its `after` steps are signed in `ssot/stages.agent.tsv`. After it, record who signed and the reference.
 
 ## Never
 

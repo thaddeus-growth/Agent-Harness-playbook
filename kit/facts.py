@@ -64,8 +64,8 @@ Deviations from the reference and from the SPEC, each deliberate:
   * Refusals exit 2 (kit.contract), not 1. The wizard's prompts go to
     stderr and are read from stdin without builtins.input. The wizard's
     questions are the harness's `init_questions` ([{"key", "prompt"?}],
-    checked against the registry when main() starts), not A-class and
-    profit-model keys.
+    checked against the registry when main() starts), not keys a
+    source project hard-coded.
   * An answer that `init` finds on disk is compared in canonical form, so
     retyping 4.20 over a stored 4.2 keeps it. An invalid answer is asked
     again, up to 3 times, just like a new key's answer.
