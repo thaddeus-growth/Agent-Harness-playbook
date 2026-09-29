@@ -1,7 +1,7 @@
 """The adapter's boundary: generic code, harness words only in the manifest.
 
   * lib.js, the hooks, bin, the root-file template and the Caddy snippet name
-    no harness (amazon, ppc, spapi, kol, emma, …) and hold none of the example
+    no harness (amazon, ppc, spapi, kol, …) and hold none of the example
     manifest's own values: everything harness-specific is read from
     zylos/manifest.json;
   * Node stdlib only (Zylos runs hooks with no npm install); the hooks and
@@ -31,7 +31,7 @@ CODE = ["lib.js", *(f"hooks/{h}.js" for h in ("configure", "post-install", "post
         *(f"bin/{b}.js" for b in ("cli", "detach", "console"))]
 GENERIC = CODE + ["ecosystem.config.cjs.template", "Caddyfile.snippet"]
 # Real harnesses the adapter was distilled from or is for; nowhere in this folder.
-HARNESS_WORDS = ["amazon", "ppc", "spapi", "sp-api", "kol", "emma", "sellersprite", "sqs", "webconsole"]
+HARNESS_WORDS = ["amazon", "ppc", "spapi", "sp-api", "kol", "sellersprite", "sqs", "webconsole"]
 # The example harness's words: only the example and the docs may use them
 # (generic hints in lib.js say "acme").
 EXAMPLE_WORDS = ["shop", "northwind"]

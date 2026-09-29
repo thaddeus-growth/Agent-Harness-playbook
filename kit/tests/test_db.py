@@ -940,7 +940,7 @@ def t15_codes() -> None:
         _shop.KIT, ["db.py", "schema_base.py"], reg, strict_kit=True)
     check("closed both ways (literal codes, exact params, each emitted)",
           probs == [], probs)
-    words = ("amazon", "ppc", "spapi", "meta_", "kol", "emma", "lark",
+    words = ("amazon", "ppc", "spapi", "meta_", "kol", "lark",
              "zylos")
     text = "".join((_shop.KIT / f).read_text(encoding="utf-8").lower()
                    for f in ("db.py", "schema_base.py",

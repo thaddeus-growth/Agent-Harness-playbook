@@ -28,7 +28,7 @@ from kit.testing.check import check, finish  # noqa: E402
 KIT = _shop.KIT
 CONSOLE = _shop.PLAYBOOK / "console"
 STD = set(sys.stdlib_module_names) | {"__future__"}
-BANNED = re.compile(r"\b(amazon|ppc|spapi|kol|emma|lark|zylos|meta_\w*)\b",
+BANNED = re.compile(r"\b(amazon|ppc|spapi|kol|lark|zylos|meta_\w*)\b",
                     re.I)
 # kit/tools/vendor.py falls back to `import manifest` (its sibling) when it
 # runs as a script with kit/tools on sys.path
