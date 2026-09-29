@@ -34,17 +34,24 @@ must_be_declared=False) validates only, for reads that may show an
 undeclared market's rows (the reference's `get --market`); `cmd=` makes
 market_ambiguous's `next` the same command rerun with each --market.
 
+No database module is imported: the functions that read one take the
+connection they are given, so a puller may call validate() and still
+reach no database (kit.guards.layering, rule b).
+
 Test: kit/tests/test_market.py.
 """
 
 from __future__ import annotations
 
 import shlex
-import sqlite3
+from typing import TYPE_CHECKING
 
 from kit.config import config
 from kit.contract import HarnessError
 from kit.messages import msg
+
+if TYPE_CHECKING:          # a type only: a puller imports validate() and
+    import sqlite3         # must not reach the database (the layering rule)
 
 MARKET_KEY = "market_declared"   # the client fact whose confirmed row declares a market
 PSEUDO = "_"                     # the one market of a harness with no partition

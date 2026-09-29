@@ -27,8 +27,10 @@ dispatcher; its routing table became the verb table):
      `<P>_DATA_DIR` (data_dir_unset / data_dir_not_absolute: never the
      cwd); asking the script for `-h/--help` always works.
   6. The script (`<scripts_dir>/<script>`) runs as kit.runner.script_cmd
-     runs it, with the verb's sub-verb words when the script serves several
-     verbs (kit.verbs.script_args) and every other argument as given; the
+     runs it, with the verb's words after the first as the script's
+     sub-verb (`facts confirm X` -> facts.py confirm X), unless the script
+     is named after the whole verb (`compute sales` -> compute_sales.py:
+     none; kit.verbs.script_args), and every other argument as given; the
      `+ cmd` trace goes to stderr (stdout stays the script's one document;
      a `--code` value is masked); the exit code is the script's (a signal
      = 128 + its number).

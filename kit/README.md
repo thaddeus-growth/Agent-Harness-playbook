@@ -26,9 +26,9 @@ The harness declares itself once, in `harness.toml` at its root ([templates/harn
 | `[ssot]` | `dir`, and the registries: `message_codes` (plus `<dir>/message_codes.d/*.tsv`), `fact_keys`, `decision_keys`, `constants`, `story_checks` |
 | `[release]` | `internal` (export-ignore), `must_ship`, `runtime` |
 | `[layers]` | `pull`, `ingest`, `compute`, `writer`, `writer_importers`, `clients`, `spawn_allowed`, `write_verbs`, `exempt` |
-| `[contract]`, `[auth]`, `[env]`, `[guards.*]` | optional: `no_db_next`, prose keys and data labels; token-command fields; default credential prefixes; the guards' parameters |
+| `[contract]`, `[auth]`, `[env]`, `[guards.*]` | optional: `no_db_next`, prose keys and data labels; token-command fields; default credential prefixes; the guards' parameters (`[guards.json_contract] args`: sample arguments per read verb) |
 
-The harness lists its verbs in `scripts/verbs.py` (`VERBS = [Verb(words, script, kind, …)]`, kinds `read`, `human`, `gated`, `external`, `dev`), and its CLI is three lines over `kit.cli.Dispatcher`. The fake harness in [tests/fake_harness/](tests/fake_harness/) is a whole small example: a verb table, a CLI, facts, decisions, pending, a queue fed by a compute, execute with an empty allowlist.
+The harness lists its verbs in `scripts/verbs.py` (`VERBS = [Verb(words, script, kind, …)]`, kinds `read`, `ingest`, `human`, `gated`, `external`, `dev`), and its CLI is three lines over `kit.cli.Dispatcher`. A script named after its whole verb (`compute_sales.py` for `compute sales`) is that verb; any other script is a family, and the words after the first are its sub-verb (`facts confirm X` runs `facts.py confirm X`). A read verb that needs an argument gets a sample one for the `--json` contract test: `[guards.json_contract] args = {"facts get" = ["unit_cost"]}`. The fake harness in [tests/fake_harness/](tests/fake_harness/) is a whole small example: a verb table, a CLI, facts, decisions, pending, a queue fed by a compute, execute with an empty allowlist.
 
 ## The modules
 

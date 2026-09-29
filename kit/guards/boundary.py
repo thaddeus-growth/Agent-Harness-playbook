@@ -9,8 +9,8 @@
   * `check_consumer(root, consumer_dir)`: in its code and config (prose
     files .md/.tsv/.txt and its own tests/ are not scanned: they run
     nothing), the consumer invokes no verb of
-    kind human or external (a verb that writes human rows or reaches an
-    external system), as shell prose (`<cli> facts set`) or as an argv
+    kind ingest, human or external (a verb that writes the database or
+    reaches an external system), as shell prose (`<cli> facts set`) or as an argv
     list (`("facts", "set")`); a gated verb only in a code file that also
     passes the relayed `--code`, `--relay-user` and `--relay-at` (a
     human's click, recorded in history as relayed); never `--apply`;
@@ -41,7 +41,7 @@ from kit.guards import (SKIP_DIRS, harness, read, report, section, strs,
                         text_files, verb_table)
 from kit.guards import ssot as _ssot
 
-READ, GATED, WRITE = ("read",), ("gated",), ("human", "external")
+READ, GATED, WRITE = ("read",), ("gated",), ("ingest", "human", "external")
 RELAY_FLAGS = ("--code", "--relay-user", "--relay-at")
 # What a consumer runs lives in code and config, not in prose: a rule that
 # says "the button never says --apply" invokes nothing. And the relayed

@@ -32,3 +32,7 @@ spawn_allowed = ["compute_stories"]
 
 [contract]
 no_db_next = ["facts init"]
+
+[guards.json_contract]
+# sample arguments for the read verbs that need some (kit.guards.json_contract)
+args = {"facts get" = ["unit_cost"], "decisions get" = ["product", "SKU-1", "stage"]}

@@ -31,7 +31,9 @@ there is refused (the reference, running scripts directly, required an
 empty stderr).
 
 `check_read_verbs(data_dir)` runs every read verb of the verb table with
-`--json` on a fixture data dir through the harness CLI
+`--json` on a fixture data dir through the harness CLI, with the sample
+arguments harness.toml gives a verb that needs some
+(`[guards.json_contract] args = {"facts get" = ["unit_cost"]}`)
 (`<scripts_dir>/<cli>.py <words> -- --json [--market M]`, under
 kit.testing.sandbox's env) and applies the rules above.
 
@@ -333,22 +335,42 @@ def _flags(cfg: HarnessConfig, v: Any, market: str | None) -> list[str]:
     return flags
 
 
+def sample_args(cfg: HarnessConfig, given: dict | None = None
+                ) -> dict[str, list[str]]:
+    """{verb as typed: [its arguments]} for the read verbs that need some
+    (`facts get` needs a KEY): `given`, else harness.toml
+    `[guards.json_contract] args = {"facts get" = ["unit_cost"], …}`.
+    A verb not named runs with none."""
+    raw = given if given is not None else section(
+        cfg, "guards", "json_contract").get("args", {})
+    out = {}
+    for verb, argv in dict(raw or {}).items():
+        if not (isinstance(argv, list) and all(isinstance(a, str)
+                                               for a in argv)):
+            raise ValueError(f"[guards.json_contract].args[{verb!r}] must be "
+                             f"a list of strings, got {argv!r}")
+        out[" ".join(str(verb).split())] = list(argv)
+    return out
+
+
 def check_read_verbs(data_dir: Path | str, *, verbs: Any = None,
                      run: Run | None = None, market: str | None = None,
                      skip: tuple[str, ...] = (),
-                     registry: dict | None = None) -> list[str]:
+                     registry: dict | None = None,
+                     args: dict | None = None) -> list[str]:
     """Every read verb run with --json on the fixture `data_dir`: one
     document; a success has every message coded (and a compute its meta);
     a failure is the one coded failure document. `skip` = verbs (as typed)
-    not to run."""
+    not to run; `args` = sample arguments per verb (sample_args())."""
     cfg = harness()
     run = run or cli_runner(data_dir, cfg)
+    samples = sample_args(cfg, args)
     out = []
     for v in _reads(cfg, verbs):
         label = " ".join(v.words)
         if label in skip:
             continue
-        rc, stdout, err = run(verb_argv(list(v.words), [],
+        rc, stdout, err = run(verb_argv(list(v.words), samples.get(label, []),
                                         _flags(cfg, v, market)))
         if rc != 0:
             out += [f"{label}: {p}" for p in check_failure(
@@ -374,13 +396,19 @@ def _listing(d: Path) -> list[str]:
 def check_read_verbs_no_db(data_dir: Path | str, *, verbs: Any = None,
                            run: Run | None = None, market: str | None = None,
                            allow_ok: tuple[str, ...] = (),
-                           registry: dict | None = None) -> list[str]:
+                           registry: dict | None = None,
+                           codes: tuple[str, ...] = ("no_db",),
+                           args: dict | None = None) -> list[str]:
     """On a data dir without a DB, every read verb that needs the data dir
     fails `no_db` (one coded failure document) and creates nothing.
-    `allow_ok` = verbs (as typed) that may succeed without a DB."""
+    `allow_ok` = verbs (as typed) that may succeed without a DB; `codes`
+    = the failure codes accepted (add `usage` for a verb that needs an
+    argument this check does not give); `args` = sample arguments per
+    verb (sample_args())."""
     cfg = harness()
     d = Path(data_dir)
     run = run or cli_runner(d, cfg)
+    samples = sample_args(cfg, args)
     out = []
     if (d / cfg.db_file).exists():
         return [f"fixture: {d / cfg.db_file} exists; give an empty data dir"]
@@ -389,7 +417,7 @@ def check_read_verbs_no_db(data_dir: Path | str, *, verbs: Any = None,
         if not getattr(v, "needs_data_dir", True):
             continue
         label = " ".join(v.words)
-        rc, stdout, err = run(verb_argv(list(v.words), [],
+        rc, stdout, err = run(verb_argv(list(v.words), samples.get(label, []),
                                         _flags(cfg, v, market)))
         after = _listing(d)
         if after != before:
@@ -399,7 +427,7 @@ def check_read_verbs_no_db(data_dir: Path | str, *, verbs: Any = None,
         if rc == 0 and label in allow_ok:
             continue
         out += [f"{label}: {p}" for p in check_failure(
-            rc, stdout, err, registry=registry, codes={"no_db"})]
+            rc, stdout, err, registry=registry, codes=set(codes))]
     return out
 
 

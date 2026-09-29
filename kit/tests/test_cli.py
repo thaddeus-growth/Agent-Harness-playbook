@@ -63,8 +63,9 @@ raise SystemExit(int(code or 0))
 
 TABLE_SRC = """[Verb(("things", "list"), "multi.py", "read"),
  Verb(("things", "set"), "multi.py", "human"),
- Verb(("compute", "sales"), "single.py", "read"),
- Verb(("compute", "sales", "deep"), "other.py", "read"),
+ Verb(("compute", "sales"), "compute_sales.py", "read"),
+ Verb(("compute", "sales", "deep"), "compute_sales_deep.py", "read"),
+ Verb(("import", "codes"), "import_file.py", "ingest"),
  Verb(("notes",), "notes.py", "read", False, False,
       answers="Notes, no data dir"),
  Verb(("gone",), "missing.py", "read", False, False)]"""
@@ -81,7 +82,8 @@ raise SystemExit(Dispatcher({TABLE_SRC}, scripts_dir=HERE).main(sys.argv[1:]))
 
 def echo_dir() -> Path:
     d = Path(tmp_dir("cli-scripts-"))
-    for name in ("multi.py", "single.py", "other.py", "notes.py"):
+    for name in ("multi.py", "compute_sales.py", "compute_sales_deep.py",
+                 "notes.py", "import_file.py"):
         (d / name).write_text(ECHO, encoding="utf-8")
     (d / "cli.py").write_text(DRIVER, encoding="utf-8")
     return d
@@ -153,8 +155,8 @@ def test_table() -> None:
     check("a missing verbs.py is refused",
           "no verb table" in str(raises(lambda: verbs.load(d / "nope.py"))))
     kinds = {k for k in verbs.KINDS}
-    check("the five kinds", kinds == {"read", "human", "gated", "external",
-                                      "dev"})
+    check("the six kinds, closed", kinds == {"read", "ingest", "human",
+                                             "gated", "external", "dev"})
     gated = verbs.of_kind(TABLE, "gated")
     check("of_kind: the gated verbs, in table order",
           [x.command for x in gated] == ["facts confirm", "facts restore",
@@ -175,12 +177,21 @@ def test_table() -> None:
           [x.command for x in verbs.group(["things", "--help"], ECHO_TABLE)]
           == ["things list", "things set"]
           and verbs.group(["zzz"], ECHO_TABLE) == [])
-    check("script_args: a shared script gets the words after the first",
-          verbs.script_args(ECHO_TABLE[0], ECHO_TABLE) == ["list"])
-    check("script_args: a script of one verb gets none",
-          verbs.script_args(ECHO_TABLE[2], ECHO_TABLE) == [])
+    check("script_args: a family script gets the words after the first",
+          verbs.script_args(ECHO_TABLE[0]) == ["list"]
+          and verbs.script_args(Verb(("execute", "apply"),
+                                     "execute_actions.py", "external"))
+          == ["apply"]
+          and verbs.script_args(Verb(("import", "codes"), "import_file.py",
+                                     "ingest")) == ["codes"])
+    check("script_args: a script named after the whole verb gets none",
+          verbs.script_args(ECHO_TABLE[2]) == []
+          and verbs.script_args(Verb(("compute", "price-ladder"),
+                                     "compute_price_ladder.py", "read")) == []
+          and verbs.script_args(Verb(("pending",), "pending.py", "read"))
+          == [])
     check("answers: the verb's own line first",
-          verbs.answers(ECHO_TABLE[4], SCRIPTS) == "Notes, no data dir")
+          verbs.answers(ECHO_TABLE[5], SCRIPTS) == "Notes, no data dir")
     check("answers: else the script docstring's first line",
           verbs.answers(Verb(("x",), "facts.py", "read"), SCRIPTS)
           == "Client facts: what the owner told us, pending until a person "
@@ -304,14 +315,20 @@ def test_forwarding() -> None:
           rc == 0 and doc.get("script") == "multi.py"
           and doc.get("argv") == ["set", "k", "v", "--x", "--", "y"], doc)
     rc, doc, err = go(["compute", "sales", "--by", "week", "--json"])
-    check("a single script: no verb words; flags pass without `--`",
+    check("a script named after the verb: no verb words; flags pass "
+          "without `--`",
           doc.get("argv") == ["--by", "week", "--json"]
-          and doc.get("script") == "single.py", doc)
+          and doc.get("script") == "compute_sales.py", doc)
+    rc, doc, err = go(["import", "codes", "f.csv"])
+    check("a script of one verb not named after it (import_file.py for "
+          "`import codes`): its sub-verb too",
+          doc.get("script") == "import_file.py"
+          and doc.get("argv") == ["codes", "f.csv"], doc)
     rc, doc, err = go(["compute", "--", "sales", "--tree"])
     check("`--` right after a word: stripped before the verb is matched",
           doc.get("argv") == ["--tree"], doc)
     rc, doc, err = go(["compute", "sales", "deep", "z"])
-    check("the longest prefix wins", doc.get("script") == "other.py"
+    check("the longest prefix wins", doc.get("script") == "compute_sales_deep.py"
           and doc.get("argv") == ["z"], doc)
     rc, out, err = drive(scripts, ["things", "set", "--code", "123456",
                                    "--code=654321"], env(data))
@@ -400,14 +417,34 @@ def test_real_cli() -> None:
     check("the boundary guard reads the kinds from verbs.py",
           write.search("shop facts set x 1") and gated.search(
               "shop queue approve 1") and not write.search("shop facts list"))
+    check("harness.toml gives the sample arguments of the verbs that need "
+          "some", json_contract.sample_args(config.config())
+          == {"facts get": ["unit_cost"],
+              "decisions get": ["product", "SKU-1", "stage"]})
     empty = Path(tmp_dir("cli-empty-"))
     problems = json_contract.check_read_verbs_no_db(
         empty, run=lambda argv: sandbox_run([sys.executable, str(CLI), *argv],
-                                            real_env(empty)),
-        verbs=[v for v in TABLE if v.kind == "read"
-               and v.command not in ("facts get", "decisions get")])
-    check("every read verb on an empty data dir: no_db, nothing created",
-          problems == [], problems)
+                                            real_env(empty)))
+    check("every read verb on an empty data dir, `facts get` and "
+          "`decisions get` with their sample arguments: no_db, nothing "
+          "created", problems == [], problems)
+    problems = json_contract.check_read_verbs_no_db(
+        empty, run=lambda argv: sandbox_run([sys.executable, str(CLI), *argv],
+                                            real_env(empty)), args={})
+    check("…without them `facts get` fails on its usage (the samples are "
+          "what makes it pass)", any(p.startswith("facts get:")
+                                     for p in problems), problems)
+    for argv, code in ((["decisions", "get", "--json"], "usage"),
+                       (["queue", "approve", "--json"], "usage"),
+                       (["execute", "apply", "--nope", "--json"], "usage"),
+                       (["pending", "--nope", "--json"], "usage"),
+                       (["compute", "steer", "--nope", "--json"], "usage"),
+                       (["facts", "get", "--json"], "fact_usage")):
+        rc, out, err = shop(data, *argv)
+        doc = one_doc(out)
+        check(f"`shop {' '.join(argv)}`: one coded usage document, no "
+              f"argparse text", rc == 2 and doc and doc.get("code") == code
+              and "usage:" not in err, (out, err[-300:]))
     rc, out, err = shop(data, "doctor", "--json")
     doc = one_doc(out)
     check("the built-in doctor through the CLI: one document",

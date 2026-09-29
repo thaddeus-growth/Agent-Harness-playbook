@@ -174,10 +174,42 @@ def test_closure() -> None:
            "market_not_onboarded", "market_not_a_market"} <= set(mine))
 
 
+def test_puller_safe() -> None:
+    print("[6] a puller may import kit.market (it reaches no database)")
+    import subprocess
+    r = subprocess.run([sys.executable, "-c",
+                        "import sys; import kit.market; "
+                        "print(sorted(m for m in ('sqlite3', 'kit.db') "
+                        "if m in sys.modules))"],
+                       capture_output=True, text=True, timeout=60,
+                       cwd=str(_shop.PLAYBOOK),
+                       env={"PYTHONPATH": str(_shop.PLAYBOOK),
+                            "PYTHONDONTWRITEBYTECODE": "1",
+                            "PATH": "/usr/bin:/bin"})
+    check("importing kit.market loads neither sqlite3 nor kit.db",
+          r.returncode == 0 and r.stdout.strip() == "[]", (r.stdout, r.stderr))
+    from kit.guards import layering
+    import shutil
+    root = Path(tmp_dir("market-pull-")) / "shop"
+    shutil.copytree(_shop.SHOP, root, ignore=shutil.ignore_patterns(
+        "__pycache__", "*.pyc"))
+    (root / "scripts" / "pull_orders.py").write_text(
+        "from kit import market\n\n\ndef scope(m):\n"
+        "    return market.validate(m)\n", encoding="utf-8")
+    probs = [p for p in layering.check_layers(root) if "pull_orders" in p]
+    check("the layering guard: a pull calling market.validate() is clean",
+          probs == [], probs)
+    (root / "scripts" / "pull_orders.py").write_text(
+        "from kit import market, db\n", encoding="utf-8")
+    probs = [p for p in layering.check_layers(root) if "pull_orders" in p]
+    check("…and one importing kit.db is still caught", any(
+        p.startswith("b: pull_orders") for p in probs), probs)
+
+
 def main() -> int:
     _shop.use()
     for fn in (test_validate, test_declared, test_resolve, test_no_partition,
-               test_closure):
+               test_puller_safe, test_closure):
         fn()
     return finish()
 

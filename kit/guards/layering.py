@@ -28,6 +28,8 @@ every problem of these rules, all named in harness.toml `[layers]`:
      __import__, spec_from_file_location, runpy): the graph must see
      every edge.
 
+An import under `if TYPE_CHECKING:` is a type hint, not an edge.
+
 `[layers].exempt = ["m>t", …]` allows the one edge m -> t (a deliberate
 lazy import). A module harness.toml names that does not exist leaves its
 rule empty rather than failing: `members(root)` shows what each layer
@@ -81,12 +83,24 @@ def _collect(roots: dict[str, Path]) -> dict[str, Path]:
     return out
 
 
+def _type_checking(node: ast.AST) -> bool:
+    """`if TYPE_CHECKING:` (or typing.TYPE_CHECKING): never runs."""
+    t = node.test if isinstance(node, ast.If) else None
+    return (isinstance(t, ast.Name) and t.id == "TYPE_CHECKING") or (
+        isinstance(t, ast.Attribute) and t.attr == "TYPE_CHECKING")
+
+
 def _imports(tree: ast.AST, eager: bool = True):
     """(statement, eager) for every import; eager = runs when the module
-    loads (not inside a def or lambda)."""
+    loads (not inside a def or lambda). The body of `if TYPE_CHECKING:`
+    never runs, so its imports (type hints only) are no edge."""
     for node in ast.iter_child_nodes(tree):
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             yield node, eager
+        elif _type_checking(node):
+            for other in node.orelse:
+                yield from _imports(ast.Module(body=[other], type_ignores=[]),
+                                    eager)
         else:
             yield from _imports(node, eager and not isinstance(
                 node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)))

@@ -59,7 +59,6 @@ Test: kit/tests/test_stories.py.
 
 from __future__ import annotations
 
-import argparse
 import json
 import re
 import shlex
@@ -399,15 +398,19 @@ def main(argv: list[str] | None = None, *, verbs: Any = None,
     empty kit.contract.meta)."""
     cfg = config()
     argv = list(sys.argv[1:] if argv is None else argv)
-    p = argparse.ArgumentParser(prog=f"{cfg.cli} compute stories",
-                                description=__doc__.splitlines()[0])
+    p = contract.Parser(prog=f"{cfg.cli} compute stories",
+                        description=__doc__.splitlines()[0])
     p.add_argument("--market")
     p.add_argument("--assume", action="append", default=[],
                    metavar="NAME=VALUE",
                    help="passed on to every compute the checks run")
     contract.add_json_arg(p)
-    args = p.parse_args(argv)
     cmd = [cfg.cli, "compute", "stories"]
+    try:
+        args = p.parse_args(argv)
+    except contract.HarnessError as e:
+        head = argv[:argv.index("--")] if "--" in argv else argv
+        return contract.fail(e, cmd=cmd, as_json="--json" in head)
     assume = [x for a in args.assume for x in ("--assume", a)]
     try:
         table = verb_table(verbs)

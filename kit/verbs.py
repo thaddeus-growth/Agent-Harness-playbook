@@ -22,6 +22,8 @@ declaration; a verb that is not listed is refused, never guessed):
 
     read      opens the database read-only, or reads nothing at all; writes
               nothing, calls nothing outside
+    ingest    writes cache tables (rebuildable) from raw or an imported
+              file; never a human table, never an external call
     human     writes a human table: a pending value, or lowers trust
     gated     passes the human gate (a retype at the terminal, or a relayed
               one-time code) before it writes
@@ -33,15 +35,17 @@ What this module guards:
 
   * a verb is a tuple of plain lower-case words, one script (a path under
     the scripts dir, never absolute, never leaving it except the declared
-    `../tests/run.py` form) and one of the five kinds; anything else fails
+    `../tests/run.py` form) and one of the six kinds; anything else fails
     when the table loads, not when the verb runs;
   * no verb is listed twice, and no verb takes a built-in word (`doctor`,
     `verbs`, `help`: the dispatcher answers those itself);
   * routing is the longest listed prefix (`match()`); what the script is
-    given is fixed by the table alone (`script_args()`): a script that
-    serves several verbs (facts.py behind `facts list|set|confirm…`) gets
-    the words after the first one (its own sub-verb), a script that serves
-    one verb (compute_sales.py) gets none of them.
+    given is fixed by its name alone (`script_args()`): the words after
+    the first are the script's sub-verb (`facts confirm X` -> facts.py
+    confirm X; `execute apply` -> execute_actions.py apply; `import codes
+    F` -> import_file.py codes F), unless the script is named after the
+    whole verb (`compute sales` -> compute_sales.py, words joined by `_`,
+    `-` read as `_`), which is that one verb and gets none of them.
 
 Addition to the SPEC (§verbs): an optional last field `answers`, the one
 line `<cli> --help` and `<cli> verbs --json` show for the verb (default:
@@ -63,6 +67,8 @@ from typing import Any, Iterable
 
 KINDS: dict[str, str] = {
     "read": "reads only: opens the database read-only, writes nothing",
+    "ingest": "writes cache tables from raw or an imported file; calls "
+              "nothing outside",
     "human": "writes a human table: a pending value, or lowers trust",
     "gated": "needs a person: a retype at the terminal or a relayed "
              "one-time code",
@@ -220,16 +226,25 @@ def group(args: list[str], verbs: Iterable[Any]) -> list[Any]:
     return []
 
 
+def named_after(v: Any) -> bool:
+    """True when the verb's script is named after the whole verb
+    (compute_sales.py for `compute sales`): a script of one verb."""
+    stem = Path(str(v.script)).stem.replace("-", "_")
+    return stem == "_".join(v.words).replace("-", "_")
+
+
 def shared(v: Any, verbs: Iterable[Any]) -> bool:
     """True when the verb's script serves more than one verb."""
     return sum(1 for x in verbs if x.script == v.script) > 1
 
 
-def script_args(v: Any, verbs: Iterable[Any]) -> list[str]:
-    """The verb's own words the script is given: the words after the first
-    for a script that serves several verbs (its sub-verb), none otherwise."""
-    table = list(verbs)
-    return list(v.words[1:]) if shared(v, table) else []
+def script_args(v: Any, verbs: Iterable[Any] = ()) -> list[str]:
+    """The verb's own words its script is given: none for a script named
+    after the whole verb (compute_sales.py for `compute sales`), else the
+    words after the first (the script's sub-verb: facts.py gets `confirm`
+    for `facts confirm`). `verbs` is accepted for call compatibility; the
+    rule reads the verb alone."""
+    return [] if named_after(v) else list(v.words[1:])
 
 
 def answers(v: Any, scripts_dir: Path | str | None = None) -> str:
