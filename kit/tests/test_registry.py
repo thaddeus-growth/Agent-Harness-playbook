@@ -27,6 +27,7 @@
 """
 
 import argparse
+import shutil
 import sqlite3
 import sys
 from pathlib import Path
@@ -524,12 +525,20 @@ def test_thresholds() -> None:
 
 def test_harness_paths() -> None:
     print("[5] files from harness.toml; labels per language")
-    r = coded(lambda: FactKeys())
-    check("the shop harness declares ssot/fact_keys.tsv but has none: "
+    check("FactKeys() reads the shop harness's [ssot].fact_keys",
+          "unit_cost" in FactKeys().settable())
+    bare = Path(tmp_dir("reg-bare-")) / "shop"
+    shutil.copytree(_shop.SHOP, bare, ignore=shutil.ignore_patterns(
+        "__pycache__", "*.pyc", "fact_keys.tsv"))
+    config.use(bare)
+    try:
+        r = coded(lambda: FactKeys())
+    finally:
+        _shop.use()
+    check("a harness declaring ssot/fact_keys.tsv with none on disk: "
           "registry_file_missing",
           r and r["code"] == "registry_file_missing"
-          and r["params"]["path"].endswith("fake_harness/ssot/fact_keys.tsv"),
-          r)
+          and r["params"]["path"].endswith("shop/ssot/fact_keys.tsv"), r)
     d = Path(tmp_dir("reg-harness-"))
     (d / "ssot").mkdir()
     (d / "harness.toml").write_text(

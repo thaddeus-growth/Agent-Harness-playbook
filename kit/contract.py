@@ -14,6 +14,8 @@
     params.confirm_code, `subject`, and `next` = the same command rerun
     with `--code C --relay-user <sender_id> --relay-at <iso_time>`.
   * Read verbs never create the DB: `missing_db_error()`.
+  * `Parser`: argparse whose usage errors are coded refusals (`usage`),
+    so a mistyped verb under --json still prints one document.
   * Every compute `--json` carries one `meta` built by `meta()`: its
     required keys are always present (None / [] / {} when n/a), so an
     orchestrator never guesses a shape.
@@ -282,6 +284,18 @@ def stale_warning(m: dict) -> Msg | None:
 
 
 # ---- argparse + main glue --------------------------------------------------
+
+class Parser(argparse.ArgumentParser):
+    """argparse whose usage errors are coded refusals (`usage`, exit 2), so
+    a verb run with --json keeps its one document even when it is typed
+    wrong. Its subparsers are Parsers too (argparse builds them from the
+    parent's class). --help still prints help and exits 0."""
+
+    def error(self, message: str):
+        raise HarnessError(msg("usage", f"{self.prog}: {message}",
+                               prog=self.prog, detail=message),
+                           [f"{self.prog} --help"])
+
 
 def add_json_arg(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--json", action="store_true",

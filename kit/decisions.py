@@ -103,6 +103,7 @@ from kit import db, human
 from kit import market as mk
 from kit.config import config
 from kit.contract import HarnessError, add_json_arg, run_main
+from kit.contract import Parser as contract_parser
 from kit.db import SchemaSpec
 from kit.messages import joined, msg
 from kit.registry import DecisionRegistry
@@ -638,7 +639,7 @@ def cmd_history(con: sqlite3.Connection, a: argparse.Namespace,
 
 def _parser(registry: DecisionRegistry) -> argparse.ArgumentParser:
     cli = _cli()
-    p = argparse.ArgumentParser(
+    p = contract_parser(
         prog=f"{cli} decisions",
         description="Human decisions about one entity: set proposes "
                     "(pending), only a human confirm puts a value in force.",

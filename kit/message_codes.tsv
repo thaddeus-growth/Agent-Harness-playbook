@@ -13,3 +13,4 @@ contract_stale_data	stale	STALE DATA — {stale} (each: table, last day, days be
 contract_assumed_thresholds	assumed	ASSUMED (not stored): this run uses {assumed} instead of the values in effect	假设值（未保存）：本次运行使用 {assumed}，而不是当前生效的值
 contract_short_window	days_found,days_requested,start,end,missing,gaps,next	SHORT WINDOW — only {days_found} of {days_requested} requested days ({start}..{end}) have data, so results rest on {days_found} day(s); no rows for {missing}; per source: {gaps}; backfill: {next}	数据天数不足：请求的 {days_requested} 天（{start} 至 {end}）里只有 {days_found} 天有数据，结果只基于这 {days_found} 天；缺少：{missing}；各数据源缺少：{gaps}；补数据命令：{next}
 contract_partial_source	gaps,next	PARTIAL SOURCE — some sources have no rows for some requested days: {gaps}; backfill: {next}	部分数据源缺天：{gaps}；补数据命令：{next}
+usage	prog,detail	{prog}: the command is not written the way it takes it: {detail}	{prog}：命令格式不对：{detail}

@@ -520,7 +520,7 @@ def pending(con: sqlite3.Connection, market: str | None = None
 
 def _parser(prog: str) -> argparse.ArgumentParser:
     from kit.schema_base import QUEUE_STATUSES
-    p = argparse.ArgumentParser(prog=prog, description=__doc__.splitlines()[0])
+    p = contract.Parser(prog=prog, description=__doc__.splitlines()[0])
     sub = p.add_subparsers(dest="verb", required=True)
     sp = sub.add_parser("add", help="queue a proposal snapshot (the "
                                     "harness's compute, or --from FILE)")

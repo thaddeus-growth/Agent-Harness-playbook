@@ -489,7 +489,7 @@ def main(argv: list[str] | None = None, *, spec: db.SchemaSpec,
     argv = list(sys.argv[1:] if argv is None else argv)
     cfg = config()
     cmd = [cfg.cli, "pending", *argv]
-    p = argparse.ArgumentParser(prog=f"{cfg.cli} pending",
+    p = contract.Parser(prog=f"{cfg.cli} pending",
                                 description=__doc__.splitlines()[0])
     p.add_argument("--market")
     contract.add_json_arg(p)

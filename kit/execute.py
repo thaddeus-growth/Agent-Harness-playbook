@@ -422,7 +422,7 @@ def reconcile(spec: db.SchemaSpec, con: sqlite3.Connection, queue_id: int, *,
 # ---- the CLI ---------------------------------------------------------------
 
 def _parser(prog: str) -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog=prog, description=__doc__.splitlines()[0])
+    p = contract.Parser(prog=prog, description=__doc__.splitlines()[0])
     sub = p.add_subparsers(dest="verb", required=True)
     sp = sub.add_parser("apply", help="execute approved queue items (a dry "
                                       "run unless --apply)")

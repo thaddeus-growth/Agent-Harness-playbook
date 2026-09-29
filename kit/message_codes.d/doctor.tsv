@@ -1,0 +1,32 @@
+code	params	meaning_en	meaning_zh
+doctor_harness	name,version,kit_version,root	{name} {version} (kit {kit_version}) at {root}	{name} {version}（kit {kit_version}），位置 {root}
+doctor_env_chain	files	env chain (later wins, the process env before all): {files}	环境变量查找链（后面的覆盖前面的，进程环境变量优先）：{files}
+doctor_env_process_only	var	env chain: none — process env only ({var}=none or empty: the cloud / multi-client setting)	没有环境变量文件：只用进程环境变量（{var}=none 或为空：云端或多客户的设置）
+doctor_env_var	name,value,source	{name} = {value} [{source}]	{name} = {value}（来源：{source}）
+doctor_token_source	mode	token source (every API): {mode}	令牌来源（所有接口）：{mode}
+doctor_home_secrets	names,file,var	{names} came from {file} (HOME-level: shared by every client of this user) — export them in the process env instead and set {var}=none	{names} 来自 {file}（用户主目录级文件：这个用户的所有客户共用）——请改为在进程环境变量里设置，并设 {var}=none
+doctor_env_file_loose	path	{path} is readable by other users	{path} 其他用户也能读取
+doctor_path	var,path	{var} -> {path}	{var} -> {path}
+doctor_data_dir_from_home	var,file	{var} came from {file} (HOME-level: any client that leaves it unset lands in this data dir)	{var} 来自 {file}（用户主目录级文件：任何没设置它的客户都会落到这个数据目录）
+doctor_inside_repo	var,path	{var} -> {path} is inside the harness checkout: client data would ship in a release or leak into a commit	{var} -> {path} 在工具的代码目录里：客户数据可能随发布版本发出，或被提交进仓库
+doctor_no_db	path	no database yet at {path} (a write verb creates it)	{path} 还没有数据库（写入类命令会创建它）
+doctor_db_present	path	database at {path} (no schema given to doctor: its shape is not checked)	数据库在 {path}（没有提供表结构，未检查结构）
+doctor_db_unreadable	path,detail	the database at {path} cannot be read: {detail}	无法读取 {path} 的数据库：{detail}
+doctor_db_stale	tables	cache table(s) in an older shape: {tables} — the next ingest rebuilds them	缓存表结构过旧：{tables}——下次导入会重建
+doctor_db_unknown	tables	table(s) no longer in the schema (left by an older harness; do not read them): {tables}	表结构里已没有的表（旧版本留下的，不要读取）：{tables}
+doctor_db_ok	path,version	database at {path}: schema v{version}, current	数据库 {path}：表结构 v{version}，是最新的
+doctor_no_partition		no market partition (markets = []): nothing to declare	没有市场分区（markets = []）：无需声明
+doctor_markets_declared	markets	declared market(s): {markets}	已声明的市场：{markets}
+doctor_markets_pending	markets	market(s) {markets} declared but not confirmed: a person confirms the declaration	市场 {markets} 已声明但未确认：需要由人确认
+doctor_not_onboarded		no market declared — this harness is not onboarded yet	还没有声明任何市场——这个工具还没完成初始设置
+doctor_writes_on	var	writes: ON ({var}=1) — only the calls on the harness's allowlist can go out	写入：已开启（{var}=1）——只有白名单里的调用能发出
+doctor_writes_bad_value	var,value	{var}={value} does not turn writes on (only 1 does): writes are off	{var}={value} 不会开启写入（只有 1 会）：写入是关闭的
+doctor_writes_off	reason	writes: off ({reason}) — the healthy default	写入：关闭（{reason}）——这是正常的默认状态
+doctor_platform_lock_set	detail	platform rule: set {detail}	平台规则：已设置 {detail}
+doctor_platform_lock_unknown	detail	platform rule: unknown — ask the client's admin to set the platform's own limit on what agents may do, then record it {detail}	平台规则：未知——请客户的管理员在平台上设置助手可做事项的限制，然后记录下来 {detail}
+doctor_verb_script_missing	verb,script	`{verb}` has no script at {script}	命令 `{verb}` 找不到脚本 {script}
+doctor_verbs_ok	count	{count} verb(s), every script present	{count} 个命令，脚本都在
+doctor_kit_tty	var	{var} is set: the human gate's test seam stands in for the terminal (tests only)	设置了 {var}：人工确认的测试替身正在代替终端（只应在测试中）
+doctor_check_crashed	check,detail	the check {check} crashed: {detail}	检查 {check} 出错：{detail}
+doctor_summary_warnings	warnings,failures	{warnings} warning(s), {failures} failure(s) — each names its fix above	{warnings} 个警告，{failures} 个失败——每项上面都写了修复方法
+doctor_summary_ok		OK — no warnings	正常——没有警告

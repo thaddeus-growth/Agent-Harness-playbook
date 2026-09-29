@@ -16,7 +16,8 @@
     prose_lists`) its `k_codes`, same length; each code registered with
     exactly its params, nested messages too. A snake_case machine value
     needs no code; `[contract].data_labels` paths (`.rows[].label`) are
-    data, not messages;
+    data, not messages, and so is the reason a person typed that the kit's
+    own read verbs list (KIT_DATA_LABELS: history rows, queue items);
   * a failure is one {error, next, code, params[, subject]} document, exit
     non-zero, coded (never unclassified_error), `next` a list of commands;
   * read verbs never create the DB: on a data dir without one, each read
@@ -53,6 +54,9 @@ from kit.guards import harness, report, section, strs, verb_table
 
 PROSE = ("reason", "note", "explanation", "message")
 PROSE_LISTS = ("warnings", "reasons", "notes")
+# the kit's own read verbs list the reason a person typed (history rows,
+# queue items): data, not a message; always on top of [contract].data_labels
+KIT_DATA_LABELS = (".history[].reason", ".items[].reason")
 CODE = re.compile(r"^[a-z][a-z0-9_]*$")
 UTC_TS = re.compile(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
 FAILURE_KEYS = frozenset({"error", "next", "code", "params"})
@@ -106,8 +110,8 @@ def uncoded(doc: Any, *, prose: tuple[str, ...] | None = None,
     prose = tuple(prose if prose is not None else strs(c.get("prose"), PROSE))
     prose_lists = tuple(prose_lists if prose_lists is not None
                         else strs(c.get("prose_lists"), PROSE_LISTS))
-    data_labels = tuple(data_labels if data_labels is not None
-                        else strs(c.get("data_labels")))
+    data_labels = KIT_DATA_LABELS + tuple(
+        data_labels if data_labels is not None else strs(c.get("data_labels")))
     reg = messages.registry() if registry is None else registry
     keys = tuple(dict.fromkeys(prose + tuple(sorted(_coded_keys(doc, set())))))
     bad: list[str] = []
