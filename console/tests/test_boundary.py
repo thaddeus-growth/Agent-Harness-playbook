@@ -24,7 +24,7 @@ sys.path.insert(0, ROOT)
 import _t  # noqa: E402
 
 AGENT_VERBS = {"post", "withdraw", "applied", "say"}                    # what serve.py must never reach
-HUMAN_VERBS = {"answer", "reopen", "note", "advise", "ensure_secret", "sign"}   # what ask.py must never reach
+HUMAN_VERBS = {"answer", "reopen", "note", "ensure_secret", "sign"}   # what ask.py must never reach
 NETWORK = {"http", "socket", "socketserver", "subprocess", "ssl", "asyncio", "urllib.request", "ftplib", "smtplib"}
 PROCESS_CALLS = {"system", "popen", "spawnl", "spawnv", "spawnvp", "execv", "execl", "execvp", "fork", "forkpty"}
 PROCESS_MODULES = {"subprocess", "multiprocessing", "pty", "asyncio"}
@@ -109,31 +109,13 @@ def test_the_checker_sees_a_call_however_it_is_reached():
 def test_the_human_side_never_reaches_the_agents_verbs():
     src = source("serve.py")
     assert not reaches(src, AGENT_VERBS), reaches(src, AGENT_VERBS)
-    assert {"answer", "reopen", "note", "advise", "ensure_secret"} <= reaches(src, HUMAN_VERBS)   # it does use its own: the check is not vacuous
+    assert {"answer", "reopen", "note", "ensure_secret"} <= reaches(src, HUMAN_VERBS)   # it does use its own: the check is not vacuous
 
 
 def test_the_agent_side_never_reaches_the_humans_verbs():
     src = source("ask.py")
     assert not reaches(src, HUMAN_VERBS), reaches(src, HUMAN_VERBS)
     assert AGENT_VERBS <= reaches(src, AGENT_VERBS)                                       # and it does use its own
-
-
-def test_only_the_human_side_writes_advice_and_the_agent_side_only_reads_it():
-    """Team review: a view is the human side's, like an answer. core lets only that role
-    append it, serve.py is the one caller of the verb, and ask.py reads advice from the
-    log (answers, wait, list, digest) with no way to write one."""
-    import core
-    assert "advice" in core.ROLES["human"] and "advice" not in core.ROLES["agent"]
-    assert "advise" in reaches(source("serve.py"), {"advise"})
-    assert "advise" not in reaches(source("ask.py"), {"advise"})
-    assert "advice" in source("ask.py")                               # it does read it: the check is not vacuous
-    for name in module_files():
-        if name not in ("core.py", "serve.py"):
-            assert "advise" not in reaches(source(name), {"advise"}), f"{name} writes advice"
-    with _t.tmpstore() as s:
-        with s._txn() as (_box, append):
-            with _t.assert_raises("forbidden_event"):
-                append("agent", "advice", "agent:bot", id="x", on_seq=1, stance="agree")
 
 
 def test_neither_side_imports_the_other_and_both_meet_only_in_core():

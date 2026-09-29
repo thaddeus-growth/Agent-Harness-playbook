@@ -234,7 +234,7 @@ def test_limits():
     L = core.LIMITS
     assert set(L) == {"id", "kind", "group", "title", "why", "if_no", "because", "effect", "label", "value",
                       "source", "quote", "caption", "cell", "option_label", "option_note", "unit", "answer",
-                      "comment", "note", "say", "where", "reason", "advice", "evidence", "options", "columns", "rows",
+                      "comment", "note", "say", "where", "reason", "evidence", "options", "columns", "rows",
                       "verb", "expect"}, "a limit was added or removed: give it a test below"
     table = [   # (limit, builder, field)
         (L["id"], lambda s: ask(id=s), "id"),
@@ -290,14 +290,6 @@ def test_limits():
     pad = L["expect"] - len(core.canon({"k": ""}))
     ok(ask(gate={"verb": ["w"], "expect": {"k": "v" * pad}}))
     assert errs(ask(gate={"verb": ["w"], "expect": {"k": "v" * (pad + 1)}}))
-    # an adviser's reason (team review)
-    with tmpstore() as s:
-        s.post("bot", [ask()])
-        on = s.state()["asks"]["tea-word"]["ask_seq"]
-        s.advise("carol", "tea-word", on, "disagree", "r" * L["advice"])
-        with assert_raises("bad_request") as r:
-            s.advise("carol", "tea-word", on, "disagree", "r" * (L["advice"] + 1))
-        assert r.err.params == {"field": "reason"} and len(s.events()) == 2
 
 
 def test_unknown_fields_are_errors():
@@ -1266,7 +1258,6 @@ def test_a_line_without_the_fields_the_readers_need_is_corrupt():
         "say": event(2, "say", text="hi"),
         "withdraw": event(2, "withdraw", id="tea-word", reason="r"),
         "applied": event(2, "applied", id="tea-word", where="w"),
-        "advice": event(2, "advice", id="tea-word", on_seq=1, stance="disagree", reason="r", by="web:carol"),
     }
     first = line(event(1, "ask", ask=a))
     without = lambda ev, k: {x: v for x, v in ev.items() if x != k}   # noqa: E731
@@ -1281,10 +1272,6 @@ def test_a_line_without_the_fields_the_readers_need_is_corrupt():
         bad += [(f"{t} without text", without(good[t], "text"))] + [(f"{t} text={o!r}", dict(good[t], text=o)) for o in odd]
     bad += [("reopen without answer_seq", without(good["reopen"], "answer_seq"))]
     bad += [(f"reopen answer_seq={o!r}", dict(good["reopen"], answer_seq=o)) for o in ("2", 2.0, True, False, None, [2], {"a": 2})]
-    bad += [("advice without on_seq", without(good["advice"], "on_seq")), ("advice without stance", without(good["advice"], "stance"))]
-    bad += [(f"advice on_seq={o!r}", dict(good["advice"], on_seq=o)) for o in ("1", 1.0, True, None, [1])]
-    bad += [(f"advice stance={o!r}", dict(good["advice"], stance=o)) for o in ("maybe", "Agree", "", None, 1, ["agree"])]
-    bad += [(f"advice reason={o!r}", dict(good["advice"], reason=o)) for o in (None, 5, ["r"], {"r": 1})]
     assert len(bad) > 100
     with tmpstore() as s:
         for name, ev in good.items():                                # the complete event is fine
@@ -1673,122 +1660,18 @@ def test_the_codes_for_an_unclear_harness_and_a_missing_secret():
     assert core.CODES["no_secret"] != core.CODES["bad_request"] and core.CODES["gate_unsure"] != core.CODES["gate_refused"]
 
 
-# ------------------------------------------------------------- team review --
-
-def test_advice_is_a_signed_human_event_that_never_answers_reopens_or_counts():
-    """Advice (team review) is written only by the human side, signed like an
-    answer, and leaves the ask exactly where it was: open stays open, answered
-    stays answered, and it takes no place in the budget of 10."""
-    with tmpstore() as s:
-        s.post("bot", [ask(id=f"a{i}") for i in range(core.MAX_OPEN)])
-        a0 = s.state()["asks"]["a0"]
-        ev = s.advise("carol", "a0", a0["ask_seq"], "disagree", " Too early.\nWait a week. ")
-        assert (ev["type"], ev["by"], ev["id"], ev["on_seq"], ev["stance"], ev["reason"]) == \
-            ("advice", "web:carol", "a0", a0["ask_seq"], "disagree", "Too early.\nWait a week.")
-        assert core.verify(s.secret(), ev) is True
-        for tampered in (dict(ev, stance="agree"), dict(ev, reason="x"), dict(ev, on_seq=2), dict(ev, by="web:alice")):
-            assert core.verify(s.secret(), tampered) is False
-        agree = s.advise("dan", "a0", a0["ask_seq"], "agree")
-        assert "reason" not in agree                                    # agreeing needs no reason
-        st = s.state()
-        assert st["asks"]["a0"]["status"] == "open" and st["asks"]["a0"]["answer"] is None
-        assert [e["seq"] for e in st["asks"]["a0"]["advice"]] == [ev["seq"], agree["seq"]]
-        assert len(core.open_asks(st)) == core.MAX_OPEN and st["messages"] == []
-        with assert_raises("over_budget"):                               # the budget is asks, not views
-            s.post("bot", [ask(id="eleventh")])
-        answered = answer(s, id="a0")
-        on_answer = s.advise("carol", "a0", answered["seq"], "disagree", "Still too early.")
-        st = s.state()
-        assert st["asks"]["a0"]["status"] == "answered" and st["asks"]["a0"]["answer"]["seq"] == answered["seq"]
-        s.post("bot", [ask(id="eleventh")])                              # the answered one freed a place, the views none
-        s.applied("bot", ["a0"], "the catalogue", seqs={"a0": answered["seq"]})
-        s.advise("dan", "a0", answered["seq"], "agree")                 # an applied answer can still be reviewed
-        check_log(s, len(s.events()))
-        assert s.state()["problems"] == [] and on_answer["on_seq"] == answered["seq"]
-
-
-def test_advice_is_bound_to_the_ask_or_answer_as_shown_and_refused_otherwise():
-    with tmpstore() as s:
-        s.post("bot", [ask(), ask(id="gone")])
-        first = s.state()["asks"]["tea-word"]["ask_seq"]
-        before = raw_log(s)
-        for call, code in ((lambda: s.advise("carol", "ghost", 1, "agree"), "unknown_id"),
-                           (lambda: s.advise("carol", "tea-word", first + 99, "agree"), "changed"),
-                           (lambda: s.advise("carol", "tea-word", first, "maybe", "x"), "bad_request"),
-                           (lambda: s.advise("carol", "tea-word", first, None, "x"), "bad_request"),
-                           (lambda: s.advise("carol", "tea-word", True, "agree"), "bad_request"),
-                           (lambda: s.advise("carol", "tea-word", "1", "agree"), "bad_request"),
-                           (lambda: s.advise("carol", "tea-word", first, "disagree"), "no_reason"),
-                           (lambda: s.advise("carol", "tea-word", first, "disagree", " \x00\t "), "no_reason"),
-                           (lambda: s.advise("-x", "tea-word", first, "agree"), "bad_request")):
-            with assert_raises(code):
-                call()
-        assert raw_log(s) == before, "a refused view writes nothing"
-        s.post("bot", [ask(why="A revised reason.")])                     # revised: the old page is stale
-        with assert_raises("changed"):
-            s.advise("carol", "tea-word", first, "agree")
-        rev = s.state()["asks"]["tea-word"]["ask_seq"]
-        assert rev != first
-        s.advise("carol", "tea-word", rev, "agree")
-        ans = answer(s)
-        with assert_raises("changed"):                                   # answered since the page showed the ask
-            s.advise("carol", "tea-word", rev, "disagree", "no")
-        s.advise("carol", "tea-word", ans["seq"], "disagree", "no")
-        s.reopen("bob", "tea-word", ans["seq"])
-        with assert_raises("changed"):                                   # reopened: that answer is no longer the one
-            s.advise("dan", "tea-word", ans["seq"], "agree")
-        s.withdraw("bot", ["gone"], "moot")
-        with assert_raises("not_open") as r:
-            s.advise("carol", "gone", 2, "agree")
-        assert r.err.params["status"] == "withdrawn"
-        assert s.state()["problems"] == []
-
-
-def test_views_and_dissent_are_each_persons_last_word_on_the_ask_as_it_stands():
-    with tmpstore() as s:
-        s.post("bot", [ask()])
-        on_ask = s.state()["asks"]["tea-word"]["ask_seq"]
-        s.advise("carol", "tea-word", on_ask, "disagree", "no")
-        s.advise("carol", "tea-word", on_ask, "agree")                  # a change of mind replaces the first
-        s.advise("dan", "tea-word", on_ask, "disagree", "no")
-        cur = s.state()["asks"]["tea-word"]
-        assert core.target(cur)["seq"] == on_ask and core.target(cur)["type"] == "ask"
-        assert [(e["by"], e["stance"]) for e in core.views(cur)] == [("web:carol", "agree"), ("web:dan", "disagree")]
-        assert [e["by"] for e in core.dissent(cur)] == ["web:dan"]
-        ans = answer(s)
-        cur = s.state()["asks"]["tea-word"]
-        assert core.target(cur) is cur["answer"] and core.views(cur) == [] and core.dissent(cur) == []   # a new thing to judge
-        assert len(core.latest_views(cur)) == 2                          # what was said before stays on the record
-        s.advise("carol", "tea-word", ans["seq"], "disagree", "Not this.")
-        assert [e["by"] for e in core.dissent(s.state()["asks"]["tea-word"])] == ["web:carol"]
-        s.reopen("bob", "tea-word", ans["seq"])
-        cur = s.state()["asks"]["tea-word"]
-        assert core.target(cur)["seq"] == cur["ask_seq"] == on_ask         # the question again, and what was said of it
-        assert [e["by"] for e in core.dissent(cur)] == ["web:dan"]
-        s.withdraw("bot", ["tea-word"], "moot")
-        cur = s.state()["asks"]["tea-word"]
-        assert core.target(cur) is None and core.views(cur) == [] and len(core.latest_views(cur)) == 3
-
-
-def test_fold_sets_aside_advice_about_nothing_its_ask_showed():
+def test_a_retired_advice_event_in_an_old_log_is_set_aside_not_a_crash():
+    """Logs written while team review existed hold `advice` events. They are no
+    type now: the fold sets each aside as `unknown_type` and the ask is untouched."""
     a = ok(ask())
-    A, ANS = event(1, "ask", ask=a), event(2, "answer", id="tea-word", value="yes", subject="s", by="web:bob")
-    good = lambda seq, on: event(seq, "advice", id="tea-word", on_seq=on, stance="agree", by="web:carol")  # noqa: E731
-    cases = [
-        ([event(1, "advice", id="ghost", on_seq=1, stance="agree")], [(1, "unknown_id")]),
-        ([A, good(2, 7)], [(2, "not_open")]),                            # names no event of this ask
-        ([A, event(2, "say", text="x"), good(3, 2)], [(3, "not_open")]),  # names an event, but not one of its own
-        ([A, event(2, "withdraw", id="tea-word", reason="r"), good(3, 1)], [(3, "not_open")]),
-        ([A, ANS, good(3, 1), good(4, 2)], []),                           # the ask, then its answer: both fine
-    ]
-    for events, expected in cases:
-        st = core.fold(events)
-        assert [(p["seq"], p["code"]) for p in st["problems"]] == expected, (events, st["problems"])
-        if "tea-word" in st["asks"]:
-            assert len(st["asks"]["tea-word"]["advice"]) == (2 if not expected else 0)
-    st = core.fold([A, ANS, good(3, 2)])
-    cur = st["asks"]["tea-word"]
-    assert cur["status"] == "answered" and cur["answer"] is ANS and cur["targets"] == {1: A, 2: ANS}
+    old = event(2, "advice", id="tea-word", on_seq=1, stance="disagree", reason="r", by="web:carol")
+    st = core.fold([event(1, "ask", ask=a), old])
+    assert [(p["seq"], p["code"]) for p in st["problems"]] == [(2, "unknown_type")]
+    assert st["asks"]["tea-word"]["status"] == "open" and st["seq"] == 2
+    with tmpstore() as s:
+        put(s, (json.dumps(event(1, "ask", ask=a)) + "\n" + json.dumps(old) + "\n").encode())
+        assert [e["seq"] for e in s.events()] == [1, 2]
+        s.state()
 
 
 # ------------------------------------------------ the role split, signing --
@@ -1796,7 +1679,7 @@ def test_fold_sets_aside_advice_about_nothing_its_ask_showed():
 def test_the_agent_cannot_write_a_human_event_nor_the_reverse():
     assert set(core.ROLES) == {"agent", "human"}
     assert set(core.ROLES["agent"]) == {"ask", "withdraw", "applied", "say"}
-    assert set(core.ROLES["human"]) == {"answer", "reopen", "note", "advice"}
+    assert set(core.ROLES["human"]) == {"answer", "reopen", "note"}
     with tmpstore() as s:
         with s._txn() as (box, append):
             for t in core.ROLES["human"]:
@@ -2147,8 +2030,7 @@ def test_random_verbs_never_write_an_event_the_fold_rejects():
                 st = s.state()
                 cur = st["asks"].get(i)
                 answer_seq = cur["answer"]["seq"] if cur and cur["answer"] and rng.random() < .8 else rng.randint(1, 60)
-                op = rng.choice(["post", "post", "answer", "answer", "proved", "reopen", "applied", "withdraw", "say", "note",
-                                 "advise"])
+                op = rng.choice(["post", "post", "answer", "answer", "proved", "reopen", "applied", "withdraw", "say", "note"])
                 try:
                     if op == "post":
                         s.post("bot", [rng.choice(steps)(rng.choice(["w1", "w2", "w3"]), i)],
@@ -2165,10 +2047,6 @@ def test_random_verbs_never_write_an_event_the_fold_rejects():
                         s.applied("bot", [i], "w", seqs=rng.choice([None, {i: answer_seq}]))
                     elif op == "withdraw":
                         s.withdraw("bot", [i], "r")
-                    elif op == "advise":
-                        now = core.target(cur) if cur else None
-                        on = now["seq"] if now and rng.random() < .8 else rng.randint(1, 60)
-                        s.advise(rng.choice(["carol", "dan"]), i, on, rng.choice(core.STANCES), rng.choice(["", "why"]))
                     else:
                         (s.say if op == "say" else s.note)(*(("bot", "hi") if op == "say" else ("bob", "hi")))
                 except core.Refused:
@@ -2177,8 +2055,6 @@ def test_random_verbs_never_write_an_event_the_fold_rejects():
                 assert st["problems"] == [], (seed, n, op, st["problems"])
                 check_log(s, len(s.events()))
                 for a in st["asks"].values():
-                    for v in a["advice"]:          # a view names something its ask showed, and a disagreement says why
-                        assert v["on_seq"] in a["targets"] and (v["stance"] == "agree" or v.get("reason")), (seed, n, v)
                     if a["status"] != "answered":
                         continue
                     ans = a["answer"]

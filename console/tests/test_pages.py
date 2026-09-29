@@ -4,8 +4,7 @@ Both languages, every step, the group button rule, read-only, a gate without
 a relay and what a gated choice would write, escaping of every agent-supplied
 field (each carries a `<script>` payload with quotes), links only http(s),
 history states, the unsigned chip, the budget line, ages, the poll attributes,
-what a refusal gives back, and team review (what an adviser sees and may send,
-the views under each ask, the count of disagreements and the Reopen they offer). Fixtures are hand-made event logs (no clock, no
+and what a refusal gives back. Fixtures are hand-made event logs (no clock, no
 folder), so every time is fixed; one test goes through a real Store. `Doc`,
 `full_log`, `ctx` and friends are shared with test_ui_rules.py.
 """
@@ -1333,166 +1332,42 @@ def _answered(L, id, value):
     return L
 
 
-# ------------------------------------------------------------- team review --
+# ------------------------------------------------- a log of every state --
 
 GATED_OK = {"ok": True, "verb": ["facts", "confirm", "unit_cost"], "message": "unit cost confirmed"}
 
 
-def advised_log() -> Log:
-    """Team review: views on an open ask, a disagreement on an answer still waiting,
-    on one the harness's gate wrote, on one already applied, and an agreement."""
+def mixed_log() -> Log:
+    """One ask open, one answered and waiting, one whose gate wrote, one applied, one waiting."""
     L = Log()
-    o = L.ask(ask_raw("confirm", "v1", title="Open with views"))
-    w = L.ask(ask_raw("choose", "v2", title="Waiting with a disagreement"))
-    g = L.ask(ask_raw("provide", "v3", title="Gated with a disagreement", gate=GATE))
-    p = L.ask(ask_raw("confirm", "v4", title="Applied with a disagreement"))
-    k = L.ask(ask_raw("confirm", "v5", title="Waiting with agreement"))
-    L.add("advice", "web:carol", id="v1", on_seq=1, stance="disagree", reason='Carol says <script>alert("x")</script> & no.')
-    L.add("advice", "web:dan", id="v1", on_seq=1, stance="agree")
-    aw = L.add("answer", "web:alice", id="v2", value="a", subject=core.subject_hash(w), suggested=False)
-    L.add("advice", "web:carol", id="v2", on_seq=aw["seq"], stance="disagree", reason="Option B sells better.")
-    ag = L.add("answer", "web:alice", id="v3", value="4.6", subject=core.subject_hash(g), suggested=False, gate=GATED_OK)
-    L.add("advice", "web:carol", id="v3", on_seq=ag["seq"], stance="disagree", reason="Too high.")
-    ap = L.add("answer", "web:alice", id="v4", value="yes", subject=core.subject_hash(p), suggested=True)
-    L.add("advice", "web:dan", id="v4", on_seq=ap["seq"], stance="disagree", reason="Too late.")
+    o = L.ask(ask_raw("confirm", "v1", title="Open one"))
+    w = L.ask(ask_raw("choose", "v2", title="Waiting one"))
+    g = L.ask(ask_raw("provide", "v3", title="Gated one", gate=GATE))
+    p = L.ask(ask_raw("confirm", "v4", title="Applied one"))
+    k = L.ask(ask_raw("confirm", "v5", title="Waiting yes"))
+    L.add("answer", "web:alice", id="v2", value="a", subject=core.subject_hash(w), suggested=False)
+    L.add("answer", "web:alice", id="v3", value="4.6", subject=core.subject_hash(g), suggested=False, gate=GATED_OK)
+    L.add("answer", "web:alice", id="v4", value="yes", subject=core.subject_hash(p), suggested=True)
     L.add("applied", "agent:bot", id="v4", where="the plan")
-    ak = L.add("answer", "web:alice", id="v5", value="yes", subject=core.subject_hash(k), suggested=True)
-    L.add("advice", "web:dan", id="v5", on_seq=ak["seq"], stance="agree")
+    L.add("answer", "web:alice", id="v5", value="yes", subject=core.subject_hash(k), suggested=True)
     assert L.state()["problems"] == [] and o
     return L
-
-
-def decider(lang="en", **over):
-    return ctx(lang, deciders=["alice", "erin"], **over)
-
-
-def adviser(lang="en", **over):
-    return ctx(lang, user="carol", deciders=["alice", "erin"], **over)
 
 
 def row(doc, title):
     return [r for r in doc.find_all("details", "ask") if r.find("span", "ttl").text() == title][0]
 
 
-def test_an_adviser_sees_every_ask_and_answer_but_no_form_that_answers_reopens_or_notes():
-    L = advised_log()
-    st = L.state()
+def test_everyone_logged_in_answers_reopens_and_notes_and_nobody_else_writes():
     for lang in LANGS:
-        d = Doc(pages.render_inbox(st, adviser(lang)))
-        assert [a.find("span", "ttl").text() for a in d.find_all("details", "ask")] == ["Open with views"]
-        assert {f.attrs["class"] for f in d.find_all("form")} == {"adviceform"}         # no answer, all or note form
-        f = d.find("form", "adviceform")
-        assert f.attrs["action"] == "advise" and f.attrs["method"] == "post"
-        hidden = {i.attrs["name"]: i.attrs["value"] for i in f.find_all("input", type="hidden")}
-        assert hidden == {"token": "tok123", "id": "v1", "on_seq": str(st["asks"]["v1"]["ask_seq"])}
-        radios = f.find_all("input", type="radio")
-        assert [r.attrs["value"] for r in radios] == ["agree", "disagree"] and all(r.attrs["name"] == "stance" for r in radios)
-        assert not [r for r in radios if "checked" in r.attrs] and all("required" in r.attrs for r in radios)   # nothing picked for them
-        assert [x.text() for x in f.find_all("span", "lab")] == [T("advice.opt_agree", lang), T("advice.opt_disagree", lang)]
-        ta = f.find("textarea", name="reason")
-        assert ta.attrs["maxlength"] == str(core.LIMITS["advice"]) == "400" and "required" not in ta.attrs
-        assert f.find("legend").text() == T("advice.lead_ask", lang)
-        assert d.find("p", "banner").text() == T("advise.banner", lang, names="alice, erin")
-        assert d.find("footer", "foot").text().endswith(T("foot.adviser", lang, user="carol"))
-        h = Doc(pages.render_history(st, adviser(lang)))
-        assert not h.find_all("form", "reopen") and not h.find_all("form", "answer")
-        assert not h.find_all("div", "dissent")                                       # reopening is not theirs to offer
-        forms = h.find_all("form", "adviceform")
-        assert len(forms) == 4 and len(h.find_all("details", "ask")) == 4               # every answer, even an applied one
-        for f in forms:
-            hid = {i.attrs["name"]: i.attrs["value"] for i in f.find_all("input", type="hidden")}
-            assert hid["back"] == "history" and hid["on_seq"] == str(st["asks"][hid["id"]]["answer"]["seq"])
-            assert f.find("legend").text() == T("advice.lead_answer", lang)
-        assert "Waiting with agreement" in h.main.text() and "the plan" in h.main.text()
-
-
-def test_a_decider_sees_each_view_under_its_ask_and_the_inbox_counts_the_disagreements():
-    st = advised_log().state()
-    for lang in LANGS:
-        for c in (decider(lang), ctx(lang)):                                   # named, or everyone decides
-            d = Doc(pages.render_inbox(st, c))
-            assert not d.find_all("form", "adviceform") and d.find("form", "answer") and d.find("form", "noteform")
-            v1 = row(d, "Open with views")
-            views = v1.find("div", "advice")
-            assert views.find("h3").text() == T("advice.head", lang)
-            lis = views.find_all("li", "msg")
-            assert [li.find("span", "chip").text() for li in lis] == [T("advice.disagree", lang), T("advice.agree", lang)]
-            assert "bad" in lis[0].find("span", "chip").classes and "ok" in lis[1].find("span", "chip").classes
-            assert lis[0].find("p", "txt").text() == 'Carol says <script>alert("x")</script> & no.' and lis[1].find("p", "txt") is None
-            assert lis[0].find("p", "who").text() == f"carol · {T('age.hour', lang, n=2)} · {T('advice.about_ask', lang)}"
-            walk = list(v1.walk())
-            assert walk.index(views) < walk.index(v1.find("form", "answer"))       # read before answering
-            chips = v1.find("summary").find_all("span", "chip")
-            assert chips[-1].text() == T("dissent.chip", lang, n=1) and "bad" in chips[-1].classes
-            line = d.main.find("p", "dissent")
-            assert line.text() == f'{T("dissent.inbox", lang, n=3)} {T("dissent.see", lang)}'  # v1, v2, v3: not the applied v4
-            assert line.find("a").attrs["href"] == "history"
-            order = [k.attrs.get("class", k.tag).split()[0] for k in d.main.kids if isinstance(k, Node)]
-            assert order[:2] == ["head", "dissent"]
-    quiet = Log()
-    quiet.ask(ask_raw("confirm", "q1"))
-    assert inbox(quiet, deciders=["alice"]).main.find("p", "dissent") is None           # nothing to count, no line
-
-
-def test_an_answer_not_yet_applied_that_someone_disagrees_with_offers_reopen():
-    st = advised_log().state()
-    for lang in LANGS:
-        h = Doc(pages.render_history(st, decider(lang)))
-        waiting = row(h, "Waiting with a disagreement")
-        notice = waiting.find("div", "dissent")
-        assert "open" in waiting.attrs and notice.find("p").text() == T("dissent.row", lang, n=1)
-        assert len(waiting.find_all("form", "reopen")) == 1 and notice.find("form", "reopen")    # Reopen sits in the notice, once
-        assert notice.find("input", name="answer_seq").attrs["value"] == str(st["asks"]["v2"]["answer"]["seq"])
-        walk = list(waiting.walk())
-        assert walk.index(notice) < walk.index(waiting.find("h3"))                 # it comes first in the row
-        assert "Option B sells better." in waiting.find("div", "advice").text()
-        assert T("advice.about_answer", lang) in waiting.find("div", "advice").text()
-        gated = row(h, "Gated with a disagreement")                                 # the system took it: no Reopen, and it says so
-        assert gated.find("div", "dissent") and not gated.find_all("form", "reopen")
-        assert gated.find("div", "dissent").find("p", "hint").text() == T("reopen.written", lang)
-        applied = row(h, "Applied with a disagreement")                             # applied: shown, nothing to reopen
-        assert not applied.find("div", "dissent") and not applied.find_all("form") and "open" not in applied.attrs
-        assert applied.find("summary").find_all("span", "chip")[-1].text() == T("dissent.chip", lang, n=1)
-        agreed = row(h, "Waiting with agreement")                                   # agreement: the usual Reopen, no notice
-        assert not agreed.find("div", "dissent") and len(agreed.find_all("form", "reopen")) == 1
-        assert "open" not in agreed.attrs and T("advice.agree", lang) in agreed.find("div", "advice").text()
-
-
-def test_views_show_each_persons_last_word_escaped_with_the_unsigned_ones_marked():
-    L = advised_log()
-    L.add("advice", "web:carol", id="v1", on_seq=1, stance="agree")                # carol changed her mind
-    forged = L.add("advice", "web:erin", id="v5", on_seq=L.state()["asks"]["v5"]["answer"]["seq"],
-                   stance="disagree", reason="Forged.")
-    forged["sig"] = "0" * 64
-    st = L.state()
-    d = inbox(st, deciders=["alice"])
-    lis = row(d, "Open with views").find("div", "advice").find_all("li", "msg")
-    assert [(li.find("p", "who").text().split(" · ")[0], li.find("span", "chip").text()) for li in lis] == \
-        [("dan", T("advice.agree")), ("carol", T("advice.agree"))]
-    assert row(d, "Open with views").find("summary").find_all("span", "chip")[-1].text() != T("dissent.chip", n=1)
-    assert "<script>" not in d.source and "&lt;script&gt;" not in d.source             # the changed view is gone from the page
-    h = history(st, deciders=["alice"])
-    v5 = row(h, "Waiting with agreement")
-    assert T("sig.bad") in v5.find("div", "advice").text() and "Forged." in v5.find("div", "advice").text()
-    assert "<script>alert" not in history(advised_log(), deciders=["alice"]).source
-    assert "&lt;script&gt;" in inbox(advised_log(), deciders=["alice"]).source
-    older = Log()                                                                    # a view of an earlier version says so
-    a = older.ask(ask_raw("confirm", "e1"))
-    older.add("advice", "web:carol", id="e1", on_seq=1, stance="disagree", reason="Old.")
-    older.ask(ask_raw("confirm", "e1", why="Revised."))
-    assert T("advice.about_old") in inbox(older).find("div", "advice").text() and a
-
-
-def test_without_deciders_everyone_answers_and_nobody_is_offered_the_advice_form():
-    for c in ({}, {"deciders": None}):
-        d = inbox(advised_log(), **c)
-        assert not d.find_all("form", "adviceform") and d.find("form", "answer") and d.find("form", "noteform")
-        assert d.find("p", "banner") is None and d.find("footer", "foot").text().endswith(T("foot.user", user="alice"))
-    assert not inbox(advised_log(), user="bob", deciders=None).find_all("form", "adviceform")
-    ro = inbox(advised_log(), user=None, deciders=["alice"])                            # nobody logged in: read-only still
+        d = inbox(mixed_log(), lang)
+        assert d.find("form", "answer") and d.find("form", "noteform") and not d.find_all("form", "adviceform")
+        assert d.find("p", "banner") is None and d.find("footer", "foot").text().endswith(T("foot.user", lang, user="alice"))
+        h = history(mixed_log(), lang)
+        assert h.find("form", "reopen") and not h.find_all("form", "adviceform")
+    ro = inbox(mixed_log(), user=None)                                                 # nobody logged in: read-only
     assert not ro.find_all("form") and ro.find("p", "banner").text() == T("ro.banner")
-    for lang in LANGS:
-        assert pages.flash_text(lang, "advised") == T("flash.advised", lang)
+    assert "advice" not in inbox(mixed_log()).source and "dissent" not in history(mixed_log()).source
 
 
 # ------------------------------------------------- a real store, end to end --

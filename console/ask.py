@@ -17,7 +17,7 @@ Every ok document carries `dir`, the absolute folder it used (null when none is
 declared, as for `schema`): a relative or mistyped path shows up there, instead
 of an agent and a console quietly working in two folders.
 This side writes only the agent's events (ask, withdraw, applied, say). It has
-no verb that answers, reopens, notes or advises, and it never makes the
+no verb that answers, reopens or notes, and it never makes the
 console's secret: it only reads it to check signatures (`verify`, `verified`);
 with no secret `verify` is refused (`no_secret`), it does not pass.
 
@@ -42,12 +42,8 @@ since you read it is refused (`changed`), never marked applied.
 `answers` and `wait` list the asks reopened and the notes written after
 `--since`; of the notes only the newest 20, and `notes_truncated` says when
 there were more (a first look, with no --since, is a look at the newest).
-They also list, in `advice`, every view the team gave after `--since` (team
-review: someone who may not decide agrees or disagrees, with a reason), never
-cut short: a disagreement is turned into a new ask, not missed. `list` counts
-each ask's views as it stands. `digest` renders the decision record (asks,
-evidence, suggestion, answer and who gave it, the views, where it was applied)
-as Markdown in `text`, or as data with --format json: it is still one JSON
+`digest` renders the decision record (asks, evidence,
+suggestion, answer and who gave it, where it was applied) as Markdown in `text`, or as data with --format json: it is still one JSON
 document, like every other verb.
 """
 
@@ -160,7 +156,7 @@ def _parser() -> Parser:
                    help="only reopened asks and notes after this seq (the newest "
                         f"{NOTES} notes at most)")
     v.add_argument("--all", action="store_true", help="also the answers already applied")
-    v = verb("wait", cmd_wait, "block until a human answer, reopen, note or view after SEQ, then say what `answers` says")
+    v = verb("wait", cmd_wait, "block until a human answer, reopen or note after SEQ, then say what `answers` says")
     v.add_argument("--since", type=_number(int, 0), default=None, metavar="SEQ",
                    help="default: the seq when this command starts")
     v.add_argument("--timeout", type=_number(float, 0), default=900, metavar="SEC",
@@ -178,7 +174,7 @@ def _parser() -> Parser:
     verb("schema", cmd_schema, "the fields of an ask, the limits and one example per step")
     verb("verify", cmd_verify, "check every human event's signature with the console's secret")
     v = verb("digest", cmd_digest, "the decision record: every ask, what was shown, the answer and who gave it, "
-             "the team's views and where it was applied")
+             "and where it was applied")
     v.add_argument("--format", choices=("md", "json"), default="md",
                    help="md (default): Markdown in `text`, the file a team lead forwards; json: the same record as data")
     return p
@@ -251,28 +247,8 @@ def cmd_list(a):
                      "status": x["status"], "rev": x["rev"], "opened_at": x["opened_at"],
                      "answer": _brief_event(x["answer"], "value", "suggested"),
                      "applied": _brief_event(x["applied"], "where"),
-                     "withdrawn": _brief_event(x["withdrawn"], "reason"),
-                     "advice": _counts(x)})
+                     "withdrawn": _brief_event(x["withdrawn"], "reason")})
     return {"ok": True, "seq": st["seq"], "open": len(core.open_asks(st)), "asks": rows}
-
-
-def _counts(x) -> dict:
-    """The team's views of the ask as it stands (each person's last word)."""
-    views = core.views(x)
-    return {s: sum(e["stance"] == s for e in views) for s in core.STANCES}
-
-
-def _advice_row(x, e, secret) -> dict:
-    """One view, with what it was about: `on` the ask (its suggestion is
-    `value`) or an answer (its `value`), and whether that is still `current`."""
-    about, now = x["targets"].get(e["on_seq"]) or {}, core.target(x)
-    value = (about.get("value") if about.get("type") == "answer"
-             else ((about.get("ask") or {}).get("recommend") or {}).get("value"))
-    return {"seq": e["seq"], "at": e["at"], "by": e["by"], "id": x["id"], "title": x["ask"]["title"],
-            "on": about.get("type"), "on_seq": e["on_seq"], "value": value,
-            "stance": e["stance"], "reason": e.get("reason", ""),
-            "current": now is not None and now["seq"] == e["on_seq"],
-            "verified": core.verify(secret, e)}
 
 
 def _answer_row(x, secret):
@@ -289,8 +265,8 @@ def _answer_row(x, secret):
 
 def _report(events, secret, since, everything=False) -> dict:
     """What the human has said, from one snapshot of the log: the answers
-    waiting to be applied, the asks reopened after `since`, the newest notes
-    after it and every view of the team after it. `seq` is that snapshot's
+    waiting to be applied, the asks reopened after `since` and the newest notes
+    after it. `seq` is that snapshot's
     last event, the `since` to pass next time."""
     st = core.fold(events)
     asks = [st["asks"][i] for i in st["order"]]
@@ -305,12 +281,10 @@ def _report(events, secret, since, everything=False) -> dict:
     notes = [{"seq": e["seq"], "at": e["at"], "by": e["by"], "text": e["text"],
               "verified": core.verify(secret, e)}
              for e in st["messages"] if e["type"] == "note" and e["seq"] > since]
-    advice = [_advice_row(x, e, secret) for x in asks for e in x["advice"] if e["seq"] > since]
     return {"ok": True, "seq": st["seq"], "open": len(core.open_asks(st)),
             "answers": sorted(answers, key=lambda r: r["seq"]),
             "reopened": sorted(reopened, key=lambda r: r["seq"]),
-            "notes": notes[-NOTES:], "notes_truncated": len(notes) > NOTES,
-            "advice": sorted(advice, key=lambda r: r["seq"])}
+            "notes": notes[-NOTES:], "notes_truncated": len(notes) > NOTES}
 
 
 def cmd_answers(a):
@@ -408,8 +382,6 @@ def cmd_verify(a):
 
 STATUS_WORDS = {"open": "Open: waiting for an answer", "waiting": "Answered: waiting for the agent to apply",
                 "applied": "Applied", "withdrawn": "Withdrawn"}
-ABOUT_WORDS = {("ask", True): "about the question", ("ask", False): "about the question",
-               ("answer", True): "about the answer", ("answer", False): "about an earlier answer"}
 YES_NO = {("confirm", "yes"): "Yes", ("confirm", "no"): "No", ("approve", "yes"): "Approve", ("approve", "no"): "Reject"}
 
 
@@ -435,8 +407,8 @@ def _given(e, shown, secret) -> dict:
 
 def _record(x, secret) -> dict:
     """One ask for the decision record: what the owner was shown (for an answer, the
-    version they answered), the answer, answers taken back, the views, where it went."""
-    ans, now = x["answer"], core.target(x)
+    version they answered), the answer, answers taken back, where it went."""
+    ans = x["answer"]
     shown = x["revs"].get(ans.get("subject"), x["ask"]) if ans else x["ask"]
     rec = shown.get("recommend")
     reopens = {e["answer_seq"]: e for e in x["history"] if e["type"] == "reopen"}
@@ -452,11 +424,6 @@ def _record(x, secret) -> dict:
             "suggestion": ({"value": rec["value"], "label": _label(shown, rec["value"]), "because": rec.get("because")}
                            if rec else None),
             "answer": _given(ans, shown, secret) if ans else None, "earlier": earlier,
-            "advice": [{"seq": e["seq"], "at": e["at"], "by": e["by"],
-                        "on": (x["targets"].get(e["on_seq"]) or {}).get("type"), "on_seq": e["on_seq"],
-                        "current": now is not None and now["seq"] == e["on_seq"],
-                        "stance": e["stance"], "reason": e.get("reason", ""), "verified": core.verify(secret, e)}
-                       for e in x["advice"]],
             "applied": _brief_event(x["applied"], "by", "where"),
             "withdrawn": _brief_event(x["withdrawn"], "by", "reason")}
 
@@ -523,14 +490,6 @@ def _md_record(n: int, r: dict) -> list[str]:
         if isinstance(a["gate"], dict):
             bits.append("written to the system" + (f": {_md(a['gate'].get('message'))}" if a["gate"].get("message") else ""))
         out += ["**Answer:** " + "; ".join(bits) + _unsigned(a), ""]
-    if r["advice"]:
-        out += ["**The team:**", ""]
-        for v in r["advice"]:
-            said = "agrees" if v["stance"] == "agree" else "disagrees"
-            why = f": {_md(v['reason'])}" if v["reason"] else ""
-            about = ABOUT_WORDS.get((v["on"], v["current"]), "")
-            out.append(f"- {_who(v['by'])} {said} {about}, {_when(v['at'])}{why}{_unsigned(v)}")
-        out.append("")
     if r["applied"]:
         out += [f"**Applied:** {_md(r['applied']['where'])}, {_when(r['applied']['at'])}", ""]
     if r["withdrawn"]:

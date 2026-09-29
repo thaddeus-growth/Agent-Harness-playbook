@@ -16,7 +16,7 @@ flowchart LR
     GATE["A harness<br/>its own human gate"]
     AG -->|"writes ask · withdraw · applied · say"| LOG
     LOG -. "read by wait · answers" .-> AG
-    CON -->|"writes answer · reopen · note · advice, signed"| LOG
+    CON -->|"writes answer · reopen · note, signed"| LOG
     LOG -. "read for every page" .-> CON
     CON -. "optional: relay.py runs its gate" .-> GATE
     classDef owner fill:#e8f0fe,stroke:#1a73e8,stroke-width:2px
@@ -161,13 +161,12 @@ An ask whose gate verb is not allowed, or any gated ask when there is no relay, 
 
 | What is checked | Test |
 | --- | --- |
-| Only the human side writes answer, reopen, note, advice; only the agent side writes the rest | `test_boundary.py`, `test_core.py` |
-| With `--deciders`, an adviser gets no form that answers, reopens or notes, and such a POST is refused (403); a view is signed, bound to the ask or answer as shown, and a disagreement needs its reason | `test_serve.py`, `test_pages.py`, `test_core.py` |
+| Only the human side writes answer, reopen, note; only the agent side writes the rest | `test_boundary.py`, `test_core.py` |
 | Every human event is signed; `verify` finds an edited or unsigned one, and is refused where there is no secret | `test_core.py`, `test_ask_cli.py` |
 | An answer is bound to the ask as shown; a stale page gets `changed`, and `applied ID@SEQ` refuses an answer the agent never read | `test_core.py`, `test_serve.py`, `test_ask_cli.py` |
 | Binds to loopback; any other `--host` needs `--user-header`; a Host that is not ours is refused (421) | `test_serve.py` |
 | Every POST: the page token (from the folder's secret, so a page open across a restart still answers, and rotating the secret ends every open page), `Origin` equal to the request's `Host`, at most 64 KB, a plain form | `test_serve.py` |
-| A saved note, reopen or view answers 303, so a reload cannot write twice; one click per ask at a time | `test_serve.py` |
+| A saved note or reopen answers 303, so a reload cannot write twice; one click per ask at a time | `test_serve.py` |
 | No inline script or style; CSP, no-store, no framing; static files by exact name | `test_serve.py`, `test_pages.py` |
 | Everything the agent wrote is shown as text; only http(s) links | `test_pages.py` |
 | The harness call: no shell, no terminal, allowed verbs only, `=` arguments, code sent only for a subject that matches what was shown, never logged, console secret withheld, killed with its children on a timeout | `test_relay.py`, `test_serve.py` |
@@ -187,9 +186,7 @@ uv run console/serve.py --user-header X-Forwarded-User --allow-host console.exam
 - The header is believed only from a loopback peer and only if it is a plain name; otherwise nobody is logged in: read-only, every POST refused. A `--host` that is not loopback is refused without `--user-header` (exit 2); `--user` and `--user-header` exclude each other.
 - All links are relative, so it can sit under a path prefix (`/console/`, trailing slash; strip the prefix before forwarding). The language link (`?lang=zh`) is kept in a cookie named for the port, without a `Path`, so it stays under the prefix.
 - `serve.py` prints its own loopback address; the owner opens the proxy's.
-- **Team review.** The people who were in the meeting can see every answer and disagree without answering. `--deciders alice,bob` names who answers, reopens and writes notes; anyone else the proxy lets in is an **adviser**, who sees every ask and answer and, in place of each form, says Agree or Disagree (a reason is required to disagree, at most 400 characters). Without the flag everyone logged in answers, as before; with `--user` it must name that user.
-- A view (`advice`) is a signed human event about the ask or the answer as the page showed it (`changed` otherwise). It never answers, reopens or counts toward the 10. The one who decides reads each view under its ask, the waiting page counts the disagreements, and an answer not yet applied that someone disagrees with opens in History with Reopen at its top.
-- The agent gets every view in `advice[]` from `answers` and `wait`, and turns a disagreement into a new ask. `ask.py digest` renders the decision record a team lead forwards (each ask, its evidence and suggestion, the answer with who and when, the views, where it was applied): Markdown in `text`, or data with `--format json`.
+- **Decision record.** `ask.py digest` renders the record a team lead forwards (each ask, its evidence and suggestion, the answer with who and when, where it was applied): Markdown in `text`, or data with `--format json`.
 
 ## Tests
 
@@ -214,5 +211,5 @@ A file passes only if it exits 0 and prints `RESULT: N passed`; a test file that
 - **No domain pages.** The agent presents what is asked in its own words; a harness may keep its own pages beside this one.
 - **No chat app.** Nothing here knows any messenger; the agent tells the owner in chat that asks wait.
 - **No database.** One file you can read, back up and `grep`.
-- **No accounts, no login of its own.** One named user per console, or the login proxy's header; `--deciders` only says which of them answer.
+- **No accounts, no login of its own.** One named user per console, or the login proxy's header.
 - **No widening.** A click confirms or approves inside what the harness already allows; typing is for a `provide` value the harness validates. An ask that would widen an allowlist, a cap or a write switch is answered in chat.

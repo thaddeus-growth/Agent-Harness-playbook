@@ -35,25 +35,11 @@ Three lanes. Every change, value and action belongs to exactly one.
 - Widening what may be written, or paid data calls: only when the owner **types it in chat**. A click on a page does not count.
 - Everything else in lane 1: the owner's answer in the owner queue, or their merge.
 
-## Deciders and advisers
+## The digest
 
-"The owner" is a named person per kind of ask. Name them here on day one; a kind of ask with no decider is not asked until one is named.
+`ask.py digest` renders a round's decision record from the console's log: every ask, what the owner was shown, the answer, who gave it and when, whether it took the suggestion, and where it was applied or why it was withdrawn. The agent never types it. For a console without that verb, `build/digest.py`, run on the console's folder, makes the same record through `ask.py`.
 
-| Kind of ask | Decider (answers) | Advisers (comment, never answer) | Channel |
-| --- | --- | --- | --- |
-| Meaning: words, stories, rules | <<fill: the client owner>> | <<fill: who was in the meeting>> | the decider's console |
-| Numbers: costs, caps, thresholds | <<fill: the client owner, or who owns that number>> | <<fill: finance, the builder>> | the decider's console; a stated fact is confirmed through the harness's gate |
-| Money: each action | <<fill: the client owner>> | <<fill: the builder>> | the decider's console, through the harness's gate |
-| Contract: writes at all, paid calls, caps | <<fill: the client owner>> | <<fill: the builder owner>> | chat only, typed, with a cap |
-| The harness's shape: scope, host, CI home, kit version | <<fill: the builder owner>> | <<fill: the build team>> | the builder owner's console |
-| Risky merges | <<fill: the handle in CODEOWNERS>> | <<fill: reviewers>> | the merge request |
-| Release | <<fill: the client owner>> | <<fill: the release owner>> | chat: "confirm vX" |
-
-Each decider has a console folder of their own, so each keeps their own budget of 10 open asks. The console is started with `--deciders` naming them; everyone else logged in is an adviser. How advisers see and question the answers: [team-review.md](team-review.md).
-
-## Dissent
-
-- **Advice never answers.** An adviser's view is evidence for the decider. The agent never applies it, not even when the decider is silent. *(the console lets an adviser write only a view, and the agent applies only rows of `ask.py answers`)*
-- **A disagreement becomes a new ask.** An adviser who disagrees says so, with a reason: in the console, or in chat when the console has no login. The agent posts one new ask to the decider, under a new id, with both views side by side as evidence. "No" means the first answer stands. *(the console refuses an answered id: `id_used`)*
-- **An answer stands until its decider changes it.** A dissent does not pause it. A dissent about money or the contract is also said in chat, so the decider sees it before the next approval.
-- **Record both.** The digest keeps the answer, each adviser's view and the answer to the dissent, each with its `ID@SEQ`; the `.agent.tsv` row's `decided` names the answer in force. *(tests/test_ssot.py: every owner row names its `decided` answer)*
+- Keep each round's digest in the client's data folder, `$DATA_DIR/build/digest/<date>-round<N>.md`. It may hold client numbers, so never in a code repository.
+- Where the team reads it is asked once, of the builder owner. A teammate who missed the meeting reads the digest, not the chat.
+- A published digest is never edited. The next round's digest shows what changed.
+- The `.agent.tsv` row's `decided` names the answer in force, as `console:ID@SEQ`. *(tests/test_ssot.py: every owner row names its `decided` answer)*

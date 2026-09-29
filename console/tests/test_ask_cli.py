@@ -122,7 +122,7 @@ def rewrite(d, fn):
         f.writelines(json.dumps(e, ensure_ascii=False) + "\n" for e in events)
 
 
-REPORT = {"ok", "seq", "open", "answers", "reopened", "notes", "notes_truncated", "advice", "dir"}   # what `answers` says
+REPORT = {"ok", "seq", "open", "answers", "reopened", "notes", "notes_truncated", "dir"}   # what `answers` says
 
 
 def ids(rows):
@@ -695,78 +695,6 @@ def test_wait_wakes_for_a_note_and_for_a_reopen_and_hands_over_the_same_shape():
         assert time.monotonic() - t0 < 15
 
 
-# ----------------------------------------------------------- team review --
-
-def advise(d, id, stance, reason="", user="carol", on=None):
-    """A view, written the way the console writes it (ask.py cannot)."""
-    s = core.Store(d)
-    cur = s.state()["asks"][id]
-    return s.advise(user, id, on if on is not None else core.target(cur)["seq"], stance, reason)
-
-
-def test_answers_and_wait_hand_over_every_view_after_since_with_what_it_was_about():
-    with _t.tmpdir() as d:
-        s = core.Store(d)
-        s.post("agent", [mk_ask("a", "choose"), mk_ask("b")])
-        on_ask = advise(d, "a", "disagree", "B is what we agreed in the meeting.")
-        ea = answer(d, "a", "a", comment="A it is")
-        on_answer = advise(d, "a", "disagree", "Still B.", user="dan")
-        agree = advise(d, "a", "agree", user="erin")
-        doc = ok("answers", d=d)
-        assert set(doc) == REPORT
-        rows = doc["advice"]
-        assert [r["seq"] for r in rows] == [on_ask["seq"], on_answer["seq"], agree["seq"]], rows
-        first, second, third = rows
-        assert set(first) == {"seq", "at", "by", "id", "title", "on", "on_seq", "value", "stance", "reason",
-                              "current", "verified"}, first
-        assert (first["on"], first["on_seq"], first["value"], first["stance"], first["current"]) == \
-            ("ask", 1, "a", "disagree", False), first                  # about the suggestion; the ask has moved on since
-        assert (second["on"], second["on_seq"], second["value"], second["by"], second["reason"], second["current"]) == \
-            ("answer", ea["seq"], "a", "web:dan", "Still B.", True), second
-        assert third["stance"] == "agree" and third["reason"] == "" and third["verified"] is True
-        assert ids(doc["answers"]) == ["a"] and doc["answers"][0]["apply"] == f"a@{ea['seq']}"     # the answer still stands
-        assert [r["seq"] for r in ok("answers", "--since", str(on_answer["seq"]), d=d)["advice"]] == [agree["seq"]]
-        assert ok("answers", "--since", str(agree["seq"]), d=d)["advice"] == []
-        many = [advise(d, "b", "agree", user=f"u{i}") for i in range(25)]    # never cut short, unlike notes
-        assert len(ok("answers", "--since", str(agree["seq"]), d=d)["advice"]) == 25 and many
-        ok("applied", f"a@{ea['seq']}", "--where", "the plan", d=d)
-        late = advise(d, "a", "disagree", "Applied, and still wrong.")     # a view of an applied answer is heard too
-        row = ok("answers", "--since", str(many[-1]["seq"]), d=d)["advice"]
-        assert [(r["seq"], r["on"], r["current"]) for r in row] == [(late["seq"], "answer", True)]
-
-
-def test_wait_wakes_for_a_view_and_hands_it_over():
-    with _t.tmpdir() as d:
-        s = core.Store(d)
-        seq = s.post("agent", [mk_ask("a")])["seq"]
-        timer = threading.Timer(0.8, advise, (d, "a", "disagree", "Not yet."))
-        timer.start()
-        t0 = time.monotonic()
-        doc = ok("wait", "--since", str(seq), "--timeout", "20", d=d)
-        timer.join()
-        assert doc["timed_out"] is False and 0.6 < time.monotonic() - t0 < 10, doc
-        assert set(doc) == REPORT | {"timed_out"} and doc["answers"] == []
-        assert [(r["id"], r["stance"], r["reason"], r["on"]) for r in doc["advice"]] == [("a", "disagree", "Not yet.", "ask")]
-
-
-def test_list_counts_each_asks_views_as_it_stands():
-    with _t.tmpdir() as d:
-        s = core.Store(d)
-        s.post("agent", [mk_ask("a"), mk_ask("b"), mk_ask("w")])
-        advise(d, "a", "disagree", "no")
-        advise(d, "a", "agree", user="dan")
-        advise(d, "a", "agree")                                          # carol changed her mind: her last word counts
-        advise(d, "w", "disagree", "no")
-        s.withdraw("agent", ["w"], "moot")
-        rows = {r["id"]: r["advice"] for r in ok("list", "--status", "all", d=d)["asks"]}
-        assert rows == {"a": {"agree": 2, "disagree": 0}, "b": {"agree": 0, "disagree": 0},
-                        "w": {"agree": 0, "disagree": 0}}, rows
-        answer(d, "a", "yes")                                            # a new thing to judge: the answer
-        assert ok("list", "--status", "answered", d=d)["asks"][0]["advice"] == {"agree": 0, "disagree": 0}
-        advise(d, "a", "disagree", "Wrong call.")
-        assert ok("list", "--status", "answered", d=d)["asks"][0]["advice"] == {"agree": 0, "disagree": 1}
-
-
 def test_digest_renders_the_decision_record_as_markdown_and_as_json():
     with _t.tmpdir() as d:
         s = core.Store(d)
@@ -776,11 +704,9 @@ def test_digest_renders_the_decision_record_as_markdown_and_as_json():
                                           {"table": {"caption": "Stock", "columns": ["Tea", "Weeks"],
                                                      "rows": [["Chai", "14"], ["Green|tea", "9"]]}}]),
                          mk_ask("spend", "approve"), mk_ask("gone"), mk_ask("open")])
-        advise(d, "pick", "disagree", "The meeting said B.")
         first = answer(d, "pick", "b", comment="B then")
         s.reopen("alice", "pick", first["seq"])
-        final = answer(d, "pick", "a")
-        advise(d, "pick", "disagree", "<b>Still</b> B.", user="dan")
+        final = answer(d, "pick", "a", comment="<b>Still</b> B.")
         ok("applied", f"pick@{final['seq']}", "--where", "the spring plan", d=d)
         answer(d, "spend", "no")
         s.withdraw("agent", ["gone"], "not needed")
@@ -795,13 +721,12 @@ def test_digest_renders_the_decision_record_as_markdown_and_as_json():
         a = pick["answer"]
         assert (a["value"], a["label"], a["by"], a["suggested"], a["verified"], a["seq"]) == ("a", "A", "web:tester", True, True, final["seq"])
         assert [(e["value"], e["comment"], e["reopened"]["by"]) for e in pick["earlier"]] == [("b", "B then", "web:alice")]
-        assert [(v["by"], v["on"], v["stance"], v["current"]) for v in pick["advice"]] == \
-            [("web:carol", "ask", "disagree", False), ("web:dan", "answer", "disagree", True)]
+        assert "advice" not in pick
         assert pick["applied"]["where"] == "the spring plan" and pick["withdrawn"] is None
         assert (rec["spend"]["state"], rec["spend"]["answer"]["label"], rec["spend"]["answer"]["suggested"]) == ("waiting", "Reject", False)
         assert rec["spend"]["effect"] == "Something small happens."
         assert (rec["gone"]["state"], rec["gone"]["withdrawn"]["reason"], rec["gone"]["answer"]) == ("withdrawn", "not needed", None)
-        assert (rec["open"]["state"], rec["open"]["answer"], rec["open"]["advice"]) == ("open", None, [])
+        assert (rec["open"]["state"], rec["open"]["answer"]) == ("open", None)
         md = ok("digest", d=d)
         assert set(md) == {"ok", "format", "seq", "text", "dir"} and md["format"] == "md"
         assert ok("digest", "--format", "md", d=d)["text"].split("As of")[0] == md["text"].split("As of")[0]   # md is the default
@@ -817,9 +742,7 @@ def test_digest_renders_the_decision_record_as_markdown_and_as_json():
                      "**Options:** A · B", "**Suggested:** A \u2014 A is safer.", "**If no:** Nothing changes.",
                      "**Answer taken back:** B, by tester", "reopened", "by alice",
                      "**Answer:** A, by tester", "the suggestion",
-                     "- carol disagrees about the question", ": The meeting said B.",
-                     "- dan disagrees about the answer", "\\<b\\>Still\\</b\\> B.",
-                     "**Applied:** the spring plan"):
+                     "\\<b\\>Still\\</b\\> B.", "**Applied:** the spring plan"):
             assert said in part, (said, part)
         assert "<b>" not in text                                        # what people wrote shows as words, never as markup
         assert "**Answer:** Reject, by tester" in text and "not the suggestion" in text
@@ -1229,7 +1152,7 @@ def test_the_examples_are_good_asks_to_copy():
 def test_the_agent_side_has_no_way_to_answer_reopen_note_or_sign():
     with open(ASK, encoding="utf-8") as f:
         source = f.read()
-    for forbidden in (".answer(", ".reopen(", ".note(", ".advise(", "ensure_secret", "sign("):
+    for forbidden in (".answer(", ".reopen(", ".note(", "ensure_secret", "sign("):
         assert forbidden not in source, forbidden
     with _t.tmpdir() as d, _t.tmpdir() as files:       # and no verb, run on its own, leaves one behind
         f = put(files, "a.json", [mk_ask("a"), mk_ask("b")])

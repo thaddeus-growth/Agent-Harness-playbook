@@ -37,7 +37,6 @@
     "user_header": "X-Remote-User",
     "users_file": "console.users",
     "args": ["--relay-verbs", "facts confirm,decisions confirm", "--lang", "en"],
-    "deciders_key": "SHOP_CONSOLE_DECIDERS",
     "allow_host_key": "SHOP_CONSOLE_ALLOW_HOST"
   },
   "detach": {

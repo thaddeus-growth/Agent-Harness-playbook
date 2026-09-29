@@ -21,7 +21,7 @@ Read BUILD.md's table first. Then, one step at a time:
 
 1. **B0 Intake.** Consent first. Organize each meeting with [templates/meeting-intake.md](../../templates/meeting-intake.md); check it with `build/check_intake.py`.
 2. **B0.5 Prior-art scan** with [templates/prior-art-scan.md](../../templates/prior-art-scan.md), one agent per lens.
-3. **B0.6 Asks and team review.** Name deciders and advisers ([templates/decision-rights.md](../../templates/decision-rights.md)); make each round's asks with `build/intake_to_asks.py` (the builder's round too: its items have audience `builder`); forward the digest ([templates/team-review.md](../../templates/team-review.md)).
+3. **B0.6 Asks.** Name who decides each kind of ask ([templates/decision-rights.md](../../templates/decision-rights.md)); make each round's asks with `build/intake_to_asks.py` (the builder's round too: its items have audience `builder`); forward the digest ([templates/decision-rights.md](../../templates/decision-rights.md), "The digest").
 4. **B1 Scaffold** with `scaffold/new_harness.py` (BUILD.md B1); push; CI green before the first feature.
 5. **B2 Words and stories**: apply answers with `build/apply_answers.py`; you give the ids.
 6. **B3 Registries**, one agent per registry; the owner approves each rule and number.
@@ -42,15 +42,14 @@ Before each step, check its `after` steps are signed in `ssot/stages.agent.tsv`.
 - Never edit an owner file except to apply an answer the owner gave; write its `decided` reference in the same change.
 - Never confirm, approve or restore for the owner, and never relay a code the owner did not send.
 - Never ask on a page to widen what may be written: an allowlist, a cap, a write switch or paid calls. That is asked in chat.
-- Never apply advice as an answer. Only the decider's answer counts; a disagreement becomes a new ask.
 - Never let two agents edit one file in one step, and never let a worker make an id.
 - Never edit the vendored `scripts/kit/` or `console/` inside a harness. Fix them in the playbook, then vendor again.
 - Never call a step done without its test or its signed answer.
 
 ## Where questions go
 
-Only to the console, only at a gate: at most 10 open asks per decider, each with evidence, a recommendation and what "no" means. Follow [console/AGENT.md](../../console/AGENT.md). The mechanical rest you do yourself, and say in chat what you did.
+Only to the console, only at a gate: at most 10 open asks per owner, each with evidence, a recommendation and what "no" means. Follow [console/AGENT.md](../../console/AGENT.md). The mechanical rest you do yourself, and say in chat what you did.
 
 ## Where the state is
 
-`ssot/stages.agent.tsv` in the harness, and each decider's console cursor in `$DATA_DIR/build/state.json`. To resume: read both, run `ask.py answers --since SEQ` for each decider, then continue at the first step not signed. Resume from the files, never from memory.
+`ssot/stages.agent.tsv` in the harness, and each owner's console cursor in `$DATA_DIR/build/state.json`. To resume: read both, run `ask.py answers --since SEQ` for each owner, then continue at the first step not signed. Resume from the files, never from memory.

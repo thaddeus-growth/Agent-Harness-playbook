@@ -8,7 +8,7 @@ fold over the events (`fold()`), so the file is its own history and its own
 backup.
 
     agent writes (Store.post / withdraw / applied / say)   ask  withdraw  applied  say
-    human writes (Store.answer / reopen / note / advise)   answer  reopen  note  advice
+    human writes (Store.answer / reopen / note)   answer  reopen  note
 
 `ROLES` is that split, and the `append` that `Store._txn` hands out refuses an
 event type outside the caller's role, so the agent has no code path that writes an answer. A human
@@ -23,14 +23,6 @@ one definition of a clear ask (the playbook's owner-queue rules, enforced):
 a title, why now, evidence, a recommendation, and what "no" means; at most
 `MAX_OPEN` open at once. `check_value()` is the one definition of a valid
 answer. Everything the agent may send is in `ASK_FIELDS`.
-
-Advice is team review: someone who may see but not decide says `agree` or
-`disagree` (a reason is required to disagree) about the ask or the answer as
-it stands (`on_seq`, the seq of that ask or answer event; anything else is
-`changed`). It is a human event, signed like the others; it never answers,
-reopens or counts toward `MAX_OPEN`. Who may decide is the console's to say
-(serve.py --deciders); core only keeps the record. `views()` and `dissent()`
-are the one reading of it that pages and ask.py share.
 """
 
 from __future__ import annotations
@@ -55,8 +47,7 @@ MAX_OPEN = 10                                   # the owner's attention budget
 STEPS = ("confirm", "approve", "choose", "provide")
 INPUT_TYPES = ("text", "number", "date", "url")
 ROLES = {"agent": ("ask", "withdraw", "applied", "say"),
-         "human": ("answer", "reopen", "note", "advice")}
-STANCES = ("agree", "disagree")                 # what advice can say
+         "human": ("answer", "reopen", "note")}
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}\Z")
 # a token that can never be parsed as a flag: names, verbs, users
 TOKEN_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:@/-]{0,79}\Z")
@@ -67,7 +58,7 @@ LIMITS = {"id": 64, "kind": 40, "group": 60, "title": 120, "why": 400,
           "value": 120, "source": 120, "quote": 300, "caption": 80,
           "cell": 80, "option_label": 60, "option_note": 120, "unit": 12,
           "answer": 500, "comment": 500, "note": 1000, "say": 400,
-          "where": 200, "reason": 200, "advice": 400, "evidence": 12, "options": 8,
+          "where": 200, "reason": 200, "evidence": 12, "options": 8,
           "columns": 6, "rows": 30, "verb": 6, "expect": 2000}
 
 # every failure a verb can return: {ok: false, code, message, params}. The
@@ -97,8 +88,6 @@ CODES = {
     "bad_request": "The request is not one this console understands.",
     "forbidden": "Not allowed (no valid page token, host or user).",
     "too_large": "The request is too large.",
-    "not_decider": "Only the people named to decide may answer, reopen or write a note here; others agree or disagree.",
-    "no_reason": "A disagreement needs a reason.",
 }
 # what one field of an ask can be wrong with
 FIELD_CODES = ("required", "too_long", "bad_type", "bad_value", "unknown_field",
@@ -638,10 +627,8 @@ def fold(events: list[dict]) -> dict:
 
     asks      id -> {id, ask, hash, rev, status: open|answered|withdrawn,
                      opened_seq, opened_at, by, answer, applied, withdrawn,
-                     history, revs, ask_seq, targets, advice}
-                     `answer` is the current answer event, `ask_seq` the seq
-                     of the ask event now shown, `targets` {seq: event} every
-                     ask and answer event advice may name, `advice` its events
+                     history, revs}
+                     `answer` is the current answer event
     order     ids by first appearance
     messages  say (agent) and note (human) events, in order
     problems  events that broke the rules (an answer to a withdrawn ask…),
@@ -670,23 +657,13 @@ def fold(events: list[dict]) -> dict:
                     "status": "open", "opened_seq": e["seq"],
                     "opened_at": e["at"], "by": e.get("by"), "answer": None,
                     "applied": None, "withdrawn": None, "history": [],
-                    "revs": {h: a}, "ask_seq": e["seq"], "targets": {e["seq"]: e},
-                    "advice": []}
+                    "revs": {h: a}}
                 st["order"].append(a["id"])
             elif cur["status"] == "open":
-                cur.update(ask=a, hash=h, rev=cur["rev"] + 1, ask_seq=e["seq"])
+                cur.update(ask=a, hash=h, rev=cur["rev"] + 1)
                 cur["revs"][h] = a
-                cur["targets"][e["seq"]] = e
             else:
                 bad(e, "id_used")
-        elif t == "advice":
-            cur = st["asks"].get(i)
-            if cur is None:
-                bad(e, "unknown_id")
-            elif cur["status"] == "withdrawn" or e["on_seq"] not in cur["targets"]:
-                bad(e, "not_open")         # about nothing this ask ever showed
-            else:
-                cur["advice"].append(e)
         elif t in ("withdraw", "answer", "reopen", "applied"):
             cur = st["asks"].get(i)
             if cur is None:
@@ -696,7 +673,6 @@ def fold(events: list[dict]) -> dict:
             elif t == "answer" and cur["status"] == "open":
                 cur["answer"] = e
                 cur["history"].append(e)
-                cur["targets"][e["seq"]] = e
                 cur["status"] = "answered"
                 cur["revs"].setdefault(e.get("subject"), cur["ask"])
             elif t == "reopen" and cur["status"] == "answered" and not cur["applied"]:
@@ -723,35 +699,6 @@ def groups(st: dict) -> list[tuple[str, list[dict]]]:
     for a in open_asks(st):
         out.setdefault(a["ask"].get("group", ""), []).append(a)
     return list(out.items())
-
-
-def target(cur: dict) -> dict | None:
-    """What advice on this ask is about now: the ask event shown while it is
-    open, the current answer once it is answered (applied or not), nothing
-    once it is withdrawn."""
-    if cur["status"] == "open":
-        return cur["targets"][cur["ask_seq"]]
-    if cur["status"] == "answered":
-        return cur["answer"]
-    return None
-
-
-def latest_views(cur: dict) -> list[dict]:
-    """Each person's last word on each thing they advised on (a change of mind
-    replaces the earlier one), in the order they were said."""
-    last = {(e["by"], e["on_seq"]): e for e in cur["advice"]}
-    return sorted(last.values(), key=lambda e: e["seq"])
-
-
-def views(cur: dict) -> list[dict]:
-    """The team's view of the ask as it stands: `latest_views` on `target`."""
-    now = target(cur)
-    return [e for e in latest_views(cur) if now is not None and e["on_seq"] == now["seq"]]
-
-
-def dissent(cur: dict) -> list[dict]:
-    """Who disagrees with the ask as it stands (its current revision or answer)."""
-    return [e for e in views(cur) if e["stance"] == "disagree"]
 
 
 # -------------------------------------------------------------- the store --
@@ -787,9 +734,6 @@ def _well_formed(e) -> bool:
     if t in ("say", "note") and not isinstance(e.get("text"), str):
         return False
     if t == "reopen" and not (isinstance(e.get("answer_seq"), int) and not isinstance(e["answer_seq"], bool)):
-        return False
-    if t == "advice" and not (isinstance(e.get("on_seq"), int) and not isinstance(e["on_seq"], bool)
-                              and e.get("stance") in STANCES and isinstance(e.get("reason", ""), str)):
         return False
     if t != "ask":
         return True
@@ -1072,31 +1016,6 @@ class Store:
         text = self._say(text, "note", "text")
         with self._txn() as (box, append):
             return append("human", "note", by, text=text)
-
-    def advise(self, user: str, id: str, on_seq: int, stance: str, reason: str = "") -> dict:
-        """Record one view (team review). `on_seq` is the seq of the ask or
-        answer the page showed; if the ask has moved on since (revised,
-        answered, reopened) it is `changed`, so a view is never filed under
-        something its author did not see. It answers nothing and reopens nothing."""
-        by = self._by("human", user)
-        if stance not in STANCES:
-            raise Refused("bad_request", "stance is agree or disagree", field="stance")
-        if not isinstance(on_seq, int) or isinstance(on_seq, bool):
-            raise Refused("bad_request", "on_seq is the seq of the ask or answer shown", field="on_seq")
-        reason = self._say(reason, "advice", "reason", required=False)
-        with self._txn() as (box, append):
-            cur = box["st"]["asks"].get(id)
-            if cur is None:
-                raise Refused("unknown_id", id=id)
-            now = target(cur)
-            if now is None:
-                raise Refused("not_open", id=id, status=cur["status"])
-            if now["seq"] != on_seq:
-                raise Refused("changed", id=id)
-            if stance == "disagree" and not reason:
-                raise Refused("no_reason", id=id)
-            return append("human", "advice", by, id=id, on_seq=on_seq, stance=stance,
-                          reason=reason or None)
 
     # ---- helpers ----
     @staticmethod

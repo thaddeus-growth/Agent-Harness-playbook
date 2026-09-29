@@ -11,16 +11,14 @@
 It runs `ask.py list --status all` and `ask.py answers --all` (the console's
 own CLI, as a subprocess; the log file itself is never opened here) and shows
 every ask: the question, why, the evidence, the suggestion, the answer (value,
-who, when, whether it took the suggestion), the owner's comment, the team's
-advice when the console has any, and where it was applied or why it was
+who, when, whether it took the suggestion), the owner's comment, and where it was applied or why it was
 withdrawn.
 
 `ask.py list` names each ask but does not repeat its evidence or suggestion.
 Where the console has `ask.py digest --format json`, the evidence comes from
 it, as the owner was shown it. An older console has no such verb: then it
 comes from the ask JSON the agent posted (--asks, e.g. what intake_to_asks.py
-printed). Advice (the team's views: `answers`' `advice` rows, `list`'s
-counts) is shown when the console gives it; when it is absent nothing is said.
+printed).
 
 Markdown (the default) is what a team lead forwards or posts; JSON is the
 same record for a program. Prints one document; exit 0, or 2 with
@@ -96,15 +94,6 @@ def try_ask(ask_path: str, console_dir: str, *args: str) -> dict | None:
         raise
 
 
-def _views(raw) -> list[dict]:
-    """The team's views of one ask, whatever shape the console gave them."""
-    out = []
-    for v in raw if isinstance(raw, list) else []:
-        if isinstance(v, dict):
-            out.append({k: v.get(k) for k in ("by", "at", "stance", "reason", "on", "current", "verified")})
-    return out
-
-
 def collect(console_dir: str, ask_path: str = ASK, asks_files: list[str] | None = None,
             title: str | None = None) -> dict:
     listed = run_ask(ask_path, console_dir, "list", "--status", "all")
@@ -113,10 +102,6 @@ def collect(console_dir: str, ask_path: str = ASK, asks_files: list[str] | None 
     shown = {r.get("id"): r for r in record.get("asks", []) if isinstance(r, dict)}
     posted = load_posted(asks_files or [])
     by_id = {r.get("id"): r for r in answers.get("answers", []) if isinstance(r, dict)}
-    team: dict = {}
-    for v in answers.get("advice", []) if isinstance(answers.get("advice"), list) else []:
-        if isinstance(v, dict):
-            team.setdefault(v.get("id"), []).append(v)
     asks = []
     for row in listed.get("asks", []):
         if not isinstance(row, dict):
@@ -151,14 +136,6 @@ def collect(console_dir: str, ask_path: str = ASK, asks_files: list[str] | None 
                       "verified": a.get("verified", given.get("verified")),
                       "revised": bool(a.get("revised") or given.get("revised")),
                       "apply": a.get("apply")}
-        views = _views(team.get(i)) or _views(rec.get("advice"))
-        other = row.get("advice", nested.get("advice"))
-        advice = {"views": views,
-                  "counts": other if isinstance(other, dict) and all(isinstance(n, int) for n in other.values()) else None,
-                  "other": None if isinstance(other, dict) or other is None else other}
-        if not (advice["views"] or advice["other"] not in (None, "", []) or
-                (advice["counts"] and any(advice["counts"].values()))):
-            advice = None
         asks.append({
             "id": i, "title": a.get("title") or rec.get("title") or row.get("title") or "",
             "step": row.get("step"), "kind": row.get("kind"), "group": row.get("group") or "",
@@ -167,7 +144,7 @@ def collect(console_dir: str, ask_path: str = ASK, asks_files: list[str] | None 
             "recommend": details.get("recommend"), "if_no": details.get("if_no"),
             "options": details.get("options"), "effect": details.get("effect"),
             "details_from": origin,
-            "answer": answer, "advice": advice,
+            "answer": answer,
             "applied": row.get("applied"), "withdrawn": row.get("withdrawn"),
         })
     return {"ok": True, "title": title or "Decision record", "dir": listed.get("dir"),
@@ -266,35 +243,6 @@ def _plain(v) -> str:
     return md(v if not isinstance(v, (dict, list)) else json.dumps(v, ensure_ascii=False))
 
 
-ABOUT = {("ask", True): "about the question", ("ask", False): "about the question",
-         ("answer", True): "about the answer", ("answer", False): "about an earlier answer"}
-
-
-def advice_lines(advice) -> list[str]:
-    """The team's views: one line each (who agrees or disagrees, when, why);
-    counts when that is all the console gives; nothing when there are none."""
-    if not advice:
-        return []
-    out = []
-    if advice.get("views"):
-        out.append("- **Advice from the team:**")
-        for v in advice["views"]:
-            said = {"agree": "agrees", "disagree": "disagrees"}.get(v.get("stance"), _plain(v.get("stance")))
-            about = ABOUT.get((v.get("on"), v.get("current")), "")
-            why = f": {md(v['reason'])}" if v.get("reason") else ""
-            bad = " (its signature does not check)" if v.get("verified") is False else ""
-            out.append(f"  - {who(v.get('by'))} {said}{' ' + about if about else ''}, {when(v.get('at'))}{why}{bad}")
-    elif advice.get("counts"):
-        parts = [f"{n} {_plain(k)}" for k, n in advice["counts"].items() if n]
-        out.append(f"- **Advice from the team:** {', '.join(parts)}")
-    other = advice.get("other")
-    if isinstance(other, list):
-        out += ["- **Advice:**"] + [f"  - {_plain(x)}" for x in other]
-    elif other not in (None, ""):
-        out.append(f"- **Advice:** {_plain(other)}")
-    return out
-
-
 def status_text(x: dict) -> str:
     if x["status"] == "withdrawn":
         return "withdrawn"
@@ -350,7 +298,6 @@ def render_md(d: dict) -> str:
                 L.append(f"- **If no:** {md(x['if_no'])}")
             if a and a["comment"]:
                 L.append(f"- **Comment:** {md(a['comment'])}")
-            L += advice_lines(x["advice"])
             if x["applied"]:
                 ap = x["applied"]
                 L.append(f"- **Applied:** {md(ap.get('where'))}, {when(ap.get('at'))}.")

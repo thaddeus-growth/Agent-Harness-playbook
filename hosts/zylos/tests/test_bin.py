@@ -168,16 +168,14 @@ def test_console_js_starts_the_playbook_console_with_the_manifest_flags():
             "serve.py splits --relay-cmd like a shell"
 
         host.configure({"SHOP_CONSOLE_PORT": "9123", "SHOP_CONSOLE_TITLE": "Northwind shop",
-                        "SHOP_CONSOLE_ALLOW_HOST": "agent.example.com, agent.example.com:8443",
-                        "SHOP_CONSOLE_DECIDERS": "alice,bob"})
+                        "SHOP_CONSOLE_ALLOW_HOST": "agent.example.com, agent.example.com:8443"})
         r, seen = serve_argv(host)
         args = [s[4:] for s in seen[2:]]
         assert r.returncode == 0 and args[args.index("--port") + 1] == "9123" \
             and args[args.index("--title") + 1] == "Northwind shop" \
             and [args[i + 1] for i, a in enumerate(args) if a == "--allow-host"] == [
-                "agent.example.com", "agent.example.com:8443"] \
-            and args[args.index("--deciders") + 1] == "alice,bob", args
-        assert "--base-path" not in args and "--user" not in args, "the prefix is stripped by Caddy's handle_path"
+                "agent.example.com", "agent.example.com:8443"], args
+        assert "--deciders" not in args and "--base-path" not in args and "--user" not in args, "the prefix is stripped by Caddy's handle_path"
 
         for bad, says in [({"SHOP_CONSOLE_PORT": "80"}, "SHOP_CONSOLE_PORT=80 is not a port"),
                           ({"SHOP_CONSOLE_PORT": "9x"}, "is not a port"),
