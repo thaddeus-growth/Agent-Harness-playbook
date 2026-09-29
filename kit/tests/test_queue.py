@@ -490,6 +490,14 @@ def test_read_only_and_frozen() -> None:
           e is not None and e2 is not None, (e, e2))
 
 
+def test_no_snapshot() -> None:
+    print("[8b] no_snapshot: the hook of a harness with nothing proposing")
+    e = raises(lambda: q.no_snapshot("US"))
+    check("queue add without --from is refused, coded, with the way that "
+          "works", e is not None and e.message.code == "queue_no_snapshot"
+          and e.next == ["shop queue add --from <proposals.json>"], e)
+
+
 def test_closure() -> None:
     print("[9] queue.py keeps its fragment closed")
     reg = messages.registry()
@@ -511,5 +519,6 @@ test_approve_gate()
 test_expired()
 test_reject()
 test_read_only_and_frozen()
+test_no_snapshot()
 test_closure()
 raise SystemExit(finish())

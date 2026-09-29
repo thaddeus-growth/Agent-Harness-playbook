@@ -15,3 +15,4 @@ execute_item_not_found	id	no queue item #{id}	没有队列项 #{id}
 execute_reconcile_nothing	id,state	#{id}: its latest effect is {state}, not sent or unknown; nothing to reconcile	#{id}：最新的执行状态是 {state}，不是已发送或不明，无需核对
 execute_reconcile_unsure	id	#{id}: the read-back cannot tell whether it was written; it stays blocked. Check the target by hand	#{id}：回读仍无法判断是否已写入，目标继续锁定。请人工检查
 execute_reconciled	id,state	#{id}: read back, {state}; its target is no longer blocked	#{id}：已回读，结果为 {state}；目标已解除锁定
+execute_unplanned	id,kind,target_ref	#{id} {kind} on {target_ref}: this harness has no executor for it yet	#{id} {target_ref} 的 {kind}：这个工具还没有执行它的程序

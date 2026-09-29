@@ -17,3 +17,4 @@ queue_reason_code_invalid	reason_code	--reason-code {reason_code}: one snake_cas
 queue_reason_code_unknown	reason_code,allowed	--reason-code {reason_code}: not one of {allowed}. Nothing was written	--reason-code {reason_code} 不在允许的列表 {allowed} 中。未写入任何内容
 queue_approved	ids,by	approved {ids} by {by}	{by} 已批准 {ids}
 queue_rejected	ids,reason_code	rejected {ids} ({reason_code})	已拒绝 {ids}（{reason_code}）
+queue_no_snapshot	cli	no report of this harness proposes anything yet: queue a saved proposal document with `{cli} queue add --from FILE`	这个工具还没有能提出建议的报表：请用 `{cli} queue add --from FILE` 加入保存好的建议文件

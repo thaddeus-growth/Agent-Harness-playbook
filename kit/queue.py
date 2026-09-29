@@ -175,6 +175,17 @@ def expired(row: dict, ttl_hours: float, at: datetime | None = None) -> bool:
     return (at or dates.now()) - decided > timedelta(hours=ttl_hours)
 
 
+def no_snapshot(market: str | None) -> dict:
+    """The `snapshot` hook of a harness with no proposing report yet (a new
+    harness, B1): every `queue add` without --from is refused, coded, and
+    names the way that works."""
+    cli = config().cli
+    raise HarnessError(msg(
+        "queue_no_snapshot", "no report of this harness proposes anything "
+        "yet: queue a saved proposal document with --from FILE", cli=cli),
+        [f"{cli} queue add --from <proposals.json>"])
+
+
 def rejected(con: sqlite3.Connection, market: str, target_ref: str,
              kind: str | None = None) -> list[dict]:
     """The "no"s a proposal run reads before proposing again: every

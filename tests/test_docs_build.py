@@ -133,8 +133,9 @@ def test_every_template_build_md_names_exists_and_none_is_deferred():
 
 
 def test_the_to_be_built_list_is_one_list_and_each_entry_is_used():
+    assert section(doc(BUILD), "Still being built"), "BUILD.md keeps the list, even when it is empty"
     listed = to_be_built(doc(BUILD))
-    assert listed and len(listed) == len(set(listed)), listed
+    assert len(listed) == len(set(listed)), listed
     assert all(p.split("/")[0] in TOP_DIRS for p in listed), listed
     for rel in (SKILL, TREADME):
         assert not section(doc(rel), "Still being built"), f"{rel} keeps its own list"

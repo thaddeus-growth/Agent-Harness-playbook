@@ -1,6 +1,6 @@
 # Templates
 
-The files a new harness starts from. The build workflow, [BUILD.md](../BUILD.md), says when each one is used; `scaffold/new_harness.py` renders the ones with a target path into a new harness (to be built: see BUILD.md, "Still being built"). Until then an agent renders them by hand, the same way.
+The files a new harness starts from. The build workflow, [BUILD.md](../BUILD.md), says when each one is used; `scaffold/new_harness.py` renders the ones with a target path into a new harness, together with the skeleton the vendored kit runs on (BUILD.md, B1).
 
 ## Every template
 
@@ -53,7 +53,7 @@ The example rows in `ssot/` show each file's shape. A new harness starts from th
 
 ## The tests a new harness starts with
 
-The scaffolder generates exactly these files, and CLAUDE.md names no other harness test. Each is green before the first feature.
+The scaffolder generates exactly these files, each one call into the vendored kit's `kit.testing.suites`, plus `tests/run.py`; CLAUDE.md names no other harness test. Each is green before the first feature.
 
 | Test | What it checks |
 | --- | --- |

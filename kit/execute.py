@@ -111,6 +111,16 @@ Cap = Callable[[sqlite3.Connection, str], "float | None"]
 
 # ---- the effect ledger -----------------------------------------------------
 
+def unplanned(con: sqlite3.Connection, row: dict) -> dict:
+    """The `plan_item` hook of a harness with no executor yet (a new
+    harness, B1): every approved item is refused, coded, with its saved
+    basis, so a dry run shows it and --apply sends nothing."""
+    return {"basis": row["basis"], "refusal": msg(
+        "execute_unplanned", f"#{row['id']} {row['kind']} on "
+        f"{row['target_ref']}: this harness has no executor for it yet",
+        id=row["id"], kind=row["kind"], target_ref=row["target_ref"])}
+
+
 def effects(con: sqlite3.Connection, queue_id: int) -> list[dict]:
     """Every effect row of one queue item, oldest first."""
     return q._all(con, f"SELECT * FROM {EFFECTS} WHERE queue_id=? "

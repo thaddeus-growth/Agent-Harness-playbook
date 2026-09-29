@@ -7,6 +7,9 @@
                   `RESULT: N passed` with N > 0 and no `, M failed` > 0,
                   and leaves its TMPDIR empty
   * sandbox.py    the env a harness CLI runs under in a test
+  * suites.py     the nine day-one tests of a new harness, as library
+                  calls (each generated test is one call)
 
-Test: kit/tests/test_run_tests.py, kit/tests/test_check.py.
+Test: kit/tests/test_run_tests.py, kit/tests/test_check.py,
+kit/tests/test_suites.py.
 """

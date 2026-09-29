@@ -503,6 +503,17 @@ def test_market_lock_closure() -> None:
           "execute.tsv code is emitted", probs == [], probs)
 
 
+def test_unplanned() -> None:
+    print("[0] unplanned: the plan_item of a harness with no executor")
+    row = {"id": 7, "kind": "restock", "target_ref": "SKU-1", "basis": "b9"}
+    got = execute.unplanned(None, row)
+    check("the saved basis, and a coded refusal naming the item",
+          got["basis"] == "b9" and got["refusal"].code == "execute_unplanned"
+          and got["refusal"].params == {"id": 7, "kind": "restock",
+                                        "target_ref": "SKU-1"}, got)
+
+
+test_unplanned()
 test_no_db()
 test_dry_run()
 test_writes_off()

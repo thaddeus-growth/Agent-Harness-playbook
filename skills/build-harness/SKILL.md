@@ -22,7 +22,7 @@ Read BUILD.md's table first. Then, one step at a time:
 1. **B0 Intake.** Consent first. Organize each meeting with [templates/meeting-intake.md](../../templates/meeting-intake.md); check it with `build/check_intake.py`.
 2. **B0.5 Prior-art scan** with [templates/prior-art-scan.md](../../templates/prior-art-scan.md), one agent per lens.
 3. **B0.6 Asks and team review.** Name deciders and advisers ([templates/decision-rights.md](../../templates/decision-rights.md)); make each round's asks with `build/intake_to_asks.py` (the builder's round too: its items have audience `builder`); forward the digest ([templates/team-review.md](../../templates/team-review.md)).
-4. **B1 Scaffold** with `scaffold/new_harness.py` (until it lands, by hand, as BUILD.md B1 says); push; CI green before the first feature.
+4. **B1 Scaffold** with `scaffold/new_harness.py` (BUILD.md B1); push; CI green before the first feature.
 5. **B2 Words and stories**: apply answers with `build/apply_answers.py`; you give the ids.
 6. **B3 Registries**, one agent per registry; the owner approves each rule and number.
 7. **B4 Data chain**, one agent per data source.

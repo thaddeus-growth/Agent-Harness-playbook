@@ -5,3 +5,7 @@ __pycache__/
 # a console's data folder holds answers and the signing secret: never in a checkout
 events.jsonl
 secret
+
+# scaffold/new_harness.py may preview a harness here (the one folder inside
+# the playbook it writes to); never committed
+scaffold/out/

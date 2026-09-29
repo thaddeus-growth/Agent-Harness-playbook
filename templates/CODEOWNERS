@@ -7,8 +7,8 @@
 # matching MR for the owner to merge.
 # A refactor that moves code out of a path below adds its new file here in
 # the same MR; otherwise the moved code quietly starts auto-merging.
-# Every path below exists in a freshly scaffolded harness, except the client
-# console's, which comes with that console.
+# Every path below exists in a freshly scaffolded harness; scaffold/new_harness.py
+# leaves out the client console's line until that console exists.
 
 # the shared kit: the human gate, the write guard, human tables (vendored, never
 # edited here; tests/test_kit_drift.py fails on a local edit)

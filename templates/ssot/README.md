@@ -7,7 +7,7 @@
 - **Owner files** (`glossary.tsv`, `user-stories.tsv`, `policies.tsv`): plain business meaning in the owner's language. No commands, flags, file or table names, issue numbers, or a number after a threshold name. Agents never edit them: they propose in the `.agent.tsv` sibling's `proposed` column and write an owner row only to apply an answer the owner gave. Cells waiting on an open owner question sit on an exemption list (`held`, under `[guards.ssot]` in `harness.toml`) that fails when an entry no longer needs it, so it only shrinks. *(tests/test_ssot.py)*
 - **Agent files** (`*.agent.tsv`): the engineering side of the same ids (progress, code locations, proposals), and the trail of each decision. *(tests/test_ssot.py)*
 - **Registries** (`constants.tsv`, `fact_keys.tsv`, `decision_keys.tsv`, `message_codes.tsv`, `alert_rules.tsv`, `story_checks.tsv`): read by code, guarded by tests, changed in the same merge as the code that reads them. A number lives only in its registry; everywhere else uses its name.
-- The client console's UI rules are an owner file too, but live with that console (`webconsole/ui_rules.tsv`), guarded by its own lint test. The vendored owner console carries its own rules (`console/ui_rules.tsv`), changed only in the playbook.
+- The client console's UI rules are an owner file too, but live with that console (`webconsole/ui_rules.tsv`), guarded by its own lint test. The vendored owner console carries its own UI rules, in its own folder, changed only in the playbook.
 
 ## Every agent file carries the trail
 

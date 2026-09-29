@@ -50,18 +50,17 @@ Follow [templates/prior-art-scan.md](templates/prior-art-scan.md): one agent per
 
 ## B1 · Scaffold
 
-The intended command (its flags may still change; its `--help` wins):
-
 ```
-python3 scaffold/new_harness.py ../acme-harness \
-  --name acme-harness --cli acme --prefix ACME --langs en,zh \
-  --ci gitlab --owner @handle --repo-home <where the repository lives>
+python3 scaffold/new_harness.py --dir ../acme-harness \
+  --name acme-harness --cli acme --prefix ACME --markets HK,TW \
+  --langs en,zh --owner @handle --repo-home <where the repository lives>
 ```
 
-- It renders every template that has a target ([templates/README.md](templates/README.md)) and fills the placeholders from the builder owner's answers.
-- It vendors the kit (`kit/`) into `scripts/kit/` and the console into `console/`, each with its `VERSION` and `MANIFEST.sha256`, through `python3 kit/tools/vendor.py --harness ../acme-harness`. Without the scaffolder, run that yourself after rendering the templates.
-- It refuses a folder that is not empty or sits inside this checkout, takes no data path, and leaves no `{{` behind. `--dry-run` prints the file list and writes nothing. `--update-kit` vendors the kit and console again and touches nothing else.
-- The generated suite is green before the first feature. Push the skeleton as the first commit: the first pipeline proves the push rights and the CI home at once.
+- It renders every template that has a target ([templates/README.md](templates/README.md)) and fills the placeholders from the builder owner's answers. `<<fill: …>>` stays only where a later step writes: SKILL.md, README.md, references/workflows.md and docs/decision-rights.md (and CLAUDE.md without `--repo-home`).
+- It writes the skeleton the kit runs on: `scripts/<cli>.py` (the kit's dispatcher), `scripts/verbs.py` (every verb and its kind), the kit's facts, decisions, pending, story, queue and execute verbs, `scripts/_lib/schema.py` (the human tables only) and `scripts/_lib/writer.py` (an empty allowlist); every ssot file as its header row, plus `approval_ttl_hours` and the build steps; and exactly the nine tests of [templates/README.md](templates/README.md), each one call into the kit's `kit.testing.suites`.
+- It vendors the kit (`kit/`) into `scripts/kit/` and the console into `console/`, each with its `VERSION` and `MANIFEST.sha256`, through `python3 kit/tools/vendor.py --harness ../acme-harness`, and renders `.gitattributes` from `harness.toml` and the ssot index.
+- It refuses a folder that is not empty or sits inside this checkout (the scaffolder's own `out/` folder, ignored by git, is the one preview place), takes no data path, and leaves no `{{` behind. `--dry-run` prints the file list and writes nothing. `--update-kit` vendors the kit and console again and touches nothing else.
+- The generated suite is green before the first feature (`python3 scripts/<cli>.py test`; scaffold/tests/test_new_harness.py proves it on every change here). Push the skeleton as the first commit: the first pipeline proves the push rights and the CI home at once.
 
 ## B2 · Words and stories
 
@@ -152,4 +151,4 @@ To resume: read both, run `ask.py answers --since SEQ` for each decider, apply w
 
 The one list of paths this workflow names that do not exist yet. [tests/test_docs_build.py](tests/test_docs_build.py) fails on any other path that is missing, and says when a path below has landed.
 
-- `scaffold/new_harness.py`: renders the templates into a new harness and vendors the kit and the console. Until it lands, B1 is done by hand: render each template to its target ([templates/README.md](templates/README.md)), then run `kit/tools/vendor.py`.
+Nothing: every path the build names exists.

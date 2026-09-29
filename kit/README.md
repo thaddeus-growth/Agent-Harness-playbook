@@ -59,6 +59,7 @@ Each module's docstring says what it guards and names its test; this is the map.
 | `doctor.py` | An install says where every value came from and what to fix; `writes: off` is healthy; `--strict` makes a warning fatal | `test_doctor.py` |
 | `guards/` | The structural rules a harness's own tests call: the ssot index, the release archive, layering, the `--json` contract, adapter boundaries, vendored-copy drift | `test_guards.py` |
 | `testing/` | The test convention: `check()`/`finish()`, the RESULT-gated runner, the sandbox env | `test_check.py`, `test_run_tests.py` |
+| `testing/suites.py` | The nine day-one tests every new harness is generated with, as library calls (runner, ssot, layering, boundary, `--json` contract, human tables, gate, release, drift) | `test_suites.py` |
 | `tools/` | `manifest.py` (the fingerprint), `vendor.py` (the plain copy) | `test_manifest.py`, `test_vendor.py` |
 
 The whole gate protocol, the kit and the console together, is proved end to end by `test_e2e_shop.py`: the fake harness's own CLI, the real `console/ask.py` and `console/serve.py`, a relayed code that works once, a queue approval and a refused `--apply`.
