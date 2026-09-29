@@ -178,7 +178,8 @@ def test_a_bad_registry_file_is_found():
                     "ok_code\tSaid {x}\tDicho {x}\tx\n"
                     "Bad-Code\tSaid\tDicho\t\n"
                     "no_es\tSaid {y}\t\ty\n"
-                    "stray\tSaid {z}\tDicho\t\n")
+                    "stray\tSaid {z}\tDicho\t\n"
+                    "clash\tSaid {text}\tDicho {text}\ttext\n")
         dup = os.path.join(d, "b.tsv")
         with open(dup, "w", encoding="utf-8") as f:
             f.write("code\tmeaning_en\tmeaning_es\tparams\nok_code\tSaid\tDicho\t\n")
@@ -186,11 +187,12 @@ def test_a_bad_registry_file_is_found():
         with open(shape, "w", encoding="utf-8") as f:
             f.write("code\ttext\tparams\n")
         bad = contract.lint_registry([good, dup, shape])
-    assert bad[:4] == ["a.tsv: Bad-Code: a code is lowercase snake_case",
+    assert bad[:5] == ["a.tsv: Bad-Code: a code is lowercase snake_case",
                        "a.tsv: no_es: meaning_es is empty",
                        "a.tsv: stray: meaning_en names ['z'], not among its params",
+                       "a.tsv: clash: param ['text'] collides with msg()'s own arguments; rename it",
                        "b.tsv: ok_code: also in a.tsv"], bad
-    assert len(bad) == 5 and "header must be code, meaning_en" in bad[4], bad
+    assert len(bad) == 6 and "header must be code, meaning_en" in bad[5], bad
 
 
 # --------------------------------------------------------- the Msg rules --

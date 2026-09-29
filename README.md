@@ -66,6 +66,17 @@ flowchart LR
 
 The prompt and output shape for the organizer: [`templates/meeting-intake.md`](templates/meeting-intake.md).
 
+### Before stage 1: prior art
+
+Before the first line of code, a research agent looks for what others already built:
+- open-source tools, with their licences checked;
+- vendor APIs, with their real endpoints and prices;
+- the closest analogue project, and the failures it hit.
+
+The owner reads one table: adopt, fallback, avoid. Prices and limits read on a web page enter the registry as pending facts, never as numbers in code. The procedure, the scoring rubric and the stopping rule: [`templates/prior-art-research.md`](templates/prior-art-research.md).
+
+*Seen once:* in a video-ad harness, this stage replaced a planned renderer with a Pillow + ffmpeg path. It found that Remotion needs a company licence and that JianYing drafts are encrypted on read. It also found that the client's "H3 API" key was for a third-party gateway serving H3's open weights as ComfyUI workflows, with an image+audio lip-sync workflow the vendor's own API lacks. None of this was in the brief.
+
 ---
 
 ## Who decides what
@@ -158,6 +169,7 @@ Each stage ends at a gate someone signs; the lesson column is what the source pr
 | # | Stage | Produces | Gate (who signs) | Lesson |
 | --- | --- | --- | --- | --- |
 | 0 | Client meetings | Transcripts organized into goals, words, draft stories, quoted numbers, open questions | Owner accepts at most 10 items per meeting | Costs and lead times started as agent estimates and had to be re-asked; there was no meeting record to check them against |
+| 0.5 | Prior art | A decisions table (adopt, fallback, avoid) and the vendor facts code relies on, each with its source and date | Owner reads the decisions; prices enter as pending facts | The first build of a video harness planned a renderer whose licence did not fit, and a vendor route that did not exist |
 | 1 | Words and rights | Registry index, a glossary in the client's own words, three decision lanes | Lint passes; one name per idea (owner) | The index came on day 4, after 8 files; catching up cost a 213-row review. The client's word for a core concept replaced the engineers' word only after a test enforced it |
 | 2 | Stories | I want / so that / acceptance items / human step, plus a runnable proof per item | Owner accepts at most 10 rows at a time | Two branches reused the same story ids and one story was lost; proofs written as prose never ran |
 | 3 | Rules and tests | An agent instructions file of invariants only; a test runner that fails without its RESULT line | Every rule names its test (CI) | Test files that never ran counted as passes until the RESULT gate |
@@ -215,6 +227,9 @@ flowchart LR
 Install these before the first feature; each costs an hour now and saved days in the source project.
 
 - [ ] Meeting intake: consent, recording, transcript in the client's data folder, the organizer prompt ([template](templates/meeting-intake.md))
+- [ ] Prior art before code: `docs/prior-art.md` with a decisions table, licences checked with `gh api`, vendor endpoints and prices read from official pages and entered as pending facts ([procedure](templates/prior-art-research.md))
+- [ ] A review page before the first paid batch: the owner decides per item, the decisions are read back by the next session ([loop](templates/owner-review-loop.md)); vendor APIs pinned down cheaply first ([discovery](templates/vendor-api-discovery.md))
+- [ ] `docs/ROADMAP.md` with a session start/end checklist from day one ([handoff](templates/session-handoff.md))
 - [ ] The test kit before the first feature: a runner that fails a missing RESULT line, a reported failure, `0 passed` or a leaked temp file; one clock; layering rules; a release-archive test ([kit](templates/tests/)). Every rule in the agent instructions names its test ([template](templates/AGENT_INSTRUCTIONS.md))
 - [ ] An empty registry index with its lint test; ids are never reused; owner files linted for engineering words ([template](templates/ssot/))
 - [ ] CI from the first commit: one pipeline per change with every job in the MR pipeline, the story-id check on every MR title, the offline suite, a secret scan ([template](templates/ci/gitlab-ci.yml)), plus a few guarantee stories for refactors to name
@@ -474,7 +489,7 @@ flowchart TB
 
 Proven here: the core's rules and the process; the paid-ads rules on one marketplace platform with 7- and 14-day attribution windows; the writer tested and dry-run on real data, never used on a live account. Untried anywhere: the transfer itself, and goals other than sales (leads, app installs, awareness).
 
-1. **Copy the channel-free modules; port the rest of the core.** The gate, message codes, clock, data guards, test runner and release archive name no channel. The queue, `meta`, console pages and adapter prompts name markets, campaigns, keywords and product groups: expect to rewrite them with the pack. [`core/`](core/) ships seven modules: the human gate (`gate.py`), coded messages (`messages.py`) and their contract test (`contract.py`), the child-verb runner (`runner.py`), one clock (`dates.py`), and the database and raw guards (`store.py`, `raw.py`); [`templates/tests/`](templates/tests/) ships the test runner and the release-archive test. The gate's subject says `scope` where the source project said `market`. *(untried as copied here: the rules and their tests come from the source project, where the original code ran on real data; these files have run only against their own tests and a toy harness)*
+1. **Copy the channel-free modules; port the rest of the core.** The gate, message codes, clock, data guards, test runner and release archive name no channel. The queue, `meta`, console pages and adapter prompts name markets, campaigns, keywords and product groups: expect to rewrite them with the pack. [`core/`](core/) ships eight modules: the human gate (`gate.py`), coded messages (`messages.py`) and their contract test (`contract.py`), the child-verb runner (`runner.py`), one clock (`dates.py`), the database and raw guards (`store.py`, `raw.py`), and paid generative calls (`takes.py`); [`templates/tests/`](templates/tests/) ships the test runner and the release-archive test. The gate's subject says `scope` where the source project said `market`. *(untried as copied here: the rules and their tests come from the source project, where the original code ran on real data; these files have run only against their own tests and a toy harness)*
 2. **Put every number an agent will be asked for in the harness.** *Paid for:* asked for the top actions by money per day, the host agent found no such number and invented its own formula; the formula moved into the harness so every agent returns the same number.
 3. **Verify each platform's facts before trusting a number:**
    - the attribution window per ad type
@@ -488,6 +503,26 @@ Proven here: the core's rules and the process; the paid-ads rules on one marketp
 4. **Key freshness, windows and resume state by the full scope.** *Paid for:* three bugs let a fresh market hide a stale one; one would have let a stale market past the write path's freshness guard. One client on several channels would be the same multi-scope case (untested).
 5. **For SEO, GEO and KOL, only the core and the process are known to carry over.** The first meeting settles what one result is worth and costs, which source counts as truth, and what the agent may change, publish or send; each answer is a [fact key](templates/ssot/fact_keys.tsv), and a test keeps the client's form in step with them. *Paid for:* nothing ran before the scope was declared, and until unit cost and a monthly cap existed every profit verdict rested on an assumed break-even, marked as such.
 
+### Generative-media harnesses (video, image, voice)
+
+*Seen once:* a Douyin ad-video harness built on this playbook. An agent writes a storyboard; the harness generates AI presenter and voice takes, then composites them with client footage and code-drawn layers into a finished ad. The core carried over unchanged. What was new:
+
+1. **Paid generation is the money path.** Each AI call is a take: planned, priced, capped, approved at the gate with the exact plan as its subject, then made and kept. [`core/takes.py`](core/takes.py) is that path for any generator.
+2. **Raw only grows, for media.** A take is keyed by its request and written once. A re-roll is a new request, never an overwrite, so an approved take cannot be lost and the same request is never paid twice. The generator's version is in the key: a changed generator gets new takes, not stale ones.
+3. **Never cache a broken take.** *Paid for:* a TTS voice that was not installed wrote a 0.01 s file and exited 0. The empty take was cached and reused by every build. A sanity check now runs before the result is kept.
+4. **Lint before spend.** Script rules (banned ad words, category rules, product facts) run before any paid call. *Paid for:* the client's own reference ad gave the dosage as 每天3次 in one half and 每天一次 in the other. A product-facts registry now fails the build on it.
+5. **An IR with two compilers.** A frame-exact timeline JSON is the contract. One compiler renders it headlessly (ffmpeg + Pillow); a second writes a JianYing draft for human polish. The render stays the source of truth. *Paid for:* rounding a clip's start and length separately made adjacent clips overlap by 1 µs in the draft. Round both edges instead.
+6. **A free draft path first.** A free voice and the real client footage let the agent time, lint and review a whole ad before the first paid call. *Paid for:* labelled placeholder presenters read as the product and the owner rejected the preview; show a real 4-scene sample (≈¥1) instead of a full mock.
+7. **Close the outer loop: learn from what performed.** Measure the same factors on the client's winning and non-winning outputs, and turn differences into pending rules that A/B variants confirm ([outcome learning](templates/outcome-learning.md)).
+8. **Words the owner signs stay words the owner signs.** Legal lines (drug approval numbers, disclaimers), product facts and prices are pending until the owner confirms them. The agent copies them from the client's documents and never writes them.
+
+| Part | Generative media |
+| --- | --- |
+| Gate, message codes, test runner, clock, `takes.py` | Reuse |
+| Registries, `--json` + meta, story checks, console | Port |
+| Raw and store guards | Rarely needed: takes replace raw pulls |
+| Channel pack: providers, IR, renderer, lint rules, platform safe zones | Rebuild |
+
 ---
 
 ## Templates
@@ -495,6 +530,11 @@ Proven here: the core's rules and the process; the paid-ads rules on one marketp
 | File | Stage | What it is |
 | --- | --- | --- |
 | [`templates/meeting-intake.md`](templates/meeting-intake.md) | 0 | The organizer prompt and its output shape |
+| [`templates/prior-art-research.md`](templates/prior-art-research.md) | 0.5 | The prior-art procedure: decompose, seed, verify with `gh api` and official pages, score, decide, stop |
+| [`templates/vendor-api-discovery.md`](templates/vendor-api-discovery.md) | 0.5, 4 | Pinning down a vendor API cheaply: docs, product pages and their network requests, free calls first, one smallest paid call, facts recorded with dates, credentials never read |
+| [`templates/owner-review-loop.md`](templates/owner-review-loop.md) | 2, 7, 10 | The review page: the owner decides per item on a published page with a store; the next session reads the decisions back and logs each change against the note that asked for it |
+| [`templates/session-handoff.md`](templates/session-handoff.md) | all | ROADMAP + CHANGELOG + feedback copies + memory notes: each session closes one turn and leaves the next one ready |
+| [`templates/outcome-learning.md`](templates/outcome-learning.md) | 10 | Learning from outcomes: one factor catalog measured on winners **and** the rest, the owner defines "winner" first, candidate rules stay pending until a controlled variant confirms them |
 | [`templates/decision-rights.md`](templates/decision-rights.md) | 1 | The three lanes and the risky list |
 | [`templates/CODEOWNERS`](templates/CODEOWNERS) | 1, 10 | Protected paths for the risky list |
 | [`templates/ssot/`](templates/ssot/) | 1–2, 5–7 | Registry index, glossary, user stories and policies (owner file + agent sibling), thresholds, message codes, fact and decision keys, alert rules, story checks |

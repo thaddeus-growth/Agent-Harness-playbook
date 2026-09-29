@@ -9,3 +9,7 @@ confirm_relay_audit_missing	A relayed code also needs who sent it back and when;
 confirm_relay_audit_invalid	The relay detail {field} is not valid; nothing was written	El dato de reenvío {field} no es válido; no se escribió nada	field
 confirm_code_mismatch	{what}: the code does not match this exact request (other items or values, already used, or older than {ttl_minutes} minutes); nothing was written	{what}: el código no corresponde a esta solicitud exacta (otros elementos o valores, ya usado, o de más de {ttl_minutes} minutos); no se escribió nada	what,ttl_minutes
 reason_required	A reason is required: it is the history row's why; nothing was written	Se requiere un motivo: es el porqué de la fila del historial; no se escribió nada	
+take_rejected	Take {take} was not kept: {why}	La toma {take} no se guardó: {why}	take,why
+spend_cap_missing	No spend cap is declared; nothing was generated	No hay un tope de gasto declarado; no se generó nada	
+price_unknown	{count} paid takes have no price; nothing was generated	{count} tomas de pago no tienen precio; no se generó nada	count
+spend_cap_exceeded	This plan costs {cost} {currency} but only {left} {currency} of the cap is left; nothing was generated	Este plan cuesta {cost} {currency} pero solo quedan {left} {currency} del tope; no se generó nada	cost,left,currency

@@ -3,7 +3,8 @@ sources, registry files and verb table. Each check returns a list of problems,
 empty when the contract holds, so one failed assert names every problem at once.
 
     lint_registry(paths)       the registry files: header, unique snake_case codes,
-                               every meaning filled, placeholders only from params
+                               every meaning filled, placeholders only from params,
+                               no param named like msg()'s own arguments
     closed(sources, registry)  closed both ways, by reading the code (AST): every
                                msg() call names a registered code as a literal, with
                                exactly its params as keywords; every registered code
@@ -38,6 +39,9 @@ PROSE = ("message", "reason", "note", "summary", "explanation", "label", "error"
 PROSE_LISTS = ("warnings", "reasons", "notes")
 CODE_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 _PLACEHOLDER = re.compile(r"{(\w+)}")
+# msg(code, text, **params): a param with either name collides with the call
+# itself and raises TypeError at the one moment the message is needed
+RESERVED_PARAMS = frozenset({"code", "text"})
 
 
 def lint_registry(paths) -> list[str]:
@@ -57,6 +61,9 @@ def lint_registry(paths) -> list[str]:
             if c in seen:
                 bad.append(f"{where}: also in {seen[c]}")
             seen.setdefault(c, path.name)
+            if params & RESERVED_PARAMS:
+                bad.append(f"{where}: param {sorted(params & RESERVED_PARAMS)} collides with msg()'s "
+                           f"own arguments; rename it")
             for col, text in r.items():
                 if col.startswith("meaning_"):
                     if not text.strip():
