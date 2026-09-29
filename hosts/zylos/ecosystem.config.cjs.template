@@ -1,0 +1,3 @@
+// Zylos adapter; other hosts ignore this file. zylos-core loads it from the skill root only.
+// Its one pm2 app, the console service, is built from zylos/manifest.json (zylos/README.md).
+try { module.exports = require('./zylos/lib.js').ecosystem(); } catch (e) { console.error(`[zylos adapter] ${e.message}`); module.exports = { apps: [] }; }

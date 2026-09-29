@@ -1,0 +1,26 @@
+## The console's Caddy block (zylos/README.md "The Caddy block"). Lines
+## starting with ## are notes and are left out by `node zylos/lib.js caddy`,
+## which prints the block with this host's values in place of <NAME>,
+## <BASE_PATH>, <PORT>, <USERS_FILE> and <USER_HEADER>. Paste the printed
+## block inside the primary site block of ~/zylos/http/Caddyfile, just
+## before its closing }, keeping the BEGIN/END lines (zylos uninstall
+## removes the block by them).
+##
+## - handle_path strips <BASE_PATH>: the console's links are all relative.
+## - The public Host is passed through unchanged (no `header_up Host`): the
+##   console compares Origin with Host, and answers only a Host named by
+##   --allow-host (console.allow_host_key).
+## - basic_auth answers 401 first; `request_header -<USER_HEADER>` drops any
+##   copy the visitor sent; `header_up <USER_HEADER>` sets the logged-in user.
+# BEGIN zylos-component:<NAME>
+redir <BASE_PATH> <BASE_PATH>/ permanent
+handle_path <BASE_PATH>/* {
+    basic_auth {
+        import <USERS_FILE>
+    }
+    request_header -<USER_HEADER>
+    reverse_proxy 127.0.0.1:<PORT> {
+        header_up <USER_HEADER> {http.auth.user.id}
+    }
+}
+# END zylos-component:<NAME>
