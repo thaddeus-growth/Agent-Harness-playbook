@@ -1,0 +1,165 @@
+# A harness's whole CI on GitLab, from the first commit. Copy it to the repo
+# root as .gitlab-ci.yml, point tests/run.py, core/tests/run.py and adapter/ at your own paths,
+# add your platforms to the secret scan, and fill in the host versions.
+#
+#   secret scan   every change: no credential-shaped text in the checkout
+#   story id      merge requests: the title names its story or policy
+#   test          every change: the offline suite, dependencies cached
+#   adapter smoke only when the host adapter changes: against each host version
+#
+# The story id job is templates/ci/story-id.yml, folded in: keep one copy.
+# One stage, so every job runs at once and one failure never hides another.
+stages: [check]
+
+# Exactly one pipeline per change, and every job in it. When the branch has
+# an open merge request, the merge request's own pipeline runs (the one
+# auto-merge watches) and the branch pipeline is skipped; otherwise the
+# branch pipeline runs. Tags run too, so a release tag is tested as tagged.
+#
+# A job with no `rules:` runs only in branch pipelines, never in a merge
+# request's. So every job below states its rules: a merge request pipeline
+# that runs only some jobs can turn green with no test run at all.
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+# A newer push cancels the older pipeline of the same ref: CI minutes are a
+# budget that can run out mid-project.
+default:
+  interruptible: true
+
+# Last line of defence if .gitignore ever breaks. Fails when any file in the
+# checkout holds text shaped like a credential, and lists only file names:
+# the log never repeats a secret. A real value found here is already leaked:
+# rotate it first, then remove it from history.
+#
+# Placeholders that never trip it (tests, fixtures, docs, .env.example):
+#   - hosts and URLs under example.com (a reserved name);
+#   - a key's prefix plus FAKE or PLACEHOLDER, shorter than the real shape;
+#   - docs name a shape in words ("the client-secret prefix"), never a
+#     literal prefix followed by a body.
+# A pattern with a known length (below) lets docs quote the bare prefix; a
+# prefix-only pattern would trip on it.
+#
+# This file is skipped: it holds the patterns, and a comment here may quote
+# an example.
+secret scan:
+  stage: check
+  image: alpine:3.20
+  rules:
+    - when: on_success
+  script:
+    - |
+      cat > /tmp/secret-patterns.txt <<'PATTERNS'
+      # One extended regex per line; blank lines and lines starting with # are skipped.
+      # --- Base: every harness keeps these ---
+      # private keys (service-account files, SSH, TLS)
+      -----BEGIN ([A-Z]+ )?PRIVATE KEY-----
+      # cloud access-key ids, long-term and session
+      (AKIA|ASIA)[0-9A-Z]{16}
+      # forge tokens: the builder's CLI token must never land in a file
+      glpat-[0-9A-Za-z_-]{20}
+      gh[pousr]_[0-9A-Za-z]{36}
+      github_pat_[0-9A-Za-z_]{22,}
+      # queue URLs: region, account and name disclose infrastructure even without a key
+      sqs\.[a-z0-9-]+\.amazonaws\.com/[0-9]+/[A-Za-z0-9_-]+
+      # --- Channel slot: your platforms' credential shapes. Keep what you use, add yours ---
+      # Google (Ads API, Search Console): OAuth client secret, refresh token, access token, API key
+      GOCSPX-[0-9A-Za-z_-]{28}
+      1//0[0-9A-Za-z_-]{40,}
+      ya29\.[0-9A-Za-z_-]{20,}
+      AIza[0-9A-Za-z_-]{35}
+      # Meta (Marketing API): user and system-user access tokens
+      (^|[^0-9A-Za-z])EAA[0-9A-Za-z]{80,}
+      # A platform whose tokens are bare hex with no prefix has no safe pattern:
+      # keep those out with .gitignore and the placeholders above.
+      PATTERNS
+      grep -Ev '^[[:space:]]*(#|$)' /tmp/secret-patterns.txt | sed 's/^[[:space:]]*//' > /tmp/secret-patterns
+      rc=0
+      grep -rlE -f /tmp/secret-patterns --exclude-dir=.git --exclude=.gitlab-ci.yml . || rc=$?
+      case "$rc" in
+        1) echo "OK: no credential-shaped text." ;;
+        0) echo "Credential-shaped text in the files above (lines not printed)."
+           echo "A real value: rotate it, then remove it from history. A test or doc value: use a placeholder (see this job's comment)."
+           exit 1 ;;
+        *) echo "The scan itself failed (grep exit $rc): nothing was checked."
+           exit 1 ;;
+      esac
+
+# Every merge request names the story (S..) or policy (P..) it serves, or is
+# a release ("release X.Y.Z"). Written only in the agent instructions, this
+# rule was skipped by 17 of the source project's first 105 merge requests;
+# as this job, by none of the next 77. Merge request pipelines only: GitLab
+# gives the title there. The title reaches the shell as a variable, never as
+# script text.
+story id:
+  stage: check
+  image: alpine:3.20
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  script:
+    - |
+      if printf '%s\n' "$CI_MERGE_REQUEST_TITLE" | grep -Eq '(^|[^A-Za-z0-9])[SP][0-9]{2,}([^0-9]|$)|^release [0-9]'; then
+        echo "OK: the title names a story or policy (or is a release)."
+      else
+        echo "Name the story (S..) or policy (P..) this serves, or start the title with 'release X.Y.Z'."
+        exit 1
+      fi
+
+# The whole suite, offline: fixtures, temp dirs and stubbed HTTP. No job
+# here needs a credential or a client data root, so keep both out of the
+# project's CI variables (GitLab hands those to every job); a test that
+# needs either is a bug. The runner fails any test file that exits non-zero or
+# prints no `RESULT: N passed` line. The only network use is fetching
+# packages, cached per lock file (with PEP 723 scripts and no lock file, the
+# cache simply uses its default key).
+test:
+  stage: check
+  image: python:3.12-slim
+  rules:
+    - when: on_success
+  variables:
+    UV_CACHE_DIR: .uv-cache
+    PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  cache:
+    key:
+      files: [uv.lock]
+    paths: [.uv-cache]
+  before_script:
+    - pip install -q uv
+  script:
+    - uv run tests/run.py
+    - uv run core/tests/run.py
+
+# The host adapter against each host-platform version it supports. Runs
+# only when the adapter or this file changes, so the core's suite stays
+# offline and fast. Branch pipelines compare with the default branch, not
+# with the last push: set compare_to to yours. No credentials. Delete this
+# job with the adapter folder.
+adapter smoke:
+  stage: check
+  image: python:3.12-bookworm
+  rules:
+    - changes:
+        paths: ['adapter/**/*', '.gitlab-ci.yml']
+        compare_to: refs/heads/main
+  variables:
+    HOST_PLATFORM_REPO: https://host.example.com/host-platform.git
+  parallel:
+    matrix:
+      # The one list of tested host versions. Each entry is the tag as a
+      # label and the commit it points at as what is checked out: a tag can
+      # move, a commit can't. A new host release is one more entry.
+      - HOST: ['v0.0.0:0000000000000000000000000000000000000000']
+  script:
+    - TAG="${HOST%%:*}"; SHA="${HOST##*:}"
+    - git init -q .host
+    - git -C .host fetch -q --depth 1 "$HOST_PLATFORM_REPO" "$SHA"
+    - git -C .host checkout -q FETCH_HEAD
+    # The smoke script first checks that the checkout's own version equals
+    # $TAG, then drives the host's real loader and scheduler with the adapter.
+    - python3 adapter/ci/smoke.py .host "$TAG"
