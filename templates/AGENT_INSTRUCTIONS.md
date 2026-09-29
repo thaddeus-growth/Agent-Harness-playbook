@@ -8,7 +8,7 @@ Only the invariants that `--help` and the code cannot show. Every command and fl
 
 Every merge request names the story (`S..`) or rule (`P..`) it serves in its title (CI job `story id`); a release is titled `release X.Y.Z`. An idea with neither is first a `proposed` row in `ssot/user-stories.agent.tsv`. Refactors change no behaviour: the golden diff (below) shows 0 differences on fixtures and on a copy of real data; a behaviour change found on the way is its own named MR. The repository lives at {{repo_home}}: merge requests (never squashed), issues and CI.
 
-Nothing a later session needs lives only in a session: tools go in the repo, the owner's answers in the owner queue, state in a dated journal. One worktree per builder; only the orchestrator pushes, and it removes a worktree only when its commits are on main and nothing is uncommitted. Each session ends with a handoff: released vs installed, each branch in flight with its worktree and how to verify it, open owner items.
+Nothing a later session needs lives only in a session: tools go in the repo, the owner's answers in the owner queue, a client's state (facts, decisions, the work plan, spend) in the harness's own rows with a write path and a reader, and build state in a dated journal. Markdown about a client is presentation only. One worktree per builder; only the orchestrator pushes, and it removes a worktree only when its commits are on main and nothing is uncommitted. Each session ends with a handoff: released vs installed, each branch in flight with its worktree and how to verify it, open owner items.
 
 ## Layout
 

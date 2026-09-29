@@ -101,6 +101,7 @@ The gate itself: early scripts ended at the fix pass, so "green" was the fixer's
 
 - An item with `stack_on` branches from its predecessor's verified head, and its golden diff runs against that head (`--strict` for a refactor). A step that is not ready skips every step above it.
 - A later review finds a defect in step k: commit the fix on step k's branch (new commits, never an amend), then carry it up with `git rebase --update-refs <branch k> <top branch>`, which replays the steps above and moves their refs. Rerun the gates from k upward. refcheck refuses a step whose base is no longer below it (`base_not_ancestor`).
+- Once the stack is pushed, merge instead of rebasing: merge step k into k+1, then k+1 into k+2, and push each. A rebase would need a force-push, which the forge rules forbid. Merge the MRs in order, each into main. *Seen once:* an SEO harness merged five stacked MRs this way after a review; the stories file conflicted in four of the merges, and each conflict was resolved by keeping both rows. A description with newlines can't go through push options, so set it with the forge's CLI (`glab mr create --description`).
 
 ## After a restart
 
