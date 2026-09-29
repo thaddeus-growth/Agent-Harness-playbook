@@ -7,7 +7,9 @@
     missing file, an added file and an edited VERSION;
   * the CLI: write, and --check exiting 1 on drift, 0 when clean;
   * write() is idempotent; the real kit/ manifest covers the kit, not its
-    tests.
+    tests;
+  * the playbook's kit/MANIFEST.sha256 is fresh (this test fails while it
+    is stale), and a vendored copy's manifest equals it.
 """
 
 import hashlib
@@ -19,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import _shop  # noqa: E402
 from kit.testing.check import capture, check, finish, tmp_dir  # noqa: E402
-from kit.tools import manifest  # noqa: E402
+from kit.tools import manifest, vendor  # noqa: E402
 
 
 def tree() -> Path:
@@ -97,6 +99,24 @@ def main() -> int:
            "tools/manifest.py"} <= set(covered)
           and not any(r.startswith("tests/") for r in covered)
           and not any("__pycache__" in r for r in covered))
+    problems = manifest.check(_shop.KIT)
+    check("the playbook's kit/MANIFEST.sha256 is fresh: it names exactly "
+          "this version's files (regenerate: python3 kit/tools/manifest.py "
+          "kit)", problems == [], problems)
+    body = (_shop.KIT / manifest.NAME).read_text(encoding="utf-8")
+    check("…and covers the README and VERSION",
+          "  README.md\n" in body and "  VERSION\n" in body)
+    copy = Path(tmp_dir("vendored-kit-")) / "kit"
+    vendor.sync(_shop.KIT, copy, {})
+    check("a vendored copy's manifest equals the playbook's",
+          (copy / manifest.NAME).read_bytes()
+          == (_shop.KIT / manifest.NAME).read_bytes())
+    stale = Path(tmp_dir("stale-kit-")) / "kit"
+    vendor.sync(_shop.KIT, stale, {})
+    (stale / "README.md").write_text("edited\n", encoding="utf-8")
+    check("the freshness check fails once a covered file changes",
+          manifest.check(stale) == ["changed: README.md"],
+          manifest.check(stale))
     return finish()
 
 
