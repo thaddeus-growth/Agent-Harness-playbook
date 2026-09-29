@@ -1,6 +1,6 @@
 # Host install checklist
 
-The remote host agent installs a release only after the owner types `confirm vX` in the group chat, outside scheduled-job windows. It ends every install with this report, as one table.
+The remote host agent installs a release only after the owner types `confirm vX` in the channel agreed for it (on the source host, a group chat), outside scheduled-job windows. It ends every install with this report, as one table.
 
 ## The install message
 
@@ -27,7 +27,7 @@ Written from the version the host actually runs, not the previous tag: tags are 
 | Doctor | OK, no warnings |
 | Schema | The database version stamp equals the release's |
 | Scheduled tasks | Each task re-registered, next run time listed |
-| Pages | Local 200, public 401 (login required) |
+| Pages | Local 200; public refused without login (on the source host, a login proxy answering 401) |
 | The change itself | The fix or feature this release carries, seen live |
 | Writes | Still off unless the owner enabled them in writing |
 
@@ -37,7 +37,7 @@ Rules: no confirm, approve or apply on the owner's behalf; no paid data calls; r
 
 - The source project's host scheduler sent the agent a prompt, not a command. Write it closed: absolute paths, "run only these commands", what success looks like, "on success report nothing", "on failure send the owner the error lines", a verified reply channel.
 - Find tasks by name (names are not unique), keep exactly one, act on each by its id, and judge each call by its output, not its exit code.
-- Agent tool calls stop at about 10 minutes. A longer job runs detached: it writes a log ending `EXIT <code>` and a job file with its pid and start time; the agent polls the log. Pulls are read-only and resumable, so a killed job is simply rerun.
+- On the source host (Zylos), agent tool calls stop at about 10 minutes; check your host's limit. A longer job runs detached: it writes a log ending `EXIT <code>` and a job file with its pid and start time; the agent polls the log. Pulls are read-only and resumable, so a killed job is simply rerun.
 
 ## New host, or a replaced host agent: what can it reach?
 

@@ -84,7 +84,7 @@ report:
     said "no decision"); list/history --entity-type are checked against
     the registry with decision_entity_type_unknown.
   * Domain logic not ported: stage order, stage_entered_on, the stage
-    snapshot, relevance tiers, keyword caps. They are what the hooks are
+    snapshot, and any channel's own tiers or caps. They are what the hooks are
     for (kit/tests/test_decisions.py builds a stage example from them).
 
 Test: kit/tests/test_decisions.py.

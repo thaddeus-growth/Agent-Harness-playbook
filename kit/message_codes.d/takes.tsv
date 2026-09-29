@@ -1,0 +1,7 @@
+code	params	meaning_en	meaning_zh
+take_key_malformed	key	{key} is not a take key (the sha256 of a request). Nothing was read or written	{key} 不是有效的生成记录编号（应为请求内容的 sha256）。未读取或写入任何内容
+take_not_kept	take,why	Take {take} was not kept: {why}. Nothing was cached; the next run calls the generator again	生成结果 {take} 未保存：{why}。没有缓存，下次运行会重新生成
+take_ledger_unreadable	path,line	Spend ledger {path} line {line} cannot be read; what was spent is unknown until a person repairs it. Nothing was generated	花费账本 {path} 第 {line} 行无法读取，修好之前无法确定已花多少钱。未生成任何内容
+take_cap_missing		No spend cap is declared: the owner declares one before any paid call. Nothing was generated	还没有设定花费上限：付费生成之前需要老板先设定上限。未生成任何内容
+take_price_missing	count	{count} paid takes have no price; the owner adds one first. Nothing was generated	有 {count} 个付费生成项没有价格，需要老板先补上价格。未生成任何内容
+take_cap_exceeded	cost,left,currency	This plan costs {cost} {currency} but only {left} {currency} of the cap is left. Nothing was generated	这次计划要花 {cost} {currency}，但上限只剩 {left} {currency}。未生成任何内容

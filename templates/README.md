@@ -9,6 +9,7 @@ The files a new harness starts from. The build workflow, [BUILD.md](../BUILD.md)
 | [meeting-intake.md](meeting-intake.md) | B0 | (used, not copied) | The organizer prompt |
 | [intake.schema.json](intake.schema.json) | B0 | (used, not copied) | The shape of one `intake.json`: every item's `iid`, `audience` and `source`; `build/check_intake.py` reads it |
 | [prior-art-scan.md](prior-art-scan.md) | B0.5 | `docs/prior-art/` | When and how to scan what already exists |
+| [vendor-api-discovery.md](vendor-api-discovery.md) | B0.5, B4, B7 | `docs/vendor-api-discovery.md` | Pinning down a paid vendor API cheaply: product pages and their network requests, free calls first, one smallest paid call, the published schema recorded and every body preflighted against it |
 | [owner-queue-item.md](owner-queue-item.md) | B0.6, B10 | (used, not copied) | The shape of one owner ask, and its console fields |
 | [decision-rights.md](decision-rights.md) | B0.6, B2 | `docs/decision-rights.md` | The three lanes, the risky list, the channels that count, the digest |
 | [harness.toml](harness.toml) | B1 | `harness.toml` | The harness's names, languages, scopes, layers and release lists |
@@ -34,6 +35,10 @@ The files a new harness starts from. The build workflow, [BUILD.md](../BUILD.md)
 | [bug-classes.md](bug-classes.md) | B4, B6, B10 | `docs/bug-classes.md` | The data bug classes, each with the fixture test that pins it; the ids of the triage line's `Class:` |
 | [doctor-checks.md](doctor-checks.md) | B1, B9 | `docs/doctor-checks.md` | What the doctor checks: when each row warns, the fix it names, the bug it caught. The kit's `doctor` implements most rows |
 | [SKILL.md](SKILL.md) | B8 | `SKILL.md` | The agent's rules and the skill's scope: read, pending writes, out of scope |
+| [third-party-consent.md](third-party-consent.md) | B3, B7 | a consent record per person + the letter | A real person in a marketing output (AI twin, voice, testimonial, creator clip): the record, confirmed only through the gate and bound to its content; revoke is free |
+| [owner-review-loop.md](owner-review-loop.md) | B6, B10 | `docs/owner-review-loop.md` | One published page the owner decides on per item; the next session reads the decisions back and logs each change against its note |
+| [outcome-learning.md](outcome-learning.md) | B10 | `docs/winning-factors.md` | Learning from what performed: one factor catalog measured on winners and the rest; the owner defines "winner"; rules stay pending until a variant confirms them |
+| [session-handoff.md](session-handoff.md) | all | `docs/session-handoff.md` (the harness keeps its own `docs/ROADMAP.md`) | Each session closes one turn and leaves the next ready: roadmap status and next turn, changelog, dated feedback copies, memory only for what the repo can't hold |
 | [README-operator.md](README-operator.md) | B8 | `README.md` | Install, configure, daily loop, what needs a human, which command answers which question |
 | [workflows.md](workflows.md) | B8 | `references/workflows.md` | Recipes: the daily check, why a number moved, a client meeting |
 | [install-checklist.md](install-checklist.md) | B9 | `docs/install-checklist.md` | The install message, what the host agent reports after every install, scheduled tasks, and what a host agent can reach |

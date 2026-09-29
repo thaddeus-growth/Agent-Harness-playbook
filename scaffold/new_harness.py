@@ -2,7 +2,7 @@
 """Generate a new harness skeleton: green before its first feature.
 
     python3 scaffold/new_harness.py --name acme-harness --cli acme \\
-        --prefix ACME --dir ../acme-harness [--markets HK,TW] \\
+        --prefix ACME --dir ../acme-harness [--markets AA,BB] \\
         [--owner @handle] [--repo-home WHERE] [--langs en,zh] [--dry-run]
     python3 scaffold/new_harness.py --dir ../acme-harness --update-kit
 
@@ -71,6 +71,9 @@ RENDERED = {
     "triage-checklist.md": "docs/triage-checklist.md",
     "bug-classes.md": "docs/bug-classes.md",
     "doctor-checks.md": "docs/doctor-checks.md",
+    "owner-review-loop.md": "docs/owner-review-loop.md",
+    "vendor-api-discovery.md": "docs/vendor-api-discovery.md",
+    "session-handoff.md": "docs/session-handoff.md",
     "ssot/README.md": "ssot/README.md",
 }
 # the files the build writes later (B2, B8): `<<fill: …>>` may stay there
@@ -98,6 +101,9 @@ GENERATED_TESTS = ("test_run_tests.py", "test_ssot.py", "test_layering.py",
 # fails scaffold/tests/test_new_harness.py until it is mapped here.
 DAY_ONE = {
     "Meeting intake": ["ssot/stages.agent.tsv"],
+    "A review page before the first paid batch": ["docs/owner-review-loop.md",
+                                                  "docs/vendor-api-discovery.md"],
+    "`docs/ROADMAP.md`": ["docs/session-handoff.md"],
     "The test kit before the first feature": [
         "tests/run.py", "tests/test_run_tests.py", "tests/test_clock.py",
         "tests/test_layering.py", "tests/test_release.py", "CLAUDE.md"],
@@ -319,7 +325,7 @@ def values_of(a: argparse.Namespace) -> tuple[dict[str, str], list[str],
     if any(not MARKET.match(m) for m in markets) \
             or len(set(markets)) != len(markets):
         raise Refused(f"--markets {a.markets!r}: distinct plain codes, e.g. "
-                      f"HK,TW")
+                      f"AA,BB")
     langs = [x.strip() for x in (a.langs or "en,zh").split(",") if x.strip()]
     if not langs or langs[0] != "en" or any(not LANG.match(x) for x in langs) \
             or len(set(langs)) != len(langs):

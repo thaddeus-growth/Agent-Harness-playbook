@@ -54,6 +54,10 @@ Each module's docstring says what it guards and names its test; this is the map.
 | `registry.py` | Fact keys, decision keys and thresholds are closed; values checked where they are typed | `test_registry.py` |
 | `facts.py`, `decisions.py` | The one write path for each human table: pending until a person confirms, history for every change | `test_facts.py`, `test_decisions.py` |
 | `queue.py`, `execute.py`, `write_guard.py` | Nothing goes out unapproved; an approval goes stale when its basis moves; a dry run by default; kill switch, opt-in and an exact-shape allowlist; an unknown outcome blocks its target | `test_queue.py`, `test_execute.py`, `test_write_guard.py` |
+| `takes.py` | Paid generation: every AI call planned, priced (unpriced = refused), capped, approved at the gate for exactly the plan, then kept once under the sha of its request (a re-roll is a new request, never an overwrite); a broken result is never cached; spend is an append-only ledger with who approved; an optional owner-declared standing allowance | `test_takes.py` |
+| `preflight.py` | A paid request is checked offline against the vendor's own published input schema (types, enum options, ranges, lengths, accepted media types) before it is sent; an unknown schema type is itself a problem | `test_preflight.py` |
+| `consent.py` | A real person's face, voice, name, words or footage is used only under a record a person confirmed through the gate, bound to the record's content hash; any later edit needs a new confirmation; revoke is free and final for earlier confirmations | `test_consent.py` |
+| `copylint.py` | Copy compliance before spend: banned terms per category (literal or regex) and product facts said consistently (CJK numerals normalised); a finding from an unconfirmed rule says so; a broken rule is refused, never skipped | `test_copylint.py` |
 | `pending.py` | Everything waiting on a person, as ready console asks whose gate is the subject the harness binds | `test_pending.py` |
 | `stories.py` | Each story's check runs read verbs only and reports pass, fail or skip with a coded reason | `test_stories.py` |
 | `verbs.py`, `cli.py` | Every verb is declared with its kind; an unlisted verb is refused; the dispatcher's env chain, data-dir guard, `--` rule and exit code | `test_cli.py` |
@@ -76,6 +80,10 @@ Real incidents from the source project, kept with the module that now prevents t
 | `runner.py` | Three write verbs reported "no output" because they read stderr, while the reason was on stdout. |
 | `pull.py` | Each pull replaced raw and the platform keeps only a few months; a late resumed report put older numbers back; an unreadable raw file was overwritten by one pull's rows; a long pull killed halfway started over and the quota ran out again; a run that cleared the last run's gaps lost the list a gaps-only pull needed. |
 | `retry.py` | Days were lost as rate-limit gaps: the exponential guess retried before the quota refilled and the tries ran out; a throttled day became a day with no data instead of a recorded gap. |
+| `takes.py` | A text-to-speech voice that was not installed wrote a 0.01 s file and exited 0; the empty take was cached and reused by every build. Re-rolls had to be new requests so an approved take could never be lost. |
+| `preflight.py` | Two refusals on a generative vendor's first live day, both in its published schema: a wav sent as `audio/x-wav` (it lists `audio/wav`), and a number sent for an enum whose one option is the string `"0"`. |
+| `consent.py` | An agent set a real person's consent to `confirmed` by editing the record on the owner's word in chat, and the check accepted it. |
+| `copylint.py` | The client's own reference ad gave a dosage two ways (three times a day, and once a day); a banned-word list alone could not see it. |
 | `atomic.py`, `single_instance.py` | A crash mid-write left a truncated raw file that the next ingest read as data; an hourly run outlasted the hour and two drains raced. |
 
 The whole gate protocol, the kit and the console together, is proved end to end by `test_e2e_shop.py`: the fake harness's own CLI, the real `console/ask.py` and `console/serve.py`, a relayed code that works once, a queue approval and a refused `--apply`.
@@ -85,7 +93,7 @@ The whole gate protocol, the kit and the console together, is proved end to end 
 Each rule has a test that fails when it breaks.
 
 - **Stdlib only.** Vendoring stays a plain copy, and a harness installs nothing for the kit. *(tests/test_kit_rules.py)*
-- **No domain words.** The kit names no platform, client, market or product; everything domain-specific is a parameter in `harness.toml` or a hook. *(tests/test_kit_rules.py)*
+- **No domain words.** The kit names no platform, client or product (it still names `market` as its partition, a known leftover of the source project); everything domain-specific is a parameter in `harness.toml` or a hook. *(tests/test_kit_rules.py)*
 - **Never imports the console, and the console never imports the kit.** They meet only in JSON: the gate challenge (`confirm_code_required`, `subject`) and the console's ask format. *(tests/test_kit_rules.py; tests/test_e2e_shop.py proves they still meet)*
 - **Every message coded.** A module owns one fragment, `message_codes.d/<module>.tsv`, en and zh, and emits every code in it. *(each module's test, `check_registry_closed`)*
 - **Every test file** runs alone (`python3 kit/tests/test_x.py`), uses `kit.testing.check`, and prints `RESULT: N passed`; `python3 kit/tests/run.py [filter]` fails a file without that line.

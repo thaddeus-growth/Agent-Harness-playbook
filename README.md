@@ -105,7 +105,7 @@ flowchart TB
     end
     subgraph MP["The money path"]
       direction LR
-      R["Rules propose actions<br/>+ expected $/day"] --> AP["Owner approves each<br/>expires in 24 h"]:::owner --> D["Dry run<br/>full diff, writes nothing"] --> SW["Writes switch<br/>OFF until a contract"]:::off --> W["One writer<br/>allowlist · caps · kill switch"]
+      R["Rules propose actions<br/>+ expected cost per day"] --> AP["Owner approves each<br/>expires in 24 h"]:::owner --> D["Dry run<br/>full diff, writes nothing"] --> SW["Writes switch<br/>OFF until a contract"]:::off --> W["One writer<br/>allowlist · caps · kill switch"]
     end
     T -- "rules use confirmed values first" --> MP
     MP --> EXT[(External system)]
@@ -209,7 +209,7 @@ flowchart LR
 
 - One append-only file is the whole store; the agent side and the human side meet only there. Stdlib-only Python, no database, no chat app.
 - An ask missing evidence, what "no" means or a recommendation (a typed value may go without one) is refused, and an eleventh open ask too.
-- Every answer records whether the owner took the suggestion: the override log proposed under "The hardest open problem", for free.
+- Every answer records whether the owner took the suggestion: the override log rule 11 asks for, for free.
 - A click can pass through a harness's own gate, so the proof stays where the rules live. It never widens what may be written: an ask that would widen an allowlist, a cap or a write switch is answered in chat (rule 8), not clicked. The agent's side is [`console/AGENT.md`](console/AGENT.md).
 - No login of its own: by default whoever can reach the port answers as one named user, so it binds to loopback and refuses the network unless a login proxy names the user. macOS or Linux only.
 - `ask.py digest` is the decision record to forward.
@@ -221,6 +221,8 @@ flowchart LR
 Install these before the first feature; each costs an hour now and saved days in the source project.
 
 - [ ] Meeting intake: consent, recording, transcript in the client's data folder, the organizer prompt ([template](templates/meeting-intake.md))
+- [ ] A review page before the first paid batch: the owner decides per item and the next session reads the decisions back ([loop](templates/owner-review-loop.md)); paid vendor APIs pinned down cheaply first and every request preflighted against the vendor's published schema ([discovery](templates/vendor-api-discovery.md))
+- [ ] `docs/ROADMAP.md` with a session start and end checklist from day one ([handoff](templates/session-handoff.md))
 - [ ] The test kit before the first feature: a runner that fails a missing RESULT line, a reported failure, `0 passed` or a leaked temp file; one clock; layering rules; a release-archive test ([kit](templates/tests/)). Every rule in the agent instructions names its test ([template](templates/AGENT_INSTRUCTIONS.md))
 - [ ] An empty registry index with its lint test; ids are never reused; owner files linted for engineering words ([template](templates/ssot/))
 - [ ] CI from the first commit: one pipeline per change with every job in the MR pipeline, the story-id check on every MR title, the offline suite, a secret scan ([template](templates/ci/gitlab-ci.yml)), plus a few guarantee stories for refactors to name
@@ -268,7 +270,7 @@ Ask three questions of the forge:
 The checklist above, already built: a new harness starts from these instead of from a blank folder. [BUILD.md](BUILD.md) says which step uses which.
 
 - [`kit/`](kit/): the shared harness modules (the gate, human tables, the write guard, message codes, the `--json` contract, the verb table and dispatcher, doctor, the guards), vendored into each harness as `scripts/kit/`. *Test:* `python3 kit/tests/run.py`, with `kit/tests/test_e2e_shop.py` proving the gate together with the console.
-- [`hosts/zylos/`](hosts/zylos/): a host adapter driven by one manifest: install, configure, scheduled tasks and the console as a service. *Test:* `python3 hosts/zylos/tests/run.py`.
+- [`hosts/zylos/`](hosts/zylos/): the worked example of a host adapter (write one per host), driven by one manifest: install, configure, scheduled tasks and the console as a service. *Test:* `python3 hosts/zylos/tests/run.py`.
 - [`scaffold/`](scaffold/): `scaffold/new_harness.py` renders the templates, writes the skeleton, vendors the kit and the console, and generates the nine day-one tests; the result is green before its first feature. *Test:* `python3 scaffold/tests/run.py` (`scaffold/tests/test_new_harness.py`).
 - [`build/`](build/): the build-time tools: check meeting intakes, turn items into console asks, apply the answers, write the digest. *Test:* `python3 build/tests/run.py`.
 - [BUILD.md](BUILD.md): the step-by-step workflow, B0 to B10: what each step produces, what fans out, who signs which gate. *Test:* `python3 tests/run.py` (`tests/test_docs_build.py`).
@@ -362,7 +364,7 @@ flowchart TB
 
 1. **The console has no write path of its own.** From a click it runs only the harness's gate verbs, relaying the one-time code with the logged-in name, and only while the subject still matches what the page showed. It never opens the database; a test checks the boundary both ways.
 2. **Put names, evidence and the effect on the row:** money rounded, old → new with a coded reason, who proposed a value apart from whether it is confirmed. *Paid for:* dozens of pending actions showed as id triples and 16-decimal floats, so approving would have been blind; money is now rounded, names are still open.
-3. **Pick from closed sets; type only numbers.** Inputs come from the registry's domain column; a typed number is validated like any write and is what the code binds. Mechanical items confirm in one click; a product group's stage goes one at a time, and the server refuses a batch of stages, typed values or thresholds.
+3. **Pick from closed sets; type only numbers.** Inputs come from the registry's domain column; a typed number is validated like any write and is what the code binds. Mechanical items confirm in one click; a lifecycle decision (a stage change) goes one at a time, and the server refuses a batch of stages, typed values or thresholds.
 4. **One render path, one dictionary, and the UI rules linted on every page** ([owner file](templates/console/ui_rules.tsv)). The browser writes no words, so the lint and the golden diff reach them all. *Paid for:* pages drawn three ways in two days, and a template-only lint let a raw command-line refusal onto a banner.
 5. **Read top down; test at phone width on real data.** One column, what waits first, list then detail, no grids of cards holding tables. *Paid for:* one invented client run through the real chain found five console bugs the fixture tests missed.
 6. **Two doors to one gate: the inbox for what an agent proposes, settings for what a human changes unasked.** *Paid for:* the owner could not find where to enter a value, so every count of waiting items now links to its inbox section; later the owner asked for an edit place in settings. The gate already took a human's own value with nothing pending, so that was a page, not a new write path.
@@ -493,7 +495,7 @@ flowchart TB
 
 Proven here: the core's rules and the process; the paid-ads rules on one marketplace platform with 7- and 14-day attribution windows; the writer tested and dry-run on real data, never used on a live account. Untried anywhere: the transfer itself, and goals other than sales (leads, app installs, awareness).
 
-1. **Vendor the channel-free modules; port the rest.** The gate, message codes, clock, data guards, test runner and release archive name no channel. The queue, `meta`, console pages and adapter prompts name markets, campaigns, keywords and product groups: expect to rewrite them with the pack. A new harness runs `scaffold/new_harness.py`, which vendors [`kit/`](kit/): the human gate (`human.py`), coded messages (`messages.py`) and their contract test (`guards/json_contract.py`), the child-verb runner (`runner.py`), one clock (`dates.py`), and the database and raw guards (`db.py`, `pull.py`, `atomic.py`, `retry.py`, `single_instance.py`); [`templates/tests/`](templates/tests/) is the same test rules as a standalone copy for a repository that does not vendor the kit. The gate's subject says `scope` where the source project said `market`. *(untried as copied here: the rules and their tests come from the source project, where the original code ran on real data; these files have run only against their own tests and a toy harness)*
+1. **Vendor the channel-free modules; port the rest.** The gate, message codes, clock, data guards, test runner and release archive name no channel. The queue, `meta`, console pages and adapter prompts name markets, campaigns, keywords and product groups: expect to rewrite them with the pack. A new harness runs `scaffold/new_harness.py`, which vendors [`kit/`](kit/): the human gate (`human.py`), coded messages (`messages.py`) and their contract test (`guards/json_contract.py`), the child-verb runner (`runner.py`), one clock (`dates.py`), and the database and raw guards (`db.py`, `pull.py`, `atomic.py`, `retry.py`, `single_instance.py`); [`templates/tests/`](templates/tests/) is the same test rules as a standalone copy for a repository that does not vendor the kit. The gate's subject and the human tables still say `market` (a harness with no partition writes `_`): renaming it to a neutral `scope` is an open, breaking change. *(untried as copied here: the rules and their tests come from the source project, where the original code ran on real data; these files have run only against their own tests and a toy harness)*
 2. **Put every number an agent will be asked for in the harness.** *Paid for:* asked for the top actions by money per day, the host agent found no such number and invented its own formula; the formula moved into the harness so every agent returns the same number.
 3. **Verify each platform's facts before trusting a number:**
    - the attribution window per ad type
@@ -506,6 +508,29 @@ Proven here: the core's rules and the process; the paid-ads rules on one marketp
    *Paid for:* the settled boundary drifted with the operator's time zone until pull times were stamped in UTC, and the read token turned out to be able to write.
 4. **Key freshness, windows and resume state by the full scope.** *Paid for:* three bugs let a fresh market hide a stale one; one would have let a stale market past the write path's freshness guard. One client on several channels would be the same multi-scope case (untested).
 5. **For SEO, GEO and KOL, only the core and the process are known to carry over.** The first meeting settles what one result is worth and costs, which source counts as truth, and what the agent may change, publish or send; each answer is a [fact key](templates/ssot/fact_keys.tsv), and a test keeps the client's form in step with them. *Paid for:* nothing ran before the scope was declared, and until unit cost and a monthly cap existed every profit verdict rested on an assumed break-even, marked as such.
+
+
+### Generated creative and real people (video, image, voice, copy)
+
+*Seen once:* a short-video ad harness built on this playbook. An agent writes a storyboard; the harness generates AI presenter and voice takes, then composites them with client footage and code-drawn layers (subtitles, the legal bar, the AI label) into a finished ad. Later it added an authorised real person as presenter. The gate, message codes and test rules carried over unchanged. What was new, and is now in the kit or the templates:
+
+1. **Paid generation is the money path.** Each AI call is a take: planned, priced, capped, approved at the gate with the exact plan as its subject, then made and kept ([`kit/takes.py`](kit/takes.py)).
+2. **Raw only grows, for media.** A take is keyed by its request and written once. A re-roll is a new request, never an overwrite, so an approved take can't be lost and the same request is never paid for twice.
+3. **Never cache a broken take.** *Paid for:* a TTS voice that wasn't installed wrote a 0.01 s file and exited 0. Every build then reused that empty take. A sanity hook now runs before a result is kept.
+4. **Lint the copy before spending.** Banned ad words per category, category rules and product facts run before any paid call ([`kit/copylint.py`](kit/copylint.py)). A rule nobody has confirmed says so. *Paid for:* the client's own reference ad gave the dosage two ways; a list of banned words alone missed it.
+5. **Preflight every paid request against the vendor's own schema** ([`kit/preflight.py`](kit/preflight.py)). *Paid for:* two refusals on the first live day, both visible in the vendor's published input rules.
+6. **A real person is consent data, confirmed at the gate** ([`kit/consent.py`](kit/consent.py), [template](templates/third-party-consent.md)). Their face, voice, words or clip are used only under a record a person confirmed through the gate. The confirmation is bound to the record's content hash; revoking is free. *Paid for:* the first version accepted a hand-set `status: confirmed`, and an agent set it on the owner's chat word.
+7. **The agent runtime has its own gate. Hand the step over; don't work around it.** Uploading a real person's biometrics was refused by the agent's personal-data check even with the owner's go-ahead. The harness prints the exact command, the owner runs it, and the agent carries on locally.
+8. **Show a real sample, not a mock.** A free draft path (a stock voice, the real client footage) lets the agent time and lint a whole piece. The owner, though, judges a real 4-scene sample for about ¥1, not placeholders. *Paid for:* labelled placeholder presenters read as the product and were rejected ([review loop](templates/owner-review-loop.md)).
+9. **An IR with two compilers.** A frame-exact timeline JSON is the contract. One compiler renders it headlessly; a second writes an editor draft for human polish. The render stays the source of truth.
+10. **Close the outer loop.** Measure the same factors on winning and non-winning outputs; the differences become pending rules that variants confirm ([outcome learning](templates/outcome-learning.md)).
+
+| Part | Generated creative |
+| --- | --- |
+| Gate, message codes, test runner, clock, `takes.py`, `preflight.py`, `consent.py`, `copylint.py` | Reuse |
+| Registries, `--json` and `meta`, story checks, console, review page | Port |
+| Raw and database guards | Rarely needed: takes replace raw pulls |
+| Channel pack: providers, the IR and its renderer, category rules, platform safe zones, the consent letter's jurisdiction | Rebuild |
 
 ---
 
@@ -535,6 +560,11 @@ Proven here: the core's rules and the process; the paid-ads rules on one marketp
 | [`templates/verify-challenge.md`](templates/verify-challenge.md) | 10 | Reader and skeptic prompts for an outside report |
 | [`templates/intake.schema.json`](templates/intake.schema.json) | 0 | The shape of one meeting's intake; `build/check_intake.py` reads it |
 | [`templates/prior-art-scan.md`](templates/prior-art-scan.md) | 0, 4, 8 | When and how to scan what already exists, each claim with its link and date |
+| [`templates/vendor-api-discovery.md`](templates/vendor-api-discovery.md) | 0, 4, 8 | Pinning down a paid vendor API cheaply, and preflighting every request against its published schema |
+| [`templates/third-party-consent.md`](templates/third-party-consent.md) | 5, 8 | A real person in a marketing output: the record, confirmed only through the gate, bound to its content |
+| [`templates/owner-review-loop.md`](templates/owner-review-loop.md) | 7, 10 | One published page the owner decides on per item, read back by the next session |
+| [`templates/outcome-learning.md`](templates/outcome-learning.md) | 10 | Winners against the rest on one factor catalog; rules stay pending until a variant confirms them |
+| [`templates/session-handoff.md`](templates/session-handoff.md) | all | Each session closes one turn and leaves the next one ready |
 | [`templates/harness.toml`](templates/harness.toml) | 3 | The harness declares itself once: names, languages, scopes, layers, what a release ships |
 | [`templates/gitlab-ci.yml`](templates/gitlab-ci.yml) | 3, 9 | Secret scan, story id in the title, the RESULT-gated test job |
 | [`templates/gitignore`](templates/gitignore) | 3 | Secrets, the console's log and client data never enter the repository |

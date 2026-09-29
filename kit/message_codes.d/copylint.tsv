@@ -1,0 +1,7 @@
+code	params	meaning_en	meaning_zh
+copylint_banned_term	where,term,rule,note	{where}: {term} is banned by rule {rule}: {note}	{where}：“{term}”触犯了已确认的规则 {rule}（{note}）
+copylint_banned_term_draft	where,term,rule,note	{where}: {term} is banned by draft rule {rule}, which the owner has not confirmed (not legal advice): {note}	{where}：“{term}”触犯了规则草稿 {rule}（{note}）；该规则尚未经负责人确认，不构成法律意见
+copylint_fact_mismatch	where,said,fact,value	{where}: says {said} but {fact} is {value}	{where}：说的是“{said}”，但 {fact} 是 {value}
+copylint_fact_mismatch_draft	where,said,fact,value	{where}: says {said} but {fact} is {value}, a value the owner has not confirmed yet	{where}：说的是“{said}”，但 {fact} 是 {value}（该数值尚未经负责人确认）
+copylint_rule_regex_invalid	rule,pattern,error	Rule {rule}: {pattern} is not a valid regex ({error}); fix the rule file, nothing was linted	规则 {rule} 的正则 {pattern} 写错了（{error}）；请先修正规则文件，本次没有做检查
+copylint_rule_field_invalid	rule,column,value,allowed	Rule {rule}: {column} {value} is not allowed ({allowed}); fix the rule file, nothing was linted	规则 {rule} 的 {column} 填了 {value}，不允许（应为 {allowed}）；请先修正规则文件，本次没有做检查
