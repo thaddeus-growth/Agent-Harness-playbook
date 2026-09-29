@@ -8,7 +8,7 @@ Most data bugs a channel harness ships are not new. They fall into a few classes
 
 *Paid for:* in the source project about 45 fix commits fell into these classes. Several came back three to six times, and unit tests caught almost none of them: client data did, often only after several merge requests.
 
-Columns: **class** is the id the triage line uses; **usually found by** says who finds it when no test does.
+Columns: **class** is the id the triage line uses; **usually found by** says who finds it when no test does, in the triage line's `Found by:` words.
 
 ## Kinds of nothing
 
@@ -27,7 +27,7 @@ def first(raw: dict, *keys):
 | --- | --- | --- | --- | --- |
 | `zero-as-null` | A day the platform reported as 0 is stored as missing | Read fields with `first(raw, "a", "b")`, never `a or b` | A 0 ingests as 0, an absent field as NULL, and `a` wins when both are present | client's agent |
 | `zero-baseline` | A ratio rule fires on an entity's first active day and reads like a measured spike | Check for a zero baseline before comparing; fire with a coded "from zero" reason, or not at all, as the rule says | Seven zero days, then one active day: the hit carries the from-zero reason | client's agent |
-| `gate-on-absent` | A gate keyed on a field being absent also lets through every other path that leaves it absent | Key the gate on the value it guards (the computed ratio), not on a side field | Every early return (too little data, zero baseline) gives no verdict | building a fix |
+| `gate-on-absent` | A gate keyed on a field being absent also lets through every other path that leaves it absent | Key the gate on the value it guards (the computed ratio), not on a side field | Every early return (too little data, zero baseline) gives no verdict | building |
 | `not-recorded` | Rows from before a column existed read NULL, and NULL is taken as "none" | NULL in a later column means "not recorded": record each column's first day and flag a window that starts before it | A rebuild that adds a column keeps old rows with NULL; a window across the first day is flagged | golden diff |
 | `third-party-zero` | A research source's 0 reads as a real drop | Its registry row says what its 0 means; an estimate's 0 is "no estimate" and lowers coverage | A third-party 0 adds nothing and starts no decline; the platform's own 0 stays 0 | recheck |
 | `failed-lookup-null` | A failed lookup is stored as NULL, and the entity quietly changes identity (it loses its parent group) | A failed call keeps the last known value and records a gap with its reason | A 429 or 5xx on the lookup keeps the previous value and writes one gap row | owner in console |
@@ -41,7 +41,7 @@ A day is missing only when a clock says so, and every figure says which days it 
 
 | Class | Symptom | Fix pattern | Test that pins it | Usually found by |
 | --- | --- | --- | --- | --- |
-| `sparse-report` | A report type with rows only on active days shows every quiet day as missing, asks for a backfill that can never fill it, and looks stale forever | Give each sparse table a clock: a dense table the same pull fills. A day is missing only when the clock lacks it too, and lag is the clock's | Sparse table lacks day D: missing only if the clock lacks D; an empty sparse table beside a full clock is "none of that type", not a failure | install check |
+| `sparse-report` | A report type with rows only on active days shows every quiet day as missing, asks for a backfill that can never fill it, and looks stale forever | Give each sparse table a clock: a dense table the same pull fills. A day is missing only when the clock lacks it too, and lag is the clock's | Sparse table lacks day D: missing only if the clock lacks D; an empty sparse table beside a full clock is "none of that type", not a failure | nightly check |
 | `unmatched-days` | A figure built from two ledgers goes wrong (a negative remainder) when one ledger misses days | Compute on the days both ledgers hold; list the days dropped | Ledger A lacks two days B has: the result uses matched days only and names the two | recheck |
 | `window-found` | A report says "last 30 days" but covers fewer | `meta` carries the window asked, the window found and the missing days per source | A fixture with a gap: found differs from asked, and the gap days are listed | recheck |
 | `partial-period` | A week or month in progress, compared with a full one, reads as a drop | A partial period's change is null, with a coded reason | A 3-day current week: change null, reason "partial" | owner in console |
