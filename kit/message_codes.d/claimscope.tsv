@@ -1,0 +1,14 @@
+code	params	meaning_en	meaning_zh
+claimscope_row_invalid	rule,detail	Lexicon row {rule}: {detail}; fix the lexicon, nothing was checked	词库第 {rule} 行：{detail}；请先修正词库，本次未做任何检查
+claimscope_record_invalid	path,detail	{path} is not a claims record: {detail}	{path} 不是有效的宣称范围记录：{detail}
+claimscope_record_missing	path	No claims record at {path}; write it from the approved document first	{path} 没有宣称范围记录；请先按批准文件填写
+claimscope_incomplete	path,detail	{path}: fill the record from the approved document before a person confirms it: {detail}. Nothing was written	{path}：请先按批准文件把记录填完整再请人确认：{detail}。未写入任何内容
+claimscope_changed_meanwhile	path	{path} changed while the person was being asked, so the confirmation no longer matches it. Nothing was written	在等待确认期间 {path} 被改动了，这次确认已经对不上。未写入任何内容
+claimscope_confirm_done	subject,by	The claims of {subject} are confirmed by {by} for this exact content; any edit needs a new confirmation	{subject} 的宣称范围已由 {by} 确认（仅限当前内容）；之后任何改动都需要重新确认
+claimscope_outside	where,term,names,scope	{where}: {term} names {names}, outside the approved scope {scope}	{where}：“{term}”说到了 {names}，超出了批准的范围“{scope}”
+claimscope_outside_draft	where,term,names,scope	{where}: {term} names {names}, outside the approved scope {scope} (draft rule or record, not confirmed by a person; draft, not advice)	{where}：“{term}”说到了 {names}，超出了批准的范围“{scope}”（规则或范围记录尚未经人确认，仅供参考，不构成法律意见）
+claimscope_always	where,term,canonical	{where}: {term} is {canonical} whatever the scope	{where}：“{term}”属于{canonical}，无论批准范围如何都不能说
+claimscope_always_draft	where,term,canonical	{where}: {term} is {canonical} whatever the scope (draft rule, not confirmed by a person; draft, not advice)	{where}：“{term}”属于{canonical}，无论批准范围如何都不能说（规则尚未经人确认，仅供参考，不构成法律意见）
+claimscope_record_required	where,path	{where}: this category needs a claims record ({path}) from the approved document before any copy is made	{where}：这个品类必须先按批准文件建立宣称范围记录（{path}），才能制作任何文案
+claimscope_waivers_unreadable	path,detail	{path} is not a waivers file: {detail}; an unreadable waiver waives nothing	{path} 不是有效的豁免记录：{detail}；读不出的豁免一概不算
+claimscope_waive_done	rule,where,term,by	{rule} at {where} ({term}) is waived by {by}; a changed line no longer matches it	{where} 的 {rule}（“{term}”）已由 {by} 豁免；这句话一旦改动，豁免即不再适用

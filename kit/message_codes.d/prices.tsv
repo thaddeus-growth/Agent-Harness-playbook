@@ -1,0 +1,17 @@
+code	params	meaning_en	meaning_zh
+prices_file_missing	path	No price file at {path}	{path} 没有价格表
+prices_file_invalid	path,detail	{path} is not a price file: {detail}. Nothing was read	{path} 不是有效的价格表：{detail}。未读取任何内容
+prices_row_invalid	path,line,detail	{path} line {line}: {detail}. Nothing was read	{path} 第 {line} 行：{detail}。未读取任何内容
+prices_row_duplicate	path,line,key	{path} line {line}: {key} already has a row. Nothing was read	{path} 第 {line} 行：{key} 已经有一行价格了。未读取任何内容
+prices_observed_invalid	index,detail	Observed row {index}: {detail}. Nothing was proposed	读到的第 {index} 条价格：{detail}。未提出任何价格
+prices_missing	key	{key} has no price row	{key} 在价格表里没有对应的行
+prices_unknown	key	{key}: the price is blank (unknown, not zero)	{key}：价格为空（表示未知，不是零）
+prices_unconfirmed	key,status	{key}: the price is {status}, not confirmed by a person	{key}：价格状态是 {status}，还没有经人确认
+prices_unit_mismatch	key,unit,expected	{key} is priced {expected}, the quantity is {unit}. Nothing was estimated	{key} 的价格按 {expected} 计，但用量是按 {unit} 给的。未做估算
+prices_not_found	key,path	{key} has no row in {path}	{path} 里没有 {key} 这一行
+prices_value_blank	key	{key}: the price is blank; fill it from its source before a person confirms it. Nothing was written	{key}：价格为空，请先按来源填好再请人确认。未写入任何内容
+prices_status_invalid	status,allowed	Status {status} is not one trust can be lowered to ({allowed}); raising it is a confirmation through the gate	状态 {status} 不能用来降低信任（只能是 {allowed}）；要提高信任必须经人确认
+prices_changed_meanwhile	key,path	{path} changed while the person was being asked, so the confirmation of {key} no longer matches it. Nothing was written	在等待确认期间 {path} 被改动了，{key} 的这次确认已经对不上。未写入任何内容
+prices_confirm_done	key,value,unit,by	{key}: {value} {unit} confirmed by {by}	{key}：{value}（{unit}）已由 {by} 确认
+prices_lower_done	key,status	{key} is {status} now; only a person, through the gate, confirms it again	{key} 现在是 {status}；只有经人确认才能重新生效
+prices_propose_done	added,updated,held,path	{added} new and {updated} changed prices written as pending to {path}; {held} differ from a confirmed price and are held for the owner	已把 {added} 个新价格和 {updated} 个变动的价格以待确认状态写入 {path}；另有 {held} 个与已确认价格不同，留给老板决定

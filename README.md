@@ -523,17 +523,18 @@ Proven here: the core's rules and the process; the paid-ads rules on one marketp
 4. **Lint the copy before spending.** Banned ad words per category, category rules and product facts run before any paid call ([`kit/copylint.py`](kit/copylint.py)). A rule nobody has confirmed says so. *Paid for:* the client's own reference ad gave the dosage two ways; a list of banned words alone missed it.
 5. **Preflight every paid request against the vendor's own schema** ([`kit/preflight.py`](kit/preflight.py)). *Paid for:* two refusals on the first live day, both visible in the vendor's published input rules.
 6. **A real person is consent data, confirmed at the gate** ([`kit/consent.py`](kit/consent.py), [template](templates/third-party-consent.md)). Their face, voice, words or clip are used only under a record a person confirmed through the gate. The confirmation is bound to the record's content hash; revoking is free. *Paid for:* the first version accepted a hand-set `status: confirmed`, and an agent set it on the owner's chat word.
-7. **The agent runtime has its own gate. Hand the step over; don't work around it.** Uploading a real person's biometrics was refused by the agent's personal-data check even with the owner's go-ahead. The harness prints the exact command, the owner runs it, and the agent carries on locally.
-8. **Show a real sample, not a mock.** A free draft path (a stock voice, the real client footage) lets the agent time and lint a whole piece. The owner, though, judges a real 4-scene sample for about ¥1, not placeholders. *Paid for:* labelled placeholder presenters read as the product and were rejected ([review loop](templates/owner-review-loop.md)).
-9. **An IR with two compilers.** A frame-exact timeline JSON is the contract. One compiler renders it headlessly; a second writes an editor draft for human polish. The render stays the source of truth.
-10. **Close the outer loop.** Measure the same factors on winning and non-winning outputs; the differences become pending rules that variants confirm ([outcome learning](templates/outcome-learning.md)).
+7. **Regulated copy says only what the approved document allows** ([`kit/claimscope.py`](kit/claimscope.py), [`kit/phrasebook.py`](kit/phrasebook.py), [template](templates/claim-scope.md)). A claims record holds the approved wording (a drug's indication, a fund's prospectus) and the claims it allows; a person confirms it at the gate. Every line is checked against it at script, asset and render. A phrase the platform refused is remembered and refused inside any later line. Every rejection's quoted phrases are a recall test, and every approved creative a false-alarm test. *Paid for:* 20 creatives of one OTC product were refused in one afternoon for naming symptoms outside its indication. The words were ordinary, so no banned list could see them. The checker then caught 10 of 10 quoted phrases while the approved wording passed. Later, 26 rejected creatives turned out to be 5 scripts rearranged.
+8. **The agent runtime has its own gate. Hand the step over; don't work around it.** Uploading a real person's biometrics was refused by the agent's personal-data check even with the owner's go-ahead. The harness prints the exact command, the owner runs it, and the agent carries on locally.
+9. **Show a real sample, not a mock.** A free draft path (a stock voice, the real client footage) lets the agent time and lint a whole piece. The owner, though, judges a real 4-scene sample for about ¥1, not placeholders. *Paid for:* labelled placeholder presenters read as the product and were rejected ([review loop](templates/owner-review-loop.md)).
+10. **An IR with two compilers.** A frame-exact timeline JSON is the contract. One compiler renders it headlessly; a second writes an editor draft for human polish. The render stays the source of truth.
+11. **Close the outer loop.** Measure the same factors on winning and non-winning outputs; the differences become pending rules that variants confirm ([outcome learning](templates/outcome-learning.md)).
 
 | Part | Generated creative |
 | --- | --- |
-| Gate, message codes, test runner, clock, `takes.py`, `preflight.py`, `consent.py`, `copylint.py` | Reuse |
+| Gate, message codes, test runner, clock, `takes.py`, `preflight.py`, `consent.py`, `copylint.py`, `claimscope.py`, `phrasebook.py` | Reuse |
 | Registries, `--json` and `meta`, story checks, console, review page | Port |
 | Raw and database guards | Rarely needed: takes replace raw pulls |
-| Channel pack: providers, the IR and its renderer, category rules, platform safe zones, the consent letter's jurisdiction | Rebuild |
+| Channel pack: providers, the IR and its renderer, category rules, the claims lexicon, platform safe zones, the consent letter's jurisdiction | Rebuild |
 
 ---
 
@@ -565,6 +566,7 @@ Proven here: the core's rules and the process; the paid-ads rules on one marketp
 | [`templates/prior-art-scan.md`](templates/prior-art-scan.md) | 0, 4, 8 | When and how to scan what already exists, each claim with its link and date |
 | [`templates/vendor-api-discovery.md`](templates/vendor-api-discovery.md) | 0, 4, 8 | Pinning down a paid vendor API cheaply, and preflighting every request against its published schema |
 | [`templates/third-party-consent.md`](templates/third-party-consent.md) | 5, 8 | A real person in a marketing output: the record, confirmed only through the gate, bound to its content |
+| [`templates/claim-scope.md`](templates/claim-scope.md) | 5, 7, 10 | Regulated copy names only what the approved document allows: the claims record at the gate, the lexicon, waivers, the phrase library, rejections as recall tests |
 | [`templates/owner-review-loop.md`](templates/owner-review-loop.md) | 7, 10 | One published page the owner decides on per item, read back by the next session |
 | [`templates/outcome-learning.md`](templates/outcome-learning.md) | 10 | Winners against the rest on one factor catalog; rules stay pending until a variant confirms them |
 | [`templates/session-handoff.md`](templates/session-handoff.md) | all | Each session closes one turn and leaves the next one ready |
