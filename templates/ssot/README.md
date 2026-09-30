@@ -67,6 +67,10 @@ During a fan-out, each worker writes its codes to its own fragment, `message_cod
 
 The kit's own codes (the gate's refusals and `unclassified_error`) live in [`kit/message_codes.tsv`](../../kit/message_codes.tsv) and [`kit/message_codes.d/`](../../kit/message_codes.d/); this file holds the harness's. A code in both is refused. The reader and the registry checks are [`kit/messages.py`](../../kit/messages.py) (`lint_registry`, `check_registry_closed`); the every-verb check is `check_verbs` in [`kit/guards/json_contract.py`](../../kit/guards/json_contract.py), which a harness's contract test calls on its own verb table.
 
+## Cited rules
+
+A registry of checks that grade someone's work (an audit's checks, a listing's rules) carries, per row, `basis` (`authority` when the platform's own documentation makes it a rule, `heuristic` for an industry habit), the documentation URL, and the rule and fix in words the owner reads. A test keeps every `heuristic` row at the lowest severity and every `authority` row anchored to the platform's documentation tree; let that test accept more than one tree, because platforms move their docs. The network-free suite can't see a citation rot, so re-check each URL and claim against the live page from time to time (a doctor check with network, or an agent's research pass), and fix the row, not the report.
+
 ## Alert rules
 
 Each rule compares an entity's latest settled day with its own recent settled days; `threshold` is the multiple (`ge`) or fraction (`le`) that fires it. A new grain, metric or comparison still needs code; the row makes the rule visible, named and tunable. The send verb pushes from the report's output and writes only its own cooldown table.
