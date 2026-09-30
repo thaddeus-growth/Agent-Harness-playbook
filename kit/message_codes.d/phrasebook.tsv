@@ -1,0 +1,10 @@
+code	params	meaning_en	meaning_zh
+phrasebook_row_invalid	path,phrase,detail	{path}: phrase {phrase}: {detail}. Nothing was read	{path}：话术 {phrase}：{detail}。未读取任何内容
+phrasebook_text_blank		The phrase is blank once spaces and punctuation are removed. Nothing was written	去掉空格和标点后这句话术是空的。未写入任何内容
+phrasebook_unknown	phrase,path	No phrase {phrase} in {path}	{path} 里没有话术 {phrase}
+phrasebook_has_errors	phrase,term,rule	{phrase} cannot be approved: {term} ({rule}). Rewrite it as a new phrase. Nothing was written	{phrase} 不能通过：“{term}”（{rule}）。请改写成一句新的话术。未写入任何内容
+phrasebook_changed_meanwhile	phrase,path	{path} changed while the person was being asked, so the approval of {phrase} no longer matches it. Nothing was written	在等待确认期间 {path} 被改动了，{phrase} 的这次通过已经对不上。未写入任何内容
+phrasebook_approve_done	phrase,by	{phrase} is approved by {by} for this exact text	{phrase} 已由 {by} 通过（仅限当前这句原文）
+phrasebook_reject_done	phrase	{phrase} is rejected: copy that says it is refused from now on	{phrase} 已标记为不通过：今后说到这句话的文案一律拦下
+phrasebook_rejected	where,phrase,sentence,why	{where}: says rejected phrase {phrase} {sentence} ({why})	{where}：说了不通过的话术 {phrase}“{sentence}”（{why}）
+phrasebook_unapproved	where,sentence	{where}: {sentence} is not an approved phrase yet (add it, then a person approves it)	{where}：“{sentence}”还不是已通过的话术（先加入话术库，再请人确认通过）
