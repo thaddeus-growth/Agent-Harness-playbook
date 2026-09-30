@@ -30,8 +30,8 @@ Read BUILD.md's table first. Then, one step at a time:
 9. **B6 Reports**, one agent per story, each with its check row.
 10. **B7 Gate and money path**: writes stay off; the owner merges.
 11. **B8 Agent docs and evals** from [templates/SKILL.md](../../templates/SKILL.md), [templates/README-operator.md](../../templates/README-operator.md) and [templates/workflows.md](../../templates/workflows.md).
-12. **B9 Release**: one release owner; the client owner types "confirm vX".
-13. **B10 Operate**: every new meeting goes back to B0.
+12. **B9 Release**: one release owner; the client owner types "confirm vX". On Zylos, first copy the files that [hosts/zylos/README.md](../../hosts/zylos/README.md) lists, not its tests (BUILD.md, B9).
+13. **B10 Operate**: every new meeting goes back to B0 (inside a running harness, its operator follows `references/workflows.md`, section 3; BUILD.md, B10).
 
 Before each step, check its `after` steps are signed in `ssot/stages.agent.tsv`. After it, record who signed and the reference.
 
@@ -52,4 +52,4 @@ Only to the console, only at a gate: at most 10 open asks per owner, each with e
 
 ## Where the state is
 
-`ssot/stages.agent.tsv` in the harness, and each owner's console cursor in `$DATA_DIR/build/state.json`. To resume: read both, run `ask.py answers --since SEQ` for each owner, then continue at the first step not signed. Resume from the files, never from memory.
+`ssot/stages.agent.tsv` in the harness (before B1, what B0 to B0.6 left in `$DATA_DIR`), and each owner's console log, which holds what was asked, answered and applied. To resume: read both, run `ask.py answers` for each owner (it lists the answers still waiting to be applied), apply them, then continue at the first step not signed. Resume from the files, never from memory.

@@ -44,7 +44,7 @@ SCHEMA = {
 }
 GOOD = {"prompt": "a quiet street", "duration": 5, "strength": 0.5,
         "loop": False, "resolution": "768p", "mode": "0",
-        "ref_image": "https://example.test/a.png",
+        "ref_image": "https://example.com/a.png",
         "ref_audio": "data:audio/wav;base64,UklGRg=="}
 
 

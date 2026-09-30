@@ -2,10 +2,11 @@
 """kit.guards.json_contract.check_verbs: every verb of the table, of every
 kind, has a `--json` case, and each case keeps the contract.
 
-Ported from the playbook's core/ contract test ("a new verb fails until it
-has a case"). The read verbs are run by check_read_verbs (test_guards.py);
-this is the guard for the rest: a gate or write verb's refusals sat outside
-that test once, so about 40 of them reached the owner as "unclassified".
+Ported from the playbook's former core/ contract test (commit 090f788: "a new
+verb fails until it has a case"). The read verbs are run by check_read_verbs
+(test_guards.py); this is the guard for the rest: a gate or write verb's
+refusals sat outside that test once, so about 40 of them reached the owner as
+"unclassified".
 
   [1] a table whose every verb has a case, each a classified failure or a
       coded success, passes; `--json` is added, after the verb's words and

@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _t  # noqa: E402
 
 README = os.path.join(_t.BUILD, "README.md")
-SCRIPTS = ("check_intake.py", "intake_to_asks.py", "apply_answers.py", "digest.py")
+SCRIPTS = ("check_intake.py", "intake_to_asks.py", "apply_answers.py")
 
 
 def test_the_readme_is_short():
@@ -37,6 +37,29 @@ def test_every_flag_the_readme_shows_is_a_flag_of_the_script_it_follows():
         src = _t.read(os.path.join(_t.BUILD, script))
         for flag in re.findall(r"(--[a-z-]+)", args):
             assert f'"{flag}"' in src, (script, flag)
+
+
+def vendor_problems(text: str) -> list[str]:
+    """What is wrong with the kit/tools/vendor.py commands `text` shows: none shown, or a flag its --help does not list."""
+    import subprocess
+    shown = re.findall(r"`python3 kit/tools/vendor\.py([^`]*)`", text)
+    if not shown:
+        return ["shows no `python3 kit/tools/vendor.py ...` command"]
+    p = subprocess.run([sys.executable, os.path.join(_t.ROOT, "kit", "tools", "vendor.py"), "--help"],
+                       capture_output=True, text=True, timeout=60, env=_t.ENV)
+    assert p.returncode == 0, p.stderr[-300:]
+    listed = set(re.findall(r"(?<![\w-])--[a-z][a-z-]*", p.stdout))
+    return [f"{flag} is not a flag of vendor.py" for args in shown
+            for flag in re.findall(r"(?<![\w-])--[a-z][a-z-]*", args) if flag not in listed]
+
+
+def test_a_console_without_the_digest_verb_is_vendored_again_by_a_real_command_not_copied_over():
+    text = _t.read(README)
+    assert vendor_problems(text) == [], vendor_problems(text)
+    assert "--harness" in text and "--console" in text and "MANIFEST.sha256" in text    # the two files a hand copy leaves behind
+    assert "copying this playbook" not in text                                          # the advice that turned the drift test red
+    assert vendor_problems("Run it again.") and vendor_problems("`python3 kit/tools/vendor.py --harness DIR --consol`")
+    assert vendor_problems("`python3 kit/tools/vendor.py --harness DIR --console`") == []
 
 
 def test_every_script_names_the_test_that_holds_its_rules():

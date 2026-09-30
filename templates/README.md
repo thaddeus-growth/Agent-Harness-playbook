@@ -1,6 +1,6 @@
 # Templates
 
-The files a new harness starts from. The build workflow, [BUILD.md](../BUILD.md), says when each one is used; `scaffold/new_harness.py` renders the ones with a target path into a new harness, together with the skeleton the vendored kit runs on (BUILD.md, B1).
+The files a new harness starts from. The build workflow, [BUILD.md](../BUILD.md), says when each one is used; `scaffold/new_harness.py` renders the ones with a rendered target into a new harness (the `ssot/` files as header rows), together with the skeleton the vendored kit runs on (BUILD.md, B1). `RENDERED` in that script is the list it renders; every other row is used, not copied, or names a target that a later build step writes or copies.
 
 ## Every template
 
@@ -15,9 +15,8 @@ The files a new harness starts from. The build workflow, [BUILD.md](../BUILD.md)
 | [harness.toml](harness.toml) | B1 | `harness.toml` | The harness's names, languages, scopes, layers and release lists |
 | [AGENT_INSTRUCTIONS.md](AGENT_INSTRUCTIONS.md) | B1 | `CLAUDE.md` | Invariants only, each naming its test |
 | [CODEOWNERS](CODEOWNERS) | B1 | `.gitlab/CODEOWNERS` | Protected paths for the risky list |
-| [gitlab-ci.yml](gitlab-ci.yml) | B1 | `.gitlab-ci.yml` | Secret scan, story id in the title, the RESULT-gated test job |
-| [ci/story-id.yml](ci/story-id.yml) | B1 | a job in a CI file of your own | The story-id job alone, with why it is a job and not only a rule; gitlab-ci.yml already holds it |
-| [ci/gitlab-ci.yml](ci/gitlab-ci.yml) | B1 | (used, not copied) | The fuller CI to grow into: the secret-scan pattern file with a channel slot, a dependency cache, and an adapter smoke job for each host version. gitlab-ci.yml is its short form |
+| [gitlab-ci.yml](gitlab-ci.yml) | B1 | `.gitlab-ci.yml` | Secret scan, story id in the title, the RESULT-gated test job; every job states its `rules:` (a harness scaffolded before that adds them by hand: BUILD.md, B10) |
+| [ci/gitlab-ci.yml](ci/gitlab-ci.yml) | B1 | (used, not copied) | The fuller CI to grow into: the secret-scan pattern file with a channel slot, a dependency cache, the story-id job with its GitHub Actions note, a check of the Zylos adapter and an adapter smoke job for each host version. gitlab-ci.yml is its short form |
 | [gitignore](gitignore) | B1 | `.gitignore` | Secrets, the console's log, client data |
 | [gitattributes](gitattributes) | B1, B9 | `.gitattributes` | The internal files every release leaves out. The scaffolder renders this file from `harness.toml` and the ssot index instead (`kit.guards.release.render_gitattributes`); copy this one into a repository that is not scaffolded |
 | [ssot/README.md](ssot/README.md) | B1 | `ssot/README.md` | Owner files, agent files, registries, the trail columns |
@@ -84,7 +83,7 @@ The playbook's own check of this page, BUILD.md and the build skill: [tests/test
 
 ## Standalone kits (copy as is)
 
-Three folders are not rendered by the scaffolder. They are self-contained modules a harness copies whole, and each has its own tests, kept out of the generated set above.
+Three folders are not rendered by the scaffolder. Each is a module a harness copies, and each has its own tests, kept out of the generated set above. The copy is the module only (from `tests/golden/`, just `engine.py` and `cases.py`; from `workflows/`, the scripts and `refcheck.py`). The golden and workflow tests run inside this playbook, and their runners import its `kit/` from the playbook root, so they do not travel with the copy.
 
 **`tests/`: the test kit for a repository that does not vendor the kit.** It holds the same rules as the ten generated tests, for the layout of the source project (`src/` beside a `common/` package at the root), with the rules as constants at the top of each file. A scaffolded harness does not copy it: the generated tests call the vendored kit, and `scripts/kit/` and its manifest keep every harness on one copy of each rule. The overlap, rule by rule:
 

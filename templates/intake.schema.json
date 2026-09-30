@@ -18,7 +18,7 @@
           "items": {"type": "string", "minLength": 1, "maxLength": 120}
         },
         "consent": {
-          "description": "Who gave consent to record, and when. If it was not given, say so: the owner is asked.",
+          "description": "Who gave consent to record, and when. A blank line is refused. If it was not given or not recorded, say so in words: that passes the check, and must then be raised to the owner as a question.",
           "type": "string", "minLength": 1, "maxLength": 200, "x-missing": "no_consent"
         }
       }
