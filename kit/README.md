@@ -65,7 +65,7 @@ Each module's docstring says what it guards and names its test; this is the map.
 | `stories.py` | Each story's check runs read verbs only and reports pass, fail or skip with a coded reason | `test_stories.py` |
 | `verbs.py`, `cli.py` | Every verb is declared with its kind; an unlisted verb is refused; the dispatcher's env chain, data-dir guard, `--` rule and exit code | `test_cli.py` |
 | `doctor.py` | An install says where every value came from and what to fix; `writes: off` is healthy; `--strict` makes a warning fatal | `test_doctor.py` |
-| `guards/` | The structural rules a harness's own tests call: the ssot index, the release archive, layering, the `--json` contract (every verb of every kind has a case: `check_verbs`), adapter boundaries, vendored-copy drift, one clock | `test_guards.py`, `test_verb_cases.py`, `test_clock.py` |
+| `guards/` | The structural rules a harness's own tests call: the ssot index, the release archive, layering, the `--json` contract (every verb of every kind has a case: `check_verbs`), adapter boundaries, vendored-copy drift, one clock, agent-eval cases (each names the SKILL.md rule it tests, carries the forbidden-verbs grader generated from the verb table, has an ablation row) | `test_guards.py`, `test_verb_cases.py`, `test_clock.py`, `test_evals.py` |
 | `testing/` | The test convention: `check()`/`finish()`, the RESULT-gated runner, the sandbox env | `test_check.py`, `test_run_tests.py` |
 | `testing/suites.py` | The ten day-one tests every new harness is generated with, as library calls (runner, ssot, layering, boundary, `--json` contract, human tables, gate, release, drift, clock) | `test_suites.py` |
 | `tools/` | `manifest.py` (the fingerprint), `vendor.py` (the plain copy) | `test_manifest.py`, `test_vendor.py` |
@@ -90,6 +90,7 @@ Real incidents from the source project, kept with the module that now prevents t
 | `copylint.py` | The client's own reference ad gave a dosage two ways (three times a day, and once a day); a banned-word list alone could not see it. |
 | `claimscope.py` | One OTC product's creatives were refused 20 times in one afternoon for naming symptoms its approved indication does not: ordinary words a banned list cannot catch. The checker then caught 10 of 10 of the reviewer's quoted phrases while the approved wording passed. And an agent once hand-set a record's status (`consent.py`), so a record counts only through the gate. |
 | `phrasebook.py` | 26 rejected creatives turned out to be 5 scripts rearranged: one bad sentence was rejected again and again. |
+| `guards/evals.py` | An agent-behaviour suite kept its forbidden-command pattern by hand, a long regular expression that began to miss a verb the moment one was added; and 4 of its 9 first cases passed with their rule cut out of the skill, because the model already behaved that way, so they measured nothing. |
 | `atomic.py`, `single_instance.py` | A crash mid-write left a truncated raw file that the next ingest read as data; an hourly run outlasted the hour and two drains raced. |
 
 The whole gate protocol, the kit and the console together, is proved end to end by `test_e2e_shop.py`: the fake harness's own CLI, the real `console/ask.py` and `console/serve.py`, a relayed code that works once, a queue approval and a refused `--apply`.

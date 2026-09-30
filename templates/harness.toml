@@ -45,3 +45,11 @@ spawn_allowed = ["compute_stories"]    # the one compute that may run other read
 # count; the list must match exactly and only shrinks. A new harness has none.
 # [guards.clock.allowed]
 # "scripts/pull_ads.py::window" = 1
+
+# Optional, read by kit.guards.evals (templates/evals/README.md): what an eval agent
+# must never run besides the gated and external verbs, and the SKILL.md rules that
+# have no case yet (a list that only shrinks).
+# [guards.evals]
+# extra = ["facts init"]
+# families = ["queue"]
+# uncovered = []

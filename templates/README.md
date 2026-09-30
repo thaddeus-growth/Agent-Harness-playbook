@@ -18,6 +18,7 @@ The files a new harness starts from. The build workflow, [BUILD.md](../BUILD.md)
 | [gitlab-ci.yml](gitlab-ci.yml) | B1 | `.gitlab-ci.yml` | Secret scan, story id in the title, the RESULT-gated test job |
 | [ci/story-id.yml](ci/story-id.yml) | B1 | a job in a CI file of your own | The story-id job alone, with why it is a job and not only a rule; gitlab-ci.yml already holds it |
 | [ci/gitlab-ci.yml](ci/gitlab-ci.yml) | B1 | (used, not copied) | The fuller CI to grow into: the secret-scan pattern file with a channel slot, a dependency cache, and an adapter smoke job for each host version. gitlab-ci.yml is its short form |
+| [evals/](evals/README.md), [evals/fixture-build.sh](evals/fixture-build.sh) | B8 | `evals/`, `evals/fixture/build.sh` | Agent-behaviour evals: the case layout, the ablation table, the offline rules `kit.guards.evals` holds, and the fixture builder that refuses a checkout holding client data |
 | [gitignore](gitignore) | B1 | `.gitignore` | Secrets, the console's log, client data |
 | [gitattributes](gitattributes) | B1, B9 | `.gitattributes` | The internal files every release leaves out. The scaffolder renders this file from `harness.toml` and the ssot index instead (`kit.guards.release.render_gitattributes`); copy this one into a repository that is not scaffolded |
 | [ssot/README.md](ssot/README.md) | B1 | `ssot/README.md` | Owner files, agent files, registries, the trail columns |
