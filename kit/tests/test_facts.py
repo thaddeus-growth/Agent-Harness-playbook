@@ -18,7 +18,10 @@ banner is harness code and stays there).
   5. confirm: TTY retype; a mistype, no terminal, no secret are refused;
      a relayed code needs its audit, confirms exactly the value it was
      issued for, and a second use is refused because the version (the
-     key's last history id) moved; confirm --value creates or replaces.
+     key's last history id) moved; confirm --value creates or replaces;
+     --for-client: the client's name in the code's subject (neither code
+     passes for the other), row and history by client:<name>, the
+     operator in the reason, a typed value's source client:<name> <date>.
   6. unconfirm lowers trust with no gate; already pending / confirmed.
   7. rollback writes the old value as pending; other key, unknown row,
      same value are refused or no-ops.
@@ -476,6 +479,51 @@ def test_confirm() -> None:
           "fact_already_confirmed",
           rc == 0 and one_doc(out)["message_code"]["code"]
           == "fact_already_confirmed", out)
+
+    print("    --for-client: the client's own confirmation")
+    run(["unconfirm", "fee_pct", "--reason", "ask the client", "--json"])
+    fee = ["confirm", "fee_pct", "--reason", "client call", "--json"]
+    rc, out, err = run([*fee, "--for-client", " "], secret=True)
+    check("a blank --for-client: client_name_empty",
+          rc == 2 and coded(out) == ("client_name_empty", {}), out)
+    rc, out, err = run(fee, secret=True)
+    op_code = code_of(out)
+    rc, out, err = run([*fee, "--for-client", "Acme"], secret=True)
+    d = one_doc(out)
+    cl_code = code_of(out)
+    check("the client's challenge: the name in the subject and the summary",
+          rc == 2 and d["subject"]["client"] == "Acme"
+          and "client:Acme" in d["error"], d)
+    before = rows()
+    rc, out, err = run([*fee, "--for-client", "Acme", "--code", op_code,
+                        *RELAY], secret=True)
+    check("the operator's code never passes for the client's",
+          op_code == cl_code or (rc == 2 and coded(out)[0]
+                                 == "confirm_code_mismatch"
+                                 and rows() == before), out)
+    rc, out, err = run([*fee, "--code", cl_code, *RELAY], secret=True)
+    check("...nor the client's for the operator's",
+          op_code == cl_code or (rc == 2 and coded(out)[0]
+                                 == "confirm_code_mismatch"
+                                 and rows() == before), out)
+    last = top()
+    rc, out, err = run([*fee, "--for-client", "Acme", "--code", cl_code,
+                        *RELAY], secret=True)
+    operator = f" [operator={human.changed_by('relay')}]"
+    check("the client's code confirms: row and history by client:Acme, the "
+          "relay audit and the operator in the reason",
+          rc == 0 and one_doc(out)["changed_by"] == "client:Acme"
+          and fact("fee_pct")[1:] == (0, f"human_confirmed_{TODAY}",
+                                      "client:Acme")
+          and hist(last) == [("US", "fee_pct", "confirm", "20", "20", 0,
+                              "client call" + AUDIT + operator,
+                              "client:Acme")], (out, hist(last)))
+    rc, out, err = run(["confirm", "fee_pct", "--value", "25", "--reason",
+                        "client call", "--for-client", "Acme", "--json"],
+                       tty=["25"])
+    check("--value --for-client at a terminal: source client:Acme <date>",
+          rc == 0 and fact("fee_pct") == ("25", 0, f"client:Acme {TODAY}",
+                                          "client:Acme"), (out, err))
 
 
 # ---- 6/7 -------------------------------------------------------------------

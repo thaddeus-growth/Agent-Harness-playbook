@@ -5,13 +5,18 @@
   [1] the verb table: a malformed verb, a built-in word, a duplicate or an
       empty table fails at load; load() reads a harness's verbs.py; of_kind,
       targets, match (longest prefix), group, script_args (a shared script
-      gets its sub-verb, a single one none), answers (docstring fallback)
+      gets its sub-verb, a single one none), answers (docstring fallback);
+      examples and keys: tuples, each example starting with the verb's own
+      words, keys without spaces, both in as_dict (cli-prefixed examples)
   [2] help: every verb grouped by kind with what it answers, the built-ins
       and the env chain; `<cli>` alone is usage on stderr, exit 2; a group's
-      --help lists that group; --version; `verbs --json` is the table
+      --help lists that group; --version; `verbs --json` is the table,
+      examples and keys included
   [3] refusals: an unlisted verb (coded, one document under --json, the
       candidates named), no data dir, a relative data dir, a missing
-      script; --help needs no data dir
+      script; --help needs no data dir; a verb's own --help ends with its
+      Examples block and JSON keys line after the script's help (exit 0
+      only; none when the verb declares neither; not on a group's --help)
   [4] forwarding: the first `--` stripped wherever it sits, a second kept;
       flags pass without `--`; the sub-verb of a shared script; the `+ cmd`
       trace on stderr with a --code masked, stdout the child's alone; the
@@ -19,7 +24,9 @@
       the child's env, the process env winning
   [5] through the real CLI (a subprocess): a read verb never creates the
       DB; init, list, pending; the kit's guards read the harness's
-      verbs.py (json contract, boundary patterns)
+      verbs.py (json contract, boundary patterns); `shop facts list
+      --help` ends with its examples, and each example of a read verb run
+      through the CLI returns a document with the keys it declares
   [6] cli.tsv / doctor.tsv: every code emitted, exact params, en + zh
 """
 
@@ -67,7 +74,8 @@ TABLE_SRC = """[Verb(("things", "list"), "multi.py", "read"),
  Verb(("compute", "sales", "deep"), "compute_sales_deep.py", "read"),
  Verb(("import", "codes"), "import_file.py", "ingest"),
  Verb(("notes",), "notes.py", "read", False, False,
-      answers="Notes, no data dir"),
+      answers="Notes, no data dir", examples=("notes x", "notes  --json"),
+      keys=("argv", "script")),
  Verb(("gone",), "missing.py", "read", False, False)]"""
 ECHO_TABLE = eval(TABLE_SRC)
 DRIVER = f'''"""A dispatcher over the echo scripts (kit.cli, as a harness CLI)."""
@@ -142,6 +150,10 @@ def test_table() -> None:
         VerbTableError))
     check("an empty table fails check()",
           isinstance(raises(lambda: verbs.check([])), VerbTableError))
+    check("an example that routes to a longer verb fails check()",
+          "routes to 'a b c'" in str(raises(lambda: verbs.check([
+              Verb(("a", "b"), "a.py", "read", examples=("a b c --json",)),
+              Verb(("a", "b", "c"), "a_b_c.py", "read")]))))
     check("load(): the shop harness's verbs.py, checked, in order",
           len(TABLE) == 23 and TABLE[0].words == ("facts", "init")
           and all(isinstance(x, Verb) for x in TABLE))
@@ -198,6 +210,44 @@ def test_table() -> None:
              "confirms.")
     check("answers: '' for a missing script",
           verbs.answers(Verb(("x",), "nope.py", "read"), SCRIPTS) == "")
+    check("examples / keys default to (); a list is kept as a tuple",
+          v.examples == () and v.keys == ()
+          and Verb(("a",), "x.py", "read", examples=["a --json"],
+                   keys=["rows"]).examples == ("a --json",)
+          and Verb(("a",), "x.py", "read", keys=["rows"]).keys == ("rows",))
+    for label, make in (
+            ("examples as one string",
+             lambda: Verb(("a", "b"), "x.py", "read", examples="a b")),
+            ("an example that is not a string",
+             lambda: Verb(("a",), "x.py", "read", examples=(1,))),
+            ("a blank example",
+             lambda: Verb(("a",), "x.py", "read", examples=("  ",))),
+            ("an example of another verb",
+             lambda: Verb(("a", "b"), "x.py", "read", examples=("a c",))),
+            ("an example with the cli name",
+             lambda: Verb(("a",), "x.py", "read", examples=("shop a",))),
+            ("keys as one string",
+             lambda: Verb(("a",), "x.py", "read", keys="rows")),
+            ("a key with a space",
+             lambda: Verb(("a",), "x.py", "read", keys=("the rows",))),
+            ("an empty key", lambda: Verb(("a",), "x.py", "read", keys=("",)))):
+        check(f"refused at construction: {label}",
+              isinstance(raises(make), VerbTableError))
+    n = ECHO_TABLE[5]
+    check("examples(): whitespace collapsed; help_tail: the Examples block "
+          "(cli-prefixed) and the JSON keys line",
+          verbs.examples(n) == ["notes x", "notes --json"]
+          and verbs.help_tail(n, "shop") == "\nExamples:\n  shop notes x\n"
+          "  shop notes --json\n\nJSON keys: argv, script\n"
+          and verbs.help_tail(ECHO_TABLE[0], "shop") == ""
+          and verbs.help_tail(Verb(("a",), "x.py", "read", keys=("k",)),
+                              "c") == "\nJSON keys: k\n")
+    row = verbs.as_dict(n, "shop")
+    check("as_dict: examples (cli-prefixed) and keys; [] when none",
+          row["examples"] == ["shop notes x", "shop notes --json"]
+          and row["keys"] == ["argv", "script"]
+          and verbs.as_dict(ECHO_TABLE[0], "shop")["examples"] == []
+          and verbs.as_dict(ECHO_TABLE[0], "shop")["keys"] == [], row)
 
 
 # ------------------------------------------------------------------ [2]
@@ -229,7 +279,7 @@ def test_help() -> None:
           and "built-in" not in out, out)
     rc, out, _ = capture(d.main, ["--version"], env=env())
     check("--version: harness and kit versions",
-          rc == 0 and out.startswith("shop-harness ") and "(kit 0.6.0)" in out,
+          rc == 0 and out.startswith("shop-harness ") and "(kit 0.6.1)" in out,
           out)
     rc, out, _ = capture(d.main, ["verbs", "--json"], env=env())
     doc = one_doc(out)
@@ -239,6 +289,14 @@ def test_help() -> None:
           and all(r["kind"] == v.kind and r["script"] == v.script
                   and r["command"] == f"shop {v.command}"
                   for r, v in zip(doc["verbs"], TABLE)), out[:300])
+    fl = next(r for r in doc["verbs"] if r["words"] == ["facts", "list"])
+    check("verbs --json: each verb's examples (cli-prefixed) and JSON keys",
+          fl["examples"] == ["shop facts list --json",
+                             "shop facts list --market US --pending --json"]
+          and fl["keys"] == ["declared_markets", "pending_markets", "facts"]
+          and all(isinstance(r["examples"], list) and isinstance(r["keys"],
+                                                                  list)
+                  for r in doc["verbs"]), fl)
     check("verbs --json: the kinds and the built-ins",
           set(doc["kinds"]) == set(verbs.KINDS)
           and [b["words"] for b in doc["builtins"]] == [["doctor"], ["verbs"]]
@@ -284,6 +342,30 @@ def test_refusals() -> None:
     check("--help reaches the script without a data dir",
           rc == 0 and (one_doc(out) or {}).get("argv") == ["list", "--help"],
           (out, err))
+    rc, out, err = drive(scripts, ["notes", "--help"], env())
+    head, _, tail = out.partition("\nExamples:\n")
+    check("a verb's own --help: the script's help, then its examples "
+          "(cli-prefixed) and JSON keys",
+          rc == 0 and (one_doc(head) or {}).get("argv") == ["--help"]
+          and tail == "  shop notes x\n  shop notes --json\n\n"
+                      "JSON keys: argv, script\n", (out, err))
+    rc, out, err = drive(scripts, ["notes", "--", "-h"], env())
+    check("-h after `--` too", rc == 0 and "\nExamples:\n" in out, out)
+    rc, out, err = drive(scripts, ["notes", "--help"],
+                         env(ECHO_EXIT="3"))
+    check("a script whose --help fails: its exit code, no examples",
+          rc == 3 and "Examples:" not in out, out)
+    rc, out, err = drive(scripts, ["notes", "x"], env())
+    check("no --help: no examples after the document",
+          rc == 0 and "Examples:" not in out and "JSON keys" not in out, out)
+    rc, out, err = drive(scripts, ["things", "list", "--help"], env())
+    check("a verb that declares neither: nothing after the script's help",
+          rc == 0 and out.rstrip().endswith("}") and "Examples" not in out,
+          out)
+    rc, out, err = capture(d.main, ["things", "--help"], env=env())
+    check("a group's --help stays the listing (no examples)",
+          rc == 0 and "Examples" not in out and "shop things list" in out,
+          out)
     rc, out, err = drive(scripts, ["notes", "x"], env())
     check("a verb with needs_data_dir=False runs without one",
           rc == 0 and (one_doc(out) or {}).get("argv") == ["x"], (out, err))
@@ -399,6 +481,21 @@ def test_real_cli() -> None:
     rc, out, err = shop(data, "facts", "list", "--json")
     check("facts list --json (no `--`): one document",
           rc == 0 and one_doc(out)["pending_markets"] == ["US"], out)
+    rc, out, err = shop(data, "facts", "list", "--help")
+    check("`shop facts list --help`: the script's usage, then its examples "
+          "and JSON keys", rc == 0 and out.index("usage:")
+          < out.index("\nExamples:\n  shop facts list --json\n  shop facts "
+                      "list --market US --pending --json\n")
+          and out.endswith("\nJSON keys: declared_markets, pending_markets, "
+                           "facts\n"), (out, err))
+    for v in TABLE:
+        if v.kind != "read" or not v.keys:
+            continue
+        for ex in v.examples:
+            rc, out, err = shop(data, *ex.split())
+            doc = one_doc(out) or {}
+            check(f"the example `shop {ex}` runs and has its JSON keys",
+                  rc == 0 and set(v.keys) <= set(doc), (out, err[-300:]))
     rc, out, err = shop(data, "pending", "--json")
     check("pending --json: the declaration and the fact as asks",
           rc == 0 and len(one_doc(out)["asks"]) == 2, out[:300])

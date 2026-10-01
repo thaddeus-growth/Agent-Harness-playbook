@@ -21,6 +21,7 @@ import io
 import json
 import logging
 import os
+import pwd
 import re
 import shlex
 import socket
@@ -465,13 +466,29 @@ def test_options_that_make_no_sense_stop_it_with_one_line():
         for extra in bad:
             code, out, err = run_serve("--dir", d, "--port", "0", *extra)
             assert code == 2 and out == "" and len(err.strip().splitlines()) == 1, (extra, code, out, err)
-        code, out, err = run_serve("--dir", d, "--port", "0", env={"USER": ""})       # no --user and no $USER
+        code, out, err = run_serve("--dir", d, "--port", "0", "--user", "")         # an empty --user is not "no --user"
         assert code == 2 and len(err.strip().splitlines()) == 1, (code, err)
         assert not os.path.exists(d)                                                # nothing was made by a refused start
     with _t.tmpdir() as root, Srv(root, user="bob") as srv:                       # the good counterpart
         assert say("foot.user", user="bob") in flat(srv.get().text)
-    with _t.tmpdir() as root, Srv(root, user=None, env={"USER": "carol"}) as srv:       # no --user: the login name
-        assert say("foot.user", user="carol") in flat(srv.get().text)
+    me = serve.os_user()
+    assert me == pwd.getpwuid(os.geteuid()).pw_name and me not in ("carol", "mallory")
+    with _t.tmpdir() as root, Srv(root, user=None, env={"USER": "carol", "LOGNAME": "mallory"}) as srv:
+        page = flat(srv.get().text)                                                 # no --user: the OS account, never $USER/$LOGNAME
+        assert say("foot.user", user=me) in page and "carol" not in page and "mallory" not in page, page[-300:]
+    with _t.tmpdir() as root, Srv(root, user=None, env={"USER": ""}) as srv:       # no $USER at all still starts, as the OS account
+        assert say("foot.user", user=me) in flat(srv.get().text)
+
+
+def test_the_os_user_without_a_passwd_entry_is_its_uid():
+    def missing(uid):
+        raise KeyError(uid)
+    real = pwd.getpwuid
+    pwd.getpwuid = missing
+    try:
+        assert serve.os_user() == f"uid:{os.geteuid()}"
+    finally:
+        pwd.getpwuid = real
 
 
 def ipv6_loopback() -> bool:
