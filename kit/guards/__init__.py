@@ -15,6 +15,7 @@ kit.testing.check.
   json_contract.py  one --json document, meta, every message coded
   boundary.py       the core never names an adapter; a consumer only reads
   drift.py          a vendored kit/ or console/ matches its MANIFEST.sha256
+  evals.py          agent evals, the offline half: sound cases, and the forbidden-command pattern generated from the verb table
 
 Every rule is also tried on a planted violation, so a guard cannot pass by
 looking at nothing. This file holds the helpers they share.
