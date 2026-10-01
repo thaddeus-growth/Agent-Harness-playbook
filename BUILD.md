@@ -111,7 +111,7 @@ Only when a story's human step is approve. The integrator builds it; the owner m
 - `SKILL.md` from [templates/SKILL.md](templates/SKILL.md): the description and the scope (read, pending writes, out of scope).
 - `README.md` from [templates/README-operator.md](templates/README-operator.md), and `references/workflows.md` from [templates/workflows.md](templates/workflows.md), plus the domain's own recipes.
 - Every `<<fill: …>>` is written.
-- One eval per rule in SKILL.md. An eval counts only if it fails when its rule is removed. Evals make live model calls, so they run by hand; the result is recorded with the release.
+- One eval per rule in SKILL.md ([templates/evals/README.md](templates/evals/README.md)). An eval counts only if it fails when its rule is removed. Evals make live model calls, so they run by hand; the result is recorded with the release. What needs no model runs on every test run: `kit.guards.evals` checks that each case quotes the rule it tests, carries the forbidden-verbs grader generated from the verb table, and has its ablation row.
 
 ## B9 · Release
 
