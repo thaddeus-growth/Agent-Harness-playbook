@@ -295,6 +295,19 @@ Reading the registry: one row per module with its tier, its consumers as `who:ki
 
 ---
 
+## One client, one workspace
+
+A harness serves many clients; each client is one folder in a clients repository, never inside the harness checkout. *Seen twice:* the SEO harness's `seo-researches` (three sites and a `_method` folder) and the KOL harness's `kol-clients`. `python3 scaffold/new_client.py --harness H --clients C --client ID --title T` writes it:
+
+- `bin/<cli>` pins the data root to `./workspace` (git-ignored: database, raw, backups, the console log, `.env`, and `intake/`, the drop folder for whatever a person collected from the client). One wrapper per client means no session runs against another client's data.
+- `bin/console` is that client's owner console with the harness's gate verbs relayed; `bin/ask` is the agent's side.
+- `CLAUDE.md` is the agent's brief ([template](templates/client/CLAUDE.md)); `reports/` is for people, with one `handoff-YYYY-MM-DD.md` per session ([template](templates/client-handoff.md)).
+- `.claude/settings.json` denies every `gated` verb through the wrapper and hand edits under `workspace/`. Claude Code applies deny rules in every permission mode, so they stop the agent asking; the harness's gate still decides.
+
+**Client work is how the harness learns.** Every client handoff ends with a Distil list: each insight goes to a harness MR, a proposed story or policy, a method question in a `_method` workspace (the harness owner's console, no client data), or is marked client-only. A rule learned on one client stays proposed until a second client confirms it.
+
+---
+
 ## Stories that prove themselves
 
 The owner can't read code, so "approved" and "done" must rest on checks a machine already ran.

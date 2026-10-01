@@ -21,6 +21,7 @@ Split the scan into lenses and give each one to its own agent, so no lens is sta
 2. **The platform's own features and API**: what it already automates, what the API can read and write, rate limits, permissions.
 3. **Method**: how practitioners measure success and set thresholds (minimum data before a call, leading signals).
 4. **Agent patterns**: open-source tools and servers doing the same job for agents, their write actions and guardrails.
+5. **The law, per jurisdiction** (whenever the harness checks or produces copy people will see): the statutes and the regulators' own guidance on disclosure (paid relationships), claims the product may not make (medical, financial, environmental), price and scarcity claims, trial and return wording, origin, and personal data in the exports the harness keeps. Official sources only: the statute database, the regulator's guidelines and published decisions. Its output is a registry of **draft rules**, not prose: one row per rule with its jurisdiction, a pattern, `law_ref`, an official `source` URL and `status: pending` ([`kit/copylint.py`](../kit/copylint.py) runs the `banned` rows; a disclosure is a `required` row; what only a person can judge is a `human` row). A draft rule gives "a person reads this line", never a verdict; the client's counsel confirms rules one by one. Also list which of the client's own brief rules the law puts at risk: the brief can ask creators for exactly the wording the law forbids.
 
 Rules:
 
@@ -32,6 +33,8 @@ Rules:
 - **Read the vendor's product pages, not only its docs index.** Workflow, model and marketplace pages often hold the endpoint list, the parameters and the price; pin the API down with [vendor-api-discovery.md](vendor-api-discovery.md).
 - **Stop a lens** when two new searches in a row surface nothing better than its top three, or at about 20–30 tool calls.
 - **Prices and limits enter as pending facts** with their source and date; code never hard-codes a number read on a web page. A decision names what would change it ("if the gateway accepts `data:` URIs, drop the hosting layer").
+
+*Seen once, in a KOL harness:* the first scan left the law out; the second found that the client's creator brief made disease names required keywords (sleep apnoea, insomnia, a herniated disc) and had no sponsorship disclosure, where both markets fine a medical-efficacy claim for a non-medical product per case and hold the creator liable too. The brand's own sample scripts passed the brief check with nothing flagged until the law was a registry.
 
 *Seen once, in a video-ad harness:* the scan replaced a planned renderer whose licence needed a company licence, found that the target editor's drafts are encrypted on read, and found that the client's "model API" key belonged to a gateway serving the model's open weights as ComfyUI workflows, with a lip-sync workflow the vendor's own API lacked. None of this was in the brief.
 

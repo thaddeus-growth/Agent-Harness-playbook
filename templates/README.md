@@ -40,6 +40,8 @@ The files a new harness starts from. The build workflow, [BUILD.md](../BUILD.md)
 | [owner-review-loop.md](owner-review-loop.md) | B6, B10 | `docs/owner-review-loop.md` | One published page the owner decides on per item; the next session reads the decisions back and logs each change against its note |
 | [outcome-learning.md](outcome-learning.md) | B10 | `docs/winning-factors.md` | Learning from what performed: one factor catalog measured on winners and the rest; the owner defines "winner"; rules stay pending until a variant confirms them |
 | [ROADMAP.md](ROADMAP.md) | all | `docs/ROADMAP.md` | Where things are, how to start on a new machine, dated status, the next turns and what each needs first, backlog and open decisions |
+| [client/CLAUDE.md](client/CLAUDE.md) | B9, every client | `<clients>/<client>/CLAUDE.md` (rendered by `scaffold/new_client.py`) | The agent's brief for one client: the wrapper pinned to its data folder, the first call, the console round, the gate verbs it may not run, the Distil rule |
+| [client-handoff.md](client-handoff.md) | every client session | `<clients>/<client>/reports/handoff-YYYY-MM-DD.md` | What the database can't hold, and the Distil list: each insight tagged harness MR, proposed story, method question or client-only; a rule stays proposed until a second client confirms it |
 | [session-handoff.md](session-handoff.md) | all | `docs/session-handoff.md` (the harness keeps its own `docs/ROADMAP.md`) | Each session closes one turn and leaves the next ready: roadmap status and next turn, changelog, dated feedback copies, memory only for what the repo can't hold |
 | [README-operator.md](README-operator.md) | B8 | `README.md` | Install, configure, daily loop, what needs a human, which command answers which question |
 | [workflows.md](workflows.md) | B8 | `references/workflows.md` | Recipes: the daily check, why a number moved, a client meeting |
@@ -59,6 +61,13 @@ The files a new harness starts from. The build workflow, [BUILD.md](../BUILD.md)
 | `{{env_prefix}}` | The environment prefix, for example `ACME` | `harness.toml` `env_prefix` |
 | `{{owner}}` | The owner's handle, for example `@owner` | the builder owner's answer (B0.6) |
 | `{{repo_home}}` | Where the repository lives | the builder owner's answer (B0.6) |
+| `{{harness_name}}` | The harness's name, in a client brief | `harness.toml` `name`, read by `scaffold/new_client.py` |
+| `{{harness_dir}}` | The harness checkout the client's wrappers run | `new_client.py --harness` |
+| `{{client}}` | The client's folder id, for example `acme-us` | `new_client.py --client` |
+| `{{title}}` | The client's display name | `new_client.py --title` |
+| `{{port}}` | The client console's port | `new_client.py --port` |
+| `{{language}}` | The language the agent replies to the client in | `new_client.py --language` |
+| `{{gate_verbs}}` | The harness's gated verbs, denied through the client's wrapper | the harness's `scripts/verbs.py` (kind `gated`) |
 
 `<<fill: …>>` marks what only the build can write: the skill's description, the domain's verbs and recipes, names in decision rights. The release step refuses a shipped file that still has one.
 
