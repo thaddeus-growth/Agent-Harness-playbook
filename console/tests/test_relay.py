@@ -42,7 +42,8 @@ CH = "confirm_code_required"
 # a scripted harness: answers call n with step n (the last step repeats) and
 # records each call's argv, so a test can say what was and was not run
 CANNED = '''import json, os, sys
-cfg = json.loads(os.environ["CANNED"])
+with open(os.environ["CANNED"]) as f:      # the path of the scripted steps (a file: see Canned)
+    cfg = json.load(f)
 n = sum(1 for _ in open(cfg["log"])) if os.path.exists(cfg["log"]) else 0
 with open(cfg["log"], "a") as f:
     f.write(json.dumps({"argv": sys.argv[1:]}) + "\\n")
@@ -178,7 +179,14 @@ class Canned:
             f.write(CANNED)
         self.log = os.path.join(d, "canned.jsonl")
         self.reset()
-        self.env = dict(os.environ, CANNED=json.dumps({"log": self.log, "steps": list(steps)}))
+        # The steps travel in a file, never in the environment: Linux refuses to start a process whose single
+        # environment string is over 128 KiB (E2BIG), and some steps are 200 000 characters. macOS accepts them,
+        # so the bound is checked here, where it fails on every system.
+        self.steps = os.path.join(d, "canned.json")
+        with open(self.steps, "w") as f:
+            json.dump({"log": self.log, "steps": list(steps)}, f)
+        self.env = dict(os.environ, CANNED=self.steps)
+        assert len(self.env["CANNED"]) < 4096, "the scripted steps must not travel in the environment"
         self.cmd = [sys.executable, self.script]
 
     def run(self, ask, value, **kw) -> dict:

@@ -37,7 +37,7 @@ Three lanes. Every change, value and action belongs to exactly one.
 
 ## The digest
 
-`ask.py digest` renders a round's decision record from the console's log: every ask, what the owner was shown, the answer, who gave it and when, whether it took the suggestion, and where it was applied or why it was withdrawn. The agent never types it. For a console without that verb, `build/digest.py`, run on the console's folder, makes the same record through `ask.py`.
+`ask.py digest` renders a round's decision record from the console's log: every ask, what the owner was shown, the answer, who gave it and when, whether it took the suggestion, and where it was applied or why it was withdrawn. The agent never types it.
 
 - Keep each round's digest in the client's data folder, `$DATA_DIR/build/digest/<date>-round<N>.md`. It may hold client numbers, so never in a code repository.
 - Where the team reads it is asked once, of the builder owner. A teammate who missed the meeting reads the digest, not the chat.

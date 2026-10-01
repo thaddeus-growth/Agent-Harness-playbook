@@ -1,7 +1,8 @@
 """The engine's parts, one at a time: the diff walker and its verdicts, the
 Masker, the refusals (output inside a work tree, a write switch, an unsafe
 name), the frozen copy of a live folder, the case env, the verb table read
-with ast, the pin, and the midnight rule. Each check that guards something
+with ast (a dict, or the list of Verb calls a scaffolded harness holds), the
+pin, and the midnight rule. Each check that guards something
 also runs on an input that must trip it."""
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ import datetime as dt
 import io
 import json
 import os
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -158,6 +160,64 @@ def test_verbs_are_read_from_the_table_with_ast_and_never_imported():
     assert engine.has_verb(["init"], verbs)
     assert not engine.has_verb(["report", "rollup", "--", "--json"], verbs)
     assert not engine.has_verb(["--", "init"], verbs)
+
+
+@contextlib.contextmanager
+def naming(**names):
+    """engine.C (the cases hook) with these names set for the block."""
+    saved = {k: getattr(engine.C, k) for k in names}
+    for k, v in names.items():
+        setattr(engine.C, k, v)
+    try:
+        yield
+    finally:
+        for k, v in saved.items():
+            setattr(engine.C, k, v)
+
+
+KIT_VERBS = ('from kit.verbs import Verb\n\nVERBS = [\n'
+             '    Verb(("facts", "init"), "facts.py", "human", False, answers="Declare the scope"),\n'
+             '    Verb(("facts", "list"), "facts.py", "read"),\n'
+             '    Verb(("pending",), "pending.py", "read"),\n'
+             '    Verb(words=("execute", "apply"), script="execute_actions.py", kind="external"),\n'
+             '    Verb(("test",), "../tests/run.py", "dev", False, False),\n]\n')
+KIT_FILES = {"VERB_FILE": "scripts/verbs.py", "ENTRY": "scripts/tool.py"}
+
+
+def test_verbs_are_also_read_from_the_list_of_verb_calls_a_scaffolded_harness_holds():
+    with _t.tmpdir() as tree:
+        (tree / "scripts").mkdir()
+        (tree / "scripts" / "tool.py").write_text("raise SystemExit('imported')\n")   # the dispatcher holds no table
+        (tree / "scripts" / "verbs.py").write_text(KIT_VERBS)
+        with naming(**KIT_FILES):
+            assert engine.verbs_of(tree) == {("facts", "init"), ("facts", "list"), ("pending",), ("execute", "apply"), ("test",)}
+            (tree / "scripts" / "verbs.py").write_text(KIT_VERBS.replace("VERBS =", "VERBS: list =").replace("[\n", "(\n", 1)
+                                                       .replace("]\n", ")\n"))         # an annotated tuple is a table too
+            assert ("facts", "list") in engine.verbs_of(tree)
+            for bad in ('VERBS = [*OTHER, Verb(("a",), "a.py", "read")]\n',           # an entry that is not a call
+                        'VERBS = [Verb(words, "a.py", "read")]\n',                    # words that are not literal
+                        'VERBS = [Verb(("a", 1), "a.py", "read")]\n',                 # a word that is not a string
+                        'VERBS = [Verb()]\n'):
+                (tree / "scripts" / "verbs.py").write_text(bad)
+                with _t.refused("VERBS", "Verb(words", "line 1"):
+                    engine.verbs_of(tree)                                                  # refused, never skipped
+            (tree / "scripts" / "verbs.py").write_text("OTHER = []\n")
+            with _t.refused("no VERBS", "scripts/verbs.py"):
+                engine.verbs_of(tree)
+        assert engine.C.VERB_FILE == engine.C.ENTRY                                        # the example hook names no other file
+
+
+def test_the_verb_list_the_scaffolder_writes_is_read_whole():
+    skeleton = Path(__file__).resolve().parents[4] / "scaffold" / "skeleton" / "scripts" / "verbs.py"
+    text = skeleton.read_text(encoding="utf-8")
+    declared = re.findall(r"^    Verb\(\(([^)]*)\)", text, re.M)
+    assert len(declared) >= 20, declared                                                   # the real table, not a stub
+    with _t.tmpdir() as tree:
+        (tree / "scripts").mkdir()
+        (tree / "scripts" / "verbs.py").write_text(text.replace("{{name}}", "x-harness").replace("{{cli}}", "x"))
+        with naming(**KIT_FILES):
+            verbs = engine.verbs_of(tree)
+    assert len(verbs) == len(declared) and ("facts", "list") in verbs and ("execute", "apply") in verbs and ("test",) in verbs
 
 
 def test_a_case_sees_the_allowlist_and_never_a_hash_seed():

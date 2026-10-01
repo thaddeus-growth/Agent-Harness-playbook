@@ -7,6 +7,7 @@ from __future__ import annotations
 import copy
 import json
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -87,6 +88,13 @@ def test_every_meeting_has_a_consent_line():
     assert codes(check(d)[1]) == {"no_consent"}
     d = broken(lambda d: d["meeting"].update(consent="  "))
     assert codes(check(d)[1]) == {"no_consent"}
+    d = broken(lambda d: d["meeting"].update(consent=""))
+    assert codes(check(d)[1]) == {"no_consent"}
+    # BUILD.md B0, meeting-intake.md and the schema say: a line that says consent was not given or not recorded
+    # passes (the owner is then asked); only a blank line is refused
+    for said in ("not given", "not recorded", "not given: the client declined at 00:00:12"):
+        d = broken(lambda d: d["meeting"].update(consent=said))
+        assert check(d)[0] == 0, said
 
 
 def test_every_item_has_a_source_a_timestamp_on_a_real_date_or_a_document():
@@ -224,6 +232,95 @@ def test_the_schema_uses_only_keywords_the_checker_understands_and_codes_it_regi
     walk(schema)
     assert named and named <= set(ci.CODES), named - set(ci.CODES)
     assert "$schema" not in json.dumps(schema)            # no link to a host: the repository publishes no outside URL
+
+
+# ------------------------------------------- the organizer prompt's own example --
+
+PROMPT = os.path.join(_t.ROOT, "templates", "meeting-intake.md")
+BUCKETS = (("goals", "goal"), ("words", "word"), ("stories", "story"), ("numbers", "number"), ("questions", "question"))
+# What the prompt and BUILD.md promise, written out here so that loosening the schema is a visible edit of this
+# file and not a change of the expectation: every item has an iid, an audience and a source; a word, a story and a
+# number carry the client's quote; a number its unit and what it applies to.
+ALL_ITEMS = {"iid", "audience", "source"}
+REQUIRED = {
+    "goal": ALL_ITEMS | {"text"},
+    "word": ALL_ITEMS | {"word", "meaning", "quote"},
+    "story": ALL_ITEMS | {"want", "so_that", "done_when", "human_step", "quote"},
+    "number": ALL_ITEMS | {"key", "value", "unit", "applies_to", "quote"},
+    "question": ALL_ITEMS | {"text"},
+}
+MEETING_REQUIRED = {"date", "participants", "consent"}
+TOP_REQUIRED = {"meeting", "goals", "words", "stories", "numbers", "questions"}
+
+
+def prompt_example() -> dict:
+    """The one JSON example of templates/meeting-intake.md (Output shape), parsed."""
+    blocks = re.findall(r"```json\n(.*?)\n```", _t.read(PROMPT), re.S)
+    assert len(blocks) == 1, len(blocks)
+    return json.loads(blocks[0])
+
+
+def filled(node, key=None):
+    """The example with each `…` (what the organizer fills in) replaced by a value the schema accepts."""
+    if isinstance(node, dict):
+        return {k: filled(v, k) for k, v in node.items()}
+    if isinstance(node, list):
+        return [filled(x, key) for x in node]
+    if isinstance(node, str) and "…" in node:
+        return "2026-09-27 00:04:31" if key == "source" else node.replace("…", "x")
+    return node
+
+
+def test_the_example_in_the_organizer_prompt_passes_the_checker_once_its_blanks_are_filled():
+    example = prompt_example()
+    assert "…" in json.dumps(example, ensure_ascii=False)                # there are blanks to fill
+    assert "…" not in json.dumps(filled(example), ensure_ascii=False)
+    code, report = check(filled(example))
+    assert code == 0 and report["ok"] is True and report["items"] == len(BUCKETS), report
+    assert check(example)[0] == 2                                          # as written it is not an intake: the blanks are not values
+
+
+def test_the_schema_requires_what_the_prompt_and_build_md_promise():
+    schema = ci.load_schema()
+    assert set(schema["required"]) == TOP_REQUIRED
+    assert set(schema["properties"]["meeting"]["required"]) == MEETING_REQUIRED
+    for bucket, name in BUCKETS:
+        assert set(schema["$defs"][name]["required"]) == REQUIRED[name], (name, set(schema["$defs"][name]["required"]) ^ REQUIRED[name])
+    assert all(ALL_ITEMS <= REQUIRED[n] for _, n in BUCKETS) and {"quote"} <= REQUIRED["story"] & REQUIRED["number"]
+    prompt, build = _t.read(PROMPT), _t.read(os.path.join(_t.ROOT, "BUILD.md"))
+    for said in ("Give every item an `iid`", "Give every item an `audience`", "A story and a number each carry a `quote`"):
+        assert said in prompt, said                                      # the prose the table above is read from
+    assert "every item has an `iid` that is never reused, an `audience` (`client` or `builder`) and a `source`" in build
+    assert "consent line that says consent was not given or not recorded passes the check" in build
+
+
+def test_the_example_holds_every_key_the_schema_requires_and_none_it_forbids():
+    example, schema = prompt_example(), ci.load_schema()
+    assert set(example) == TOP_REQUIRED and set(example["meeting"]) == MEETING_REQUIRED
+    for bucket, name in BUCKETS:
+        required, allowed = REQUIRED[name], set(schema["$defs"][name]["properties"])
+        assert example[bucket], bucket
+        for it in example[bucket]:
+            assert required <= set(it) <= allowed, (bucket, sorted(required - set(it)), sorted(set(it) - allowed))
+
+
+def test_the_checker_refuses_the_example_when_any_required_key_is_left_out():
+    good = filled(prompt_example())
+    assert check(good)[0] == 0
+    cut = 0
+    for bucket, name in BUCKETS:
+        for key in sorted(REQUIRED[name]):
+            d = copy.deepcopy(good)
+            del d[bucket][0][key]
+            code, report = check(d)
+            assert code == 2 and [q["path"] for q in report["problems"]] == [f"{bucket}[0].{key}"], (bucket, key, report)
+            assert codes(report) <= {"missing_field", "no_source", "no_quote", "no_unit"}, report
+            cut += 1
+    assert cut == sum(len(v) for v in REQUIRED.values()) == 30, cut       # iid, audience and, for a story, quote among them
+    for key in sorted(MEETING_REQUIRED):
+        d = copy.deepcopy(good)
+        del d["meeting"][key]
+        assert check(d)[0] == 2, key
 
 
 if __name__ == "__main__":

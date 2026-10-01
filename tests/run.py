@@ -8,7 +8,8 @@ any argument) as its own process, 4 at a time, 120 s each. The same day-one rule
 as console/tests/run.py: a test file fails unless it exits 0 AND prints a
 `RESULT: N passed` line, so a file that crashes early, prints nothing or runs no
 test is a failure, not a pass. The console, the kit, the scaffolder and build/
-each run their own suite with their own runner.
+each run their own suite with their own runner; `python3 run_all.py` at the
+root runs every suite.
 
     python3 tests/run.py                  all files
     python3 tests/run.py docs             files with "docs" in the name

@@ -8,9 +8,10 @@ The templates themselves are held to the shapes the docs promise: the step
 table, the skill and ssot/stages.agent.tsv list the same steps; the ssot files
 carry the columns the kit reads and the trail every owner row needs; the
 placeholders are the ones explained; harness.toml parses; CODEOWNERS names real
-paths; the CI template's title rule and secret scan match what they should; the
-digest guidance in decision-rights.md names real console verbs. Each check is tried on
-a broken input first, so it cannot pass by looking at nothing.
+paths; the CI templates' title rule and secret scan match what they should and
+every CI job states its rules; the digest guidance in decision-rights.md names real
+console verbs. Each check is tried on a broken input first, so it cannot pass by
+looking at nothing.
 """
 
 from __future__ import annotations
@@ -153,6 +154,42 @@ def test_every_template_is_listed_in_the_templates_readme():
     assert len(files) >= 25, files
     for p in files:
         assert p in listed, f"{p} is not in templates/README.md"
+
+
+ROW = re.compile(r"^\| \[([^\]]+)\]\([^)]*\) \| [^|]* \| `([^`]+)`[^|]*\|", re.M)   # | [template](link) | step | `target` ... | ...
+NUMBER_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"]
+
+
+def rendered_problems(rendered: dict[str, str], readme: str) -> list[str]:
+    """The templates the scaffolder renders that `readme` does not list with the target it renders them to."""
+    rows = dict(ROW.findall(readme))
+    return [f"{t}: README says {rows.get(t)!r}, the scaffolder writes {target!r}"
+            for t, target in rendered.items() if rows.get(t) != target]
+
+
+def test_every_template_the_scaffolder_renders_is_listed_with_the_target_it_writes():
+    sys.path.insert(0, os.path.join(REPO, "scaffold"))
+    import new_harness
+    assert dict(ROW.findall("| [a.md](a.md) | B1 | `docs/a.md` | x |")) == {"a.md": "docs/a.md"}
+    assert rendered_problems({"a.md": "docs/a.md"}, "| [a.md](a.md) | B1 | `docs/b.md` | x |") != []       # the check would notice
+    assert rendered_problems({"a.md": "docs/a.md"}, "") != []
+    assert len(new_harness.RENDERED) >= 15, new_harness.RENDERED
+    assert rendered_problems(new_harness.RENDERED, doc(TREADME)) == []
+
+
+def stated_test_counts(text: str) -> list[str]:
+    """The number of generated tests a doc states, as the word it uses."""
+    return (re.findall(r"generates the (\w+) day-one tests", text) + re.findall(r"the (\w+) tests a new harness starts with", text)
+            + re.findall(r"exactly the (\w+) tests", text))
+
+
+def test_the_docs_say_how_many_tests_a_new_harness_starts_with_and_it_is_the_real_number():
+    assert stated_test_counts("generates the nine day-one tests; the ten tests a new harness starts with") == ["nine", "ten"]
+    want = NUMBER_WORDS[len(GENERATED)]
+    for rel, n in (("README.md", 2), (BUILD, 1)):
+        said = stated_test_counts(doc(rel))
+        assert len(said) == n and set(said) == {want}, (rel, said, want)
+    assert set(stated_test_counts(doc("README.md").replace("the ten tests", "the nine tests"))) != {want}   # a stale count shows
 
 
 def test_every_harness_test_named_is_one_the_scaffolder_generates():
@@ -382,6 +419,50 @@ def ci_pattern(text: str, after_word: str) -> str:
     return re.search(after_word + r"[^']*'([^']+)'", text).group(1)
 
 
+NOT_JOBS = {"stages", "workflow", "default", "variables", "include"}      # a CI file's own top-level keys
+CI_TEMPLATES = ("templates/gitlab-ci.yml", "templates/ci/gitlab-ci.yml")
+# One sample of each credential shape the CI templates name, built in pieces so this file holds no leak itself.
+LEAKS = {"private key": "-" * 5 + "BEGIN RSA PRIVATE " + "KEY-----",
+         "AWS key id": "AKIA" + "Q" * 16,
+         "AWS session key id": "ASIA" + "Q" * 16,
+         "GitHub token": "ghp" + "_" + "a" * 36,
+         "GitLab token": "glpat" + "-" + "a" * 20,
+         "GitHub fine-grained token": "github" + "_pat_" + "a" * 22,
+         "Slack token": "xox" + "b-" + "1" * 12,
+         "sk- key": "sk" + "-" + "a" * 32}
+
+
+def ci_jobs(text: str) -> dict[str, str]:
+    """{job name: its block} of a GitLab CI file: every top-level key that opens a block, except the file's own
+    (stages, workflow, default, variables, include)."""
+    parts = re.split(r"^([^\s#][^:\n]*):[ \t]*$", text, flags=re.M)
+    return {parts[i]: parts[i + 1] for i in range(1, len(parts), 2) if parts[i] not in NOT_JOBS}
+
+
+def jobs_without_rules(text: str) -> list[str]:
+    """The jobs with no `rules:` of their own. A job with none runs only in branch pipelines, never in a merge
+    request's, so a merge request pipeline can turn green with no test run."""
+    return [name for name, body in ci_jobs(text).items() if not re.search(r"^  rules:[ \t]*\n    - ", body, re.M)]
+
+
+def without_rules(text: str, job: str) -> str:
+    """`text` with the `rules:` block of one job cut out."""
+    head, sep, body = text.partition(f"\n{job}:\n")
+    return head + sep + re.sub(r"^  rules:[ \t]*\n(?:    .*\n)+", "", body, count=1, flags=re.M)
+
+
+def fuller_patterns(text: str) -> list[re.Pattern]:
+    """The extended regexes in the secret scan's pattern file (the heredoc of templates/ci/gitlab-ci.yml)."""
+    body = text.split("<<'PATTERNS'\n", 1)[1].split("\n      PATTERNS", 1)[0]
+    lines = [ln.strip() for ln in body.splitlines()]
+    return [re.compile(ln) for ln in lines if ln and not ln.startswith("#")]
+
+
+def leaks_missed(patterns: list[re.Pattern]) -> list[str]:
+    """The names of the LEAKS shapes that none of `patterns` catches."""
+    return [name for name, leak in LEAKS.items() if not any(p.search(leak) for p in patterns)]
+
+
 def test_the_ci_template_gates_on_result_and_its_title_rule_works():
     text = doc("templates/gitlab-ci.yml")
     for job in ("secret scan:", "story id:", "{{cli}} test:"):
@@ -392,12 +473,209 @@ def test_the_ci_template_gates_on_result_and_its_title_rule_works():
         assert title.search(good), good
     for bad in ("fix a typo", "S1 short", "AS01 prefix", "P7 one digit", "Release notes"):
         assert not title.search(bad), bad
-    job = doc("templates/ci/story-id.yml")
-    assert ci_pattern(job, "grep -Eq") == ci_pattern(text, "grep -Eq"), "the two story-id rules differ"
+    job = doc("templates/ci/gitlab-ci.yml")                                      # the fuller CI holds the same rule
+    assert ci_pattern(job, "grep -Eq") == ci_pattern(text, "grep -Eq"), "the two CI templates' story-id rules differ"
+    assert ci_pattern(job.replace("[SP]", "[S]"), "grep -Eq") != ci_pattern(text, "grep -Eq")   # the comparison would notice
     secret = re.compile(ci_pattern(text, "grep -rEn"))
-    for leak in ("-" * 5 + "BEGIN RSA PRIVATE " + "KEY-----", "AKIA" + "Q" * 16, "ghp" + "_" + "a" * 36):
-        assert secret.search(leak), leak[:8]
+    for name, leak in LEAKS.items():
+        assert secret.search(leak), name
     assert not secret.search("a line about a key, AKIA-short and sk-short")
+
+
+def test_every_job_of_both_ci_templates_states_its_rules():
+    sample = "stages: [x]\nworkflow:\n  rules:\n    - if: $A\na:\n  stage: x\n  rules:\n    - when: on_success\n" \
+             "b:\n  stage: x\n  script:\n    - true\n"
+    assert list(ci_jobs(sample)) == ["a", "b"]                                  # the file's own keys are not jobs
+    assert jobs_without_rules(sample) == ["b"]                                  # the check would notice a job with none
+    assert jobs_without_rules(without_rules(sample, "a")) == ["a", "b"]
+    short, fuller = (doc(rel) for rel in CI_TEMPLATES)
+    assert {"secret scan", "story id", "{{cli}} test"} <= set(ci_jobs(short)) and len(ci_jobs(short)) == 3
+    assert {"secret scan", "story id", "test", "zylos check", "adapter smoke"} <= set(ci_jobs(fuller))
+    for rel, text in zip(CI_TEMPLATES, (short, fuller)):
+        assert jobs_without_rules(text) == [], (rel, jobs_without_rules(text))
+        for job in ci_jobs(text):                                                # and each job's rules are what is checked
+            assert jobs_without_rules(without_rules(text, job)) == [job], (rel, job)
+
+
+ZYLOS_CHECK = "node zylos/lib.js check"
+
+
+def zylos_job_problems(job: str, readme: str, pinned: int) -> list[str]:
+    """What is wrong with the `zylos check` job of the fuller CI template: its one script line is the command the adapter's
+    README gives, and its node image is no older than `pinned`, the major the playbook's own CI runs the adapter's tests on."""
+    out = []
+    script = re.search(r"^  script:[ \t]*\n((?:    .*(?:\n|\Z))+)", job, re.M)
+    if not script or [ln.strip() for ln in script[1].splitlines()] != [f"- {ZYLOS_CHECK}"]:
+        out.append(f"its script is not exactly `{ZYLOS_CHECK}`")
+    if f"`{ZYLOS_CHECK}`" not in readme:
+        out.append("the adapter's README does not give that command")
+    image = re.search(r"^  image: node:(\d+)[\w.-]*[ \t]*$", job, re.M)
+    if not image or int(image[1]) < pinned:
+        out.append(f"its image is not node {pinned} or newer")
+    return out
+
+
+def test_the_zylos_check_job_runs_the_command_the_adapter_readme_gives_on_the_node_ci_uses():
+    readme = doc("hosts/zylos/README.md")
+    ci = doc(".github/workflows/ci.yml")
+    pinned = int(re.search(r'^\s+node-version: "(\d+)"$', ci, re.M)[1])
+    job = ci_jobs(doc("templates/ci/gitlab-ci.yml"))["zylos check"]
+    good = "  stage: check\n  image: node:24-alpine\n  script:\n    - node zylos/lib.js check\n"
+    assert zylos_job_problems(good, readme, 24) == []
+    for label, broken in (("a typo in the verb", good.replace("lib.js check", "lib.js chek")),
+                          ("the adapter's path in this repository, not in a harness", good.replace("zylos/lib", "hosts/zylos/lib")),
+                          ("a failure swallowed", good.replace("lib.js check", "lib.js check || true")),
+                          ("a second script line", good + "    - true\n"),
+                          ("no script", good.replace("  script:\n    - node zylos/lib.js check\n", "")),
+                          ("an old node", good.replace("node:24", "node:10")),
+                          ("no node image", good.replace("node:24-alpine", "python:3.12-slim"))):
+        assert zylos_job_problems(broken, readme, 24), label
+    assert zylos_job_problems(good, readme.replace(f"`{ZYLOS_CHECK}`", "`node zylos/lib.js`"), 24)    # the README is what it is held to
+    assert zylos_job_problems(good.replace("node:24", "node:26"), readme, 24) == []                   # newer is fine
+    assert zylos_job_problems(job, readme, pinned) == [], zylos_job_problems(job, readme, pinned)
+
+
+def zylos_copy_problems(text: str) -> list[str]:
+    """What is wrong with the one line of a build doc that tells a harness to copy the Zylos adapter: it sends the builder
+    to the adapter's README and says that what is copied is what that README lists, not the whole folder (its `tests/`
+    and two templates stay behind: the adapter's tests copy console/ and need the playbook around them)."""
+    lines = [ln for ln in text.splitlines() if "hosts/zylos/README.md" in ln and re.search(r"cop(?:y|ies)", ln.lower())]
+    if len(lines) != 1:
+        return [f"{len(lines)} lines tell a harness to copy the adapter, not 1"]
+    line = lines[0]
+    out = []
+    if re.search(r"cop(?:y|ies) \[hosts/zylos/\]\(", line):
+        out.append("it has the harness copy the whole hosts/zylos/ folder")
+    if "tests" not in line:
+        out.append("it does not say the adapter's tests stay behind")
+    return out
+
+
+def test_the_build_docs_have_a_zylos_harness_copy_what_the_adapter_readme_lists_not_its_whole_folder():
+    readme = doc("hosts/zylos/README.md")
+    listed = section(readme, "What a harness copies, and what it writes")
+    assert "lib.js" in listed and "tests/" not in listed.split("A harness **writes**")[0]     # the README's list leaves tests/ out
+    assert "without `tests/` and the two templates" in readme                                # and says so
+    old_build = "- A harness installed on Zylos copies [hosts/zylos/](hosts/zylos/README.md) into itself as `zylos/`, writes x.\n"
+    old_skill = "12. **B9 Release**: On Zylos, copy [hosts/zylos/](../../hosts/zylos/README.md) first (BUILD.md, B9).\n"
+    assert zylos_copy_problems(old_build) and zylos_copy_problems(old_skill)                  # the wording this replaced is refused
+    assert zylos_copy_problems("Copy hosts/zylos/README.md's files.\nAnd hosts/zylos/README.md again: copy.\n")   # two lines, or none
+    assert zylos_copy_problems("nothing about the host") == ["0 lines tell a harness to copy the adapter, not 1"]
+    for rel in (BUILD, SKILL):
+        assert zylos_copy_problems(doc(rel)) == [], (rel, zylos_copy_problems(doc(rel)))
+
+
+def zylos_release_problems(b9: str, internal: list[str]) -> list[str]:
+    """What is wrong with the B9 bullet that has a harness on Zylos bring the adapter into its release: it comes before the
+    tag bullet (the release is `git archive` of the tag and the host installs that archive, so a copy made after the tag is
+    not in it), says so, names [release].must_ship as the guard, and none of what it copies is [release].internal."""
+    bullets = [ln for ln in b9.splitlines() if ln.startswith("- ")]
+    adapter = [i for i, ln in enumerate(bullets) if "hosts/zylos/README.md" in ln]
+    tag = [i for i, ln in enumerate(bullets) if ln.startswith("- Tag `v")]
+    if len(adapter) != 1 or len(tag) != 1:
+        return [f"{len(adapter)} adapter bullets and {len(tag)} tag bullets, not 1 and 1"]
+    out = []
+    if adapter[0] > tag[0]:
+        out.append("the adapter's bullet comes after the tag bullet")
+    for needle in ("before the tag is cut", "[release].must_ship", "zylos/manifest.json", "ecosystem.config.cjs"):
+        if needle not in bullets[adapter[0]]:
+            out.append(f"the adapter's bullet does not say {needle!r}")
+    out += [f"[release].internal lists {p}, which never ships" for p in internal
+            if p.strip("/").split("/")[0] in ("zylos", "ecosystem.config.cjs")]
+    return out
+
+
+def test_the_adapter_is_copied_and_tracked_before_the_tag_so_the_release_archive_has_it():
+    with open(os.path.join(REPO, "templates/harness.toml"), "rb") as f:
+        internal = tomllib.load(f)["release"]["internal"]
+    b9 = section(doc(BUILD), "B9 · Release")
+    assert b9, "BUILD.md has no B9 section"
+    bullets = "- Tag `v1`: x.\n- A harness on Zylos: hosts/zylos/README.md, before the tag is cut, [release].must_ship, zylos/manifest.json, ecosystem.config.cjs.\n"
+    assert zylos_release_problems(bullets, []) == ["the adapter's bullet comes after the tag bullet"]          # the order it had
+    assert zylos_release_problems(bullets.replace("before the tag is cut, ", ""), [])                         # the sentence that says why
+    assert zylos_release_problems("- Tag `v1`: x.\n", [])                                                     # no adapter bullet at all
+    assert zylos_release_problems("- A harness on Zylos: hosts/zylos/README.md.\n- Tag `v1`: x.\n", [])       # no word of the guard
+    assert zylos_release_problems(b9, ["zylos"]) and zylos_release_problems(b9, ["ecosystem.config.cjs"])   # a stale internal entry hides it
+    assert zylos_release_problems(b9, internal) == [], zylos_release_problems(b9, internal)
+
+
+ADAPTER_LIMIT = "Checked against a fake host only"
+
+
+def zylos_claim_problems(readme: str, adapter: str) -> list[str]:
+    """While the adapter's own README says it has only run against a fake host, the top-level README says so too and lists
+    the adapter under 'Still unproven': its reuse table says 'Reuse' and its mermaid map puts it under 'Copy', and nothing
+    else would tell a builder that no real zylos-core has run it."""
+    if ADAPTER_LIMIT not in adapter:
+        return []
+    out = []
+    unproven = re.search(r"Still unproven:([^\n]*)", readme)
+    if not unproven or "Zylos adapter" not in unproven[1]:
+        out.append("'Still unproven' does not list the Zylos adapter")
+    if not re.search(r"adapter itself has only run against a fake host", readme):
+        out.append("the README does not say the adapter has only run against a fake host")
+    return out
+
+
+def test_the_readme_does_not_promise_more_of_the_zylos_adapter_than_the_adapters_own_readme():
+    adapter, readme = doc("hosts/zylos/README.md"), doc("README.md")
+    assert ADAPTER_LIMIT in adapter, "the adapter's README no longer says it is fake-host only: settle the top-level claim"
+    assert zylos_claim_problems(readme, adapter) == [], zylos_claim_problems(readme, adapter)
+    assert zylos_claim_problems(readme.replace("and the Zylos adapter on a real zylos-core", ""), adapter)   # the list that was silent
+    assert zylos_claim_problems(readme.replace("has only run against a fake host", "has run"), adapter)      # the proven-here paragraph
+    assert zylos_claim_problems("Reuse.\n", adapter) and zylos_claim_problems("Reuse.\n", "a real host ran it") == []   # lifted with the limit
+
+
+OLDER_CI = (("`--update-kit` does not rewrite", "says --update-kit leaves .gitlab-ci.yml alone"),
+            ("](templates/gitlab-ci.yml)", "links the template it is a copy of"),
+            ("never runs in a merge request pipeline", "says what a job with no rules does"),
+            ("`- when: on_success`", "gives the rule to add by hand"))
+
+
+def older_ci_problems(build: str) -> list[str]:
+    """What is wrong with the B10 bullet for a harness scaffolded before every CI job stated its rules: --update-kit does not
+    rewrite `.gitlab-ci.yml` (scaffold test [7]), so the owner adds the rules by hand. A job with no rules never runs in a
+    merge request pipeline (GitLab's job rules page), so without them that pipeline can turn green with no test run."""
+    lines = [ln for ln in section(build, "B10 · Operate").splitlines() if "`.gitlab-ci.yml`" in ln]
+    if len(lines) != 1:
+        return [f"{len(lines)} lines of B10 name `.gitlab-ci.yml`, not 1"]
+    return [f"the line {why}" for need, why in OLDER_CI if need not in lines[0]]
+
+
+def test_build_md_tells_a_harness_with_an_older_ci_file_to_add_the_rules_by_hand():
+    build = doc(BUILD)
+    assert older_ci_problems(build) == [], older_ci_problems(build)
+    for need, why in OLDER_CI:                                                   # each part of the line is held
+        assert older_ci_problems(build.replace(need, "x")) == [f"the line {why}"], need
+    assert older_ci_problems(section(build, "B10 · Operate")) == ["0 lines of B10 name `.gitlab-ci.yml`, not 1"]   # no section, no line
+    cut = "\n".join(ln for ln in build.splitlines() if "`--update-kit` does not rewrite" not in ln)
+    assert older_ci_problems(cut) == ["0 lines of B10 name `.gitlab-ci.yml`, not 1"]
+    assert "rules:" in doc(TREADME) and "BUILD.md, B10" in doc(TREADME)        # the templates README points there too
+
+
+def test_the_meeting_source_tag_has_one_spelling_in_the_docs_that_give_it():
+    tags = lambda text: set(re.findall(r"[a-z_]*meeting_<date>", text))        # noqa: E731
+    assert tags("--source meeting_<date> and client_meeting_<date>") == {"meeting_<date>", "client_meeting_<date>"}   # the check sees two
+    found = set()
+    for rel in (BUILD, "templates/meeting-intake.md", "templates/workflows.md"):
+        found |= tags(doc(rel))
+    assert found == {"client_meeting_<date>"}, found
+
+
+def test_the_fuller_ci_secret_scan_catches_every_shape_the_short_form_does():
+    short = re.compile(ci_pattern(doc("templates/gitlab-ci.yml"), "grep -rEn"))
+    text = doc("templates/ci/gitlab-ci.yml")
+    fuller = fuller_patterns(text)
+    assert [name for name, leak in LEAKS.items() if not short.search(leak)] == []
+    assert leaks_missed(fuller) == []
+    for name, line in (("Slack token", "      xox[abpr]-[0-9A-Za-z-]{10,}\n"),
+                       ("sk- key", "      (^|[^0-9A-Za-z])sk-[0-9A-Za-z_-]{32,}\n"),
+                       ("GitLab token", "      glpat-[0-9A-Za-z_-]{20}\n"),
+                       ("GitHub fine-grained token", "      github_pat_[0-9A-Za-z_]{22,}\n")):
+        assert line in text, line
+        assert leaks_missed(fuller_patterns(text.replace(line, ""))) == [name], name     # the check would notice a pattern dropped
+    for fine in ("a line about a key, AKIA-short and sk-short", "task-" + "a" * 40, "risk-" + "b" * 40):
+        assert not any(p.search(fine) for p in fuller), fine                     # sk- has a left boundary here
 
 
 def test_the_skill_template_has_its_frontmatter_and_three_scopes():
@@ -474,7 +752,7 @@ def test_the_console_verbs_and_flags_the_build_docs_use_are_real():
 def test_every_build_tool_command_the_docs_print_uses_real_flags():
     assert TOOL.findall("run `python3 build/x.py --a B --c` now") == [("build/x.py", " --a B --c")]
     runs = [(rel, m) for rel in (BUILD, SKILL, "templates/decision-rights.md") for m in TOOL.findall(doc(rel))]
-    assert len(runs) >= 5, runs
+    assert len(runs) >= 4, runs
     known = {}
     for rel, (script, rest) in runs:
         if not os.path.exists(os.path.join(REPO, script)):

@@ -20,7 +20,7 @@ Worktrees and temp folders are removed afterwards, also on a failure or a SIGTER
 ## Adopt it
 
 1. Copy `engine.py` and `cases.py` to `tests/golden/` in your harness. It is a tool, not a test: keep it out of your test runner's glob and out of every release.
-2. Give your harness the four seams `cases.py`'s docstring lists: one dispatcher with a verb table (a dict keyed by tuples of words), every clock read through one function, every child script started through one function, and the data folder named by one env variable.
+2. Give your harness the four seams `cases.py`'s docstring lists: one dispatcher with a verb table (a dict keyed by tuples of words, or a list of `Verb(words, ...)` calls like the kit's `scripts/verbs.py`), every clock read through one function, every child script started through one function, and the data folder named by one env variable. A harness made by `scaffold/new_harness.py` already has all four (the clock is `kit.dates.now`, the runner `kit.runner.script_cmd`, the data folder `<PREFIX>_DATA_DIR`); `cases.py`'s docstring has the values to set for it.
 3. Fill `cases.py`: the names at its top, then `seed`, `plan`, `learn` and `pages`. Every value there fits the fake harness in `tests/fake_harness.py`; replace each with yours. List your harness's dependencies in `engine.py`'s PEP 723 header: every case runs in its interpreter.
 4. Run the self-checks below, then commit it, before the first refactor.
 
@@ -81,6 +81,8 @@ Cases run one at a time: a database opened for writing makes parallel runs flaky
 python3 templates/tests/golden/tests/run.py          # every tests/test_*.py
 python3 templates/tests/golden/tests/run.py compare  # only files with "compare" in the name
 ```
+
+The runner is the kit's test gate (`kit/testing/run_tests.py`), imported from the playbook's root: run it inside the playbook checkout. A harness copies `engine.py` and `cases.py` only (Adopt it, step 1), not these tests.
 
 They build a fake harness as a git repository with a few commits and run the engine on it as an operator would: HEAD vs HEAD twice gives 0 with the hash seed unpinned, a set-order bug differs, a comment-only commit gives 0 even strict, a changed registry default is caught, output inside a work tree is refused. Each guard above was also broken, one at a time, in a copy of the module; its test failed every time.
 
