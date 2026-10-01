@@ -229,7 +229,7 @@ def test_help() -> None:
           and "built-in" not in out, out)
     rc, out, _ = capture(d.main, ["--version"], env=env())
     check("--version: harness and kit versions",
-          rc == 0 and out.startswith("shop-harness ") and "(kit 0.6.0)" in out,
+          rc == 0 and out.startswith("shop-harness ") and "(kit 0.7.0)" in out,
           out)
     rc, out, _ = capture(d.main, ["verbs", "--json"], env=env())
     doc = one_doc(out)
