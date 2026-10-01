@@ -6,7 +6,7 @@ Context windows end mid-project. Each session closes one turn of the build loop 
 
 | File | Holds | Written by |
 | --- | --- | --- |
-| `docs/ROADMAP.md` in the harness | The loop diagram, where things are, the **session start checklist**, **status** (dated), **next sessions** (one turn each, with what is needed from the owner), backlog, when to use sub-agents | the session, at its end |
+| `docs/ROADMAP.md` in the harness ([template](ROADMAP.md)) | The loop diagram, where things are, the **session start checklist**, **status** (dated), **next sessions** (one turn each, with what is needed from the owner), backlog, when to use sub-agents | the session, at its end |
 | `<project>/CHANGELOG.md` | Each plan revision: what changed and which owner note or decision asked for it | the session, as it applies feedback |
 | `<project>/feedback/<date>.json` | A dated copy of the owner's decisions read from the review page | the session, at its start |
 | The agent's memory notes | Only what isn't in the repo: the owner's preferences, account facts (which token is which group), links (review page URL) | the session, when learned |
