@@ -23,7 +23,7 @@ What it guards:
     mention must say the fact's value; a fact with no pattern is not
     lintable here and a retired one never fires. Values are compared
     after normalising: NFKC (full-width digits), CJK numerals as digits
-    (一 -> 1, 两 -> 2, 十二 -> 12, 二十 -> 20, 一〇二 -> 102), and two
+    (一 -> 1, 两 / 兩 -> 2, 十二 -> 12, 二十 -> 20, 一〇二 -> 102), and two
     numbers are equal when their values are (3 == 3.0).
   * A finding is {severity, rule, where, term, confirmed, law, message}.
     A rule whose status is not `confirmed` still fires, but the finding
@@ -55,7 +55,7 @@ SEVERITIES = ("error", "warn")
 STATUSES = ("pending", "confirmed", "retired")
 ANY_CATEGORY = ("all", "*")
 
-CJK_DIGITS = {"零": 0, "〇": 0, "一": 1, "二": 2, "两": 2, "三": 3, "四": 4,
+CJK_DIGITS = {"零": 0, "〇": 0, "一": 1, "二": 2, "两": 2, "兩": 2, "三": 3, "四": 4,
               "五": 5, "六": 6, "七": 7, "八": 8, "九": 9}
 CJK_UNITS = {"十": 10, "百": 100, "千": 1000}
 _CJK_RUN = re.compile("[" + "".join(CJK_DIGITS) + "".join(CJK_UNITS) + "]+")

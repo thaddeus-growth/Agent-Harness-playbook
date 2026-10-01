@@ -165,10 +165,11 @@ def test_broken_rules() -> None:
 
 def test_numerals() -> None:
     print("[5] CJK numerals normalised")
-    for raw, want in [("一", "1"), ("两", "2"), ("三", "3"), ("十", "10"),
+    for raw, want in [("一", "1"), ("两", "2"), ("兩", "2"), ("三", "3"), ("十", "10"),
                       ("十二", "12"), ("二十", "20"), ("二十三", "23"),
                       ("一百零五", "105"), ("一〇二", "102"),
-                      ("３", "3"), (" 3 ", "3"), ("每天三次", "每天3次")]:
+                      ("３", "3"), (" 3 ", "3"), ("每天三次", "每天3次"),
+                      ("兩年保固", "2年保固"), ("十年保固", "10年保固")]:
         check(f"{raw!r} -> {want!r}", copylint.norm(raw) == want,
               copylint.norm(raw))
     dose = {"d": {"value": "3", "status": "confirmed",

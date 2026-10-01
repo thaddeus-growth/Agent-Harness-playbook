@@ -793,7 +793,7 @@ def leaks(rel: str, text: str, binary: bool = False) -> list[str]:
     if not binary and not rel.startswith("console/tests/"):
         out += [f"an address in {rel}: {m}" for m in ADDRESS.findall(text)]
         out += [f"a host in {rel}: {h}" for h in LINKED.findall(text)
-                if h not in ("localhost", "127.0.0.1") and h != "example.com" and not h.endswith(".example.com")]
+                if h not in ("localhost", "127.0.0.1") and h != "example.com" and not h.endswith((".example.com", ".test"))]  # RFC 2606 names
     return out
 
 
@@ -839,6 +839,7 @@ def test_the_repository_ignores_what_only_a_console_or_an_interpreter_leaves():
 def test_nothing_that_must_not_be_public_is_in_the_repository():
     assert leaks("a.md", "at /Us" + "ers/x/y") and leaks("a.md", "key sk-" + "a" * 20) and leaks("a.md", "mail me@nowhere.invalid")
     assert leaks("a.md", "see https://nowhere.invalid/x") and not leaks("a.md", "https://console.example.com and http://127.0.0.1:1/")
+    assert not leaks("kit/tests/t.py", "https://api.example.test/v1") and leaks("a.md", "https://example.testing.io/x")
     assert not leaks("console/tests/t.py", "a@b.co")
     assert leaks("x.pyc", "\x00\x00/private/" + "tmp/run/core.py\x00", binary=True)          # bytecode holds the path it was built from
     assert not leaks("x.png", "\x89PNG a@b.co https://nowhere.invalid", binary=True)

@@ -66,9 +66,9 @@ def main() -> int:
     check("… and hashable (a cache may key on it); equal loads are equal",
           hash(cfg) == hash(config.load(_shop.SHOP))
           and cfg == config.load(_shop.SHOP))
-    check("kit.__version__ = kit/VERSION = 0.6.1",
+    check("kit.__version__ = kit/VERSION = 0.6.2",
           kit.__version__ == (_shop.KIT / "VERSION").read_text().strip()
-          == "0.6.1")
+          == "0.6.2")
 
     print("\n[2] defaults of the optional keys")
     b = config.load(harness(MINIMAL))
