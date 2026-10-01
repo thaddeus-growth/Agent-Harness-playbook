@@ -28,6 +28,14 @@ What it guards:
     used code is stale; the version is checked again under the write
     lock, so a value that changed while the human was answering is
     refused (decision_changed_meanwhile), not overwritten.
+  * `confirm --for-client NAME`: the client's own confirmation, passed
+    through the operator's channel (kit.human.client_name): the name is in
+    the code's subject (an operator's code never passes for it, nor back),
+    the rows and history the confirm itself writes record
+    `client:<name>`, a typed value's source is `client:<name> <date>`, and
+    the reason keeps who passed the gate (` [operator=…]`). A hook's
+    `apply` keeps its (con, reason=, channel=) signature, so what it writes
+    is recorded under the channel's OS account, with that reason.
   * `withdraw` takes back pending values (anyone: it only lowers trust):
     all or nothing, one `withdraw` history row each (old = the pending
     value, new = the value still in force); the value in force is
@@ -217,13 +225,14 @@ def set_history(con: sqlite3.Connection, market: str, entity_type: str,
 
 def _history(con: sqlite3.Connection, market: str, entity_type: str,
              entity_id: str, key: str, action: str, old: str | None,
-             new: str | None, status: str, reason: str, channel: str) -> None:
+             new: str | None, status: str, reason: str, channel: str,
+             client: str | None = None) -> None:
     con.execute(
         f"INSERT INTO {HISTORY} (market, entity_type, entity_id, key, action, "
         f"old_value, new_value, status, reason, changed_by, at) "
         f"VALUES (?,?,?,?,?,?,?,?,?,?,?)",
         (market, entity_type, entity_id, key, action, old, new, status, reason,
-         human.changed_by(channel), human.now()))
+         human.changed_by(channel, client), human.now()))
 
 
 def _channel(channel: str) -> str:
@@ -234,14 +243,17 @@ def _channel(channel: str) -> str:
 
 def write_set(con: sqlite3.Connection, market: str, entity_type: str,
               entity_id: str, key: str, value: str, *, source: str,
-              reason: str, channel: str, in_force: bool = False) -> None:
+              reason: str, channel: str, in_force: bool = False,
+              client: str | None = None) -> None:
     """Write `value` as the decision's value, pending or (in_force) in force,
     and one `set` history row (old = the previous value). For hooks: call
-    it inside the confirm's write, with the reason and channel it gave."""
+    it inside the confirm's write, with the reason and channel it gave.
+    `client` (the confirm's --for-client, a gated write only): the author
+    is `client:<name>`."""
     _channel(channel)
     old = row(con, market, entity_type, entity_id, key)
     status, now, who = (CONFIRMED if in_force else PENDING), human.now(), \
-        human.changed_by(channel)
+        human.changed_by(channel, client)
     in_force_value = value if in_force else (old or {}).get("confirmed_value")
     if old is None:
         con.execute(
@@ -258,14 +270,15 @@ def write_set(con: sqlite3.Connection, market: str, entity_type: str,
             (value, status, in_force_value, source, now, who, market,
              entity_type, entity_id, key))
     _history(con, market, entity_type, entity_id, key, SET,
-             old["value"] if old else None, value, status, reason, channel)
+             old["value"] if old else None, value, status, reason, channel,
+             client)
 
 
 def write_confirm(con: sqlite3.Connection, market: str, entity_type: str,
                   entity_id: str, key: str, *, reason: str,
-                  channel: str) -> None:
+                  channel: str, client: str | None = None) -> None:
     """Put the decision's stored value in force and append its `confirm`
-    history row. For hooks, like write_set."""
+    history row. For hooks, like write_set (`client` too)."""
     _channel(channel)
     r = row(con, market, entity_type, entity_id, key)
     if r is None:
@@ -274,10 +287,10 @@ def write_confirm(con: sqlite3.Connection, market: str, entity_type: str,
     con.execute(
         f"UPDATE {TABLE} SET status=?, confirmed_value=value, updated_at=?, "
         f"changed_by=? WHERE market=? AND entity_type=? AND entity_id=? AND "
-        f"key=?", (CONFIRMED, human.now(), human.changed_by(channel), market,
-                   entity_type, entity_id, key))
+        f"key=?", (CONFIRMED, human.now(), human.changed_by(channel, client),
+                   market, entity_type, entity_id, key))
     _history(con, market, entity_type, entity_id, key, CONFIRM, r["value"],
-             r["value"], CONFIRMED, reason, channel)
+             r["value"], CONFIRMED, reason, channel, client)
 
 
 def _write_withdraw(con: sqlite3.Connection, r: dict, reason: str) -> None:
@@ -354,13 +367,15 @@ def _version(con: sqlite3.Connection, m: str, et: str, key: str,
 def plan_confirm(con: sqlite3.Connection, market: str, entity_type: str,
                  entity_ids: Iterable[str], key: str, *,
                  registry: DecisionRegistry, value: str | None = None,
-                 on_confirm: OnConfirm | None = None) -> dict:
+                 on_confirm: OnConfirm | None = None,
+                 client: str | None = None) -> dict:
     """The challenge `confirm` runs for these ids, or its refusal.
 
     {"rows", "new", "already"} and, unless the one id is already confirmed
     with that value (already=True: nothing to do), {"follows", "items",
     "version", "subject", "what", "prompt", "expected"}. `subject` is what
-    a relayed code is bound to (kit.human.subject); `expected` what a
+    a relayed code is bound to (kit.human.subject, with `client` when it
+    is a client's own confirmation: --for-client); `expected` what a
     human retypes."""
     m, et = market, entity_type
     eids = list(dict.fromkeys(entity_ids))
@@ -416,10 +431,11 @@ def plan_confirm(con: sqlite3.Connection, market: str, entity_type: str,
                   + f"\n  type '{CONFIRM_WORD}' to confirm these "
                     f"{len(eids)} decisions: ")
         expected = CONFIRM_WORD
+    prompt = human.client_prompt(client) + prompt
     return {"rows": rows, "new": new, "already": False, "follows": follows,
             "items": items, "version": version,
             "subject": human.subject("decisions confirm", m, et, items,
-                                     version),
+                                     version, client),
             "what": what, "prompt": prompt, "expected": expected}
 
 
@@ -492,9 +508,10 @@ def cmd_set(con: sqlite3.Connection, a: argparse.Namespace, ctx: dict) -> Any:
 def cmd_confirm(con: sqlite3.Connection, a: argparse.Namespace,
                 ctx: dict) -> Any:
     m, et, key, spec = ctx["market"], a.entity_type, a.key, ctx["spec"]
+    client = human.client_name(a.for_client)
     plan = plan_confirm(con, m, et, a.entity_id, key,
                         registry=ctx["registry"], value=a.value,
-                        on_confirm=ctx["on_confirm"])
+                        on_confirm=ctx["on_confirm"], client=client)
     rows, new = plan["rows"], plan["new"]
     if plan["already"]:
         (eid, r), = rows.items()
@@ -505,7 +522,8 @@ def cmd_confirm(con: sqlite3.Connection, a: argparse.Namespace,
         return None
     channel = human.confirm(plan["what"], plan["prompt"], plan["expected"],
                             subj=plan["subject"], code=a.code)
-    why = ctx["why"] + human.relay_audit(channel, a.relay_user, a.relay_at)
+    why = (ctx["why"] + human.relay_audit(channel, a.relay_user, a.relay_at)
+           + human.client_audit(channel, client))
     follows, extras = plan["follows"], {}
     with db.keep_human_rows(spec, con):
         if _version(con, m, et, key, follows) != plan["version"]:
@@ -519,9 +537,10 @@ def cmd_confirm(con: sqlite3.Connection, a: argparse.Namespace,
             v = new[eid]
             if r is None or v != r["value"]:
                 write_set(con, m, et, eid, key, v,
-                          source=human.typed_source(), reason=why,
-                          channel=channel, in_force=True)
-            write_confirm(con, m, et, eid, key, reason=why, channel=channel)
+                          source=human.typed_source(client), reason=why,
+                          channel=channel, in_force=True, client=client)
+            write_confirm(con, m, et, eid, key, reason=why, channel=channel,
+                          client=client)
             f = follows[eid]
             if f and f.apply:
                 extras[eid] = list(f.apply(con, reason=why, channel=channel)
@@ -534,7 +553,8 @@ def cmd_confirm(con: sqlite3.Connection, a: argparse.Namespace,
                     if (r2 := row(con, m, et, eid, k)) is not None]
         return {"confirmed": listed("confirmed", (key,)),
                 "recorded": listed("recorded", ()),
-                "changed_by": human.changed_by(channel), "reason": why}
+                "changed_by": human.changed_by(channel, client),
+                "reason": why}
     for eid, r in rows.items():
         was = "" if r and r["value"] == new[eid] else \
             f"{(r and r['value'])!r} → "
@@ -676,7 +696,7 @@ def _parser(registry: DecisionRegistry) -> argparse.ArgumentParser:
     target(sp, many=True)
     sp.add_argument("--value", help="exactly one id: the value the human "
                     "confirms instead of the pending one (or with none)")
-    human.add_gate_args(sp)
+    human.add_gate_args(sp, for_client=True)
     sp = sub.add_parser("withdraw", help="take back PENDING values (anyone: "
                         "it only lowers trust); all or nothing")
     target(sp, many=True)
