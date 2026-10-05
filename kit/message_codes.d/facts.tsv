@@ -29,3 +29,4 @@ fact_rollback_nothing	key,market,value,id	{key} [{market}] is already {value} (h
 fact_init_done	market,recorded,declaration	Onboarding of market {market} done: {recorded} fact(s) recorded; the market declaration is {declaration}	市场 {market} 设置完成：记录了 {recorded} 项；市场声明的状态：{declaration}
 fact_restore_nothing	path	Nothing to restore: this database already holds everything in {path}	无需恢复：数据库里已经有 {path} 中的全部内容
 fact_restored	tables	Restored from the backup: {tables} (rows added or changed, history rows appended, per table)	已从备份恢复：{tables}（每张表新增或修改的行数，以及追加的历史记录数）
+fact_set_confirmed	key,market,value,new,action	{key} [{market}] = {value} was confirmed by a person; {action} does not replace it with {new}. Nothing was written. To change it: unconfirm it first (recorded), or have a person confirm the new value	{key}（{market}）= {value} 已由本人确认，{action} 不会把它改成 {new}。未写入任何内容。如需修改：先改回待确认（会留记录），或由本人确认新值

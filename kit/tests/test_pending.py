@@ -359,7 +359,9 @@ def test_asks_and_relay() -> None:
 
 def test_no_gate() -> None:
     print("[4] no gate where the relayed call cannot reach the row")
-    fset("unit_cost", "5")
+    capture(lambda a: facts.main(a, spec=SPEC, keys=KEYS, thresholds=TH),
+            ["unconfirm", "unit_cost", "--reason", "new invoice"], env=env())
+    fset("unit_cost", "5")          # a confirmed value is never set over
     dset("product", "SKU-1", "floor_price", "3")
     with closing(sqlite3.connect(DB)) as c:        # a second market waits
         c.execute("INSERT INTO client_facts (market, key, value, "
