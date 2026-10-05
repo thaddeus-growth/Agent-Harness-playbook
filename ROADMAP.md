@@ -46,6 +46,8 @@ Harnesses adopt the kit, learn what is shared and what is not, and the lesson co
 | 3 | Selective vendoring: a harness takes only the tiers it needs (breaking) | turn 2 done, owner go-ahead, a quiet week for the short-video harness | #19 |
 | 4 | Cut the README to about 2,000 words; split console, adapter and scaffold from the guide | decisions 2 and 3 below | #24 |
 
+A proposed restructure that reorders turns 2 to 4 (one kit version, then packs and selective vendoring, then docs) is in [RESTRUCTURE.md](RESTRUCTURE.md); it waits on the owner's decisions there.
+
 ## Backlog
 
 - The scaffold sets up Zylos itself: vendors the adapter, writes the manifest, passes `node zylos/lib.js check` (#25)
