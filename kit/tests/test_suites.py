@@ -6,7 +6,8 @@ each on a planted violation, so no suite can pass by looking at nothing.
   [1] every suite is green on the fresh harness (markets HK, TW)
   [2] run_tests: tests/run.py replaced by something else
   [3] ssot: an owner row with no agent sibling; a stage signed before the
-      step it comes after
+      step it comes after; an agent-only row asked is green with its ask,
+      caught without one
   [4] layering: a compute importing the writer
   [4b] clock: a script that reads datetime.now(), one that binds
       `from kit.dates import now`, a vendored clock that reads it twice
@@ -161,6 +162,17 @@ def main() -> int:
         "\t\t\tci:42"))
     caught("a stage signed before a step it comes after", suites.ssot(root),
            "no stage is signed before")
+    undo()
+    row = "S90\t{}\tagent:2026-01-01\t{}\t\t\t\t\t\t\tan idea\n"
+    undo = planted(root, "ssot/user-stories.agent.tsv",
+                   append=row.format("asked", "story-s90"))
+    check("an agent-only row asked, with its ask, is green",
+          not failing(suites.ssot(root)), failing(suites.ssot(root)))
+    undo()
+    undo = planted(root, "ssot/user-stories.agent.tsv",
+                   append=row.format("asked", ""))
+    caught("an agent-only row asked with no ask", suites.ssot(root),
+           "every owner row names its decided answer")
     undo()
 
     print("\n[4] layering")
