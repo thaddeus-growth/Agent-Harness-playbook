@@ -16,6 +16,7 @@ Adapter (TOML):
     SEOH_WORKSPACE = "{tmp}"
 
     [facts]                               # check C1
+    values = ["…", "…"]                   # optional: the human's and the agent's {value}
     setup = [ [argv…], {argv = […], stdin = "…"} ]   # once, in a fresh {tmp}
     human = [ … ]                         # steps that set value {value} AND confirm it
     agent = [ … ]                         # steps that set {value} as an agent (exit code ignored)
@@ -24,13 +25,18 @@ Adapter (TOML):
     [doctor]                              # check C2
     argv = [argv…]                        # run in a fresh, unconfirmed {tmp}
 
-A step is an argv list, or a table {argv, stdin}. {tmp}, {root}, {value} are filled in.
+A step is an argv list, or a table {argv, stdin} or {argv, tty}. {tmp}, {root}, {value} are filled in.
+`tty` runs argv on a terminal and types its answer once argv has prompted and gone quiet: a
+human at the keyboard, for a harness whose confirm reads /dev/tty (POSIX only). `values`
+replaces the default strings for a harness whose fact is typed (a number, say).
 Exit 0 when every check the adapter has passed; a missing section is a skip, said out loud.
 """
 
 from __future__ import annotations
 
+import os
 import re
+import select
 import subprocess
 import sys
 import tempfile
@@ -39,7 +45,7 @@ from pathlib import Path
 
 sys.dont_write_bytecode = True
 TIMEOUT_S = 120
-HUMAN, AGENT = "HUMAN-VALUE-1", "AGENT-VALUE-2"
+DEFAULT_VALUES = ("HUMAN-VALUE-1", "AGENT-VALUE-2")
 FIX_MARK = re.compile(r"->|→")
 WARN = re.compile(r"^\s*(?:⚠\s*)?WARNING\b")  # a warning line starts with the word; a "3 warning(s)" summary does not
 
@@ -50,7 +56,36 @@ def fill(s: str, **kw: str) -> str:
     return s
 
 
+def run_on_tty(argv: list[str], answer: str, env: dict, cwd: str) -> subprocess.CompletedProcess:
+    """argv on a pty; `answer` + newline typed after its first output and a quiet spell."""
+    import pty
+    pid, fd = pty.fork()
+    if pid == 0:
+        os.chdir(cwd)
+        os.execvpe(argv[0], argv, env)
+    out, sent = b"", False
+    while True:
+        ready, _, _ = select.select([fd], [], [], 0.5)
+        if not ready:
+            if out and not sent:
+                os.write(fd, answer.encode() + b"\n")
+                sent = True
+            continue
+        try:
+            chunk = os.read(fd, 4096)
+        except OSError:
+            break
+        if not chunk:
+            break
+        out += chunk
+    code = os.waitstatus_to_exitcode(os.waitpid(pid, 0)[1])
+    text = out.decode(errors="replace")
+    return subprocess.CompletedProcess(argv, code, text, text)
+
+
 def run_step(step, env: dict, cwd: str, **kw: str) -> subprocess.CompletedProcess:
+    if isinstance(step, dict) and "tty" in step:
+        return run_on_tty([fill(a, **kw) for a in step["argv"]], fill(step["tty"], **kw), env, cwd)
     argv, stdin = (step["argv"], step.get("stdin")) if isinstance(step, dict) else (step, None)
     return subprocess.run([fill(a, **kw) for a in argv], cwd=cwd, env=env, input=fill(stdin, **kw) if stdin else "",
                           capture_output=True, text=True, timeout=TIMEOUT_S)
@@ -65,6 +100,7 @@ def scene(cfg: dict, root: str, tmp: str) -> tuple[dict, str]:
 def c1_confirmed_is_not_overwritten(cfg: dict, root: str) -> str | None:
     """INVARIANTS I3: an agent write never changes a value a human confirmed. None = pass, else why not."""
     f = cfg["facts"]
+    HUMAN, AGENT = f.get("values", DEFAULT_VALUES)
     with tempfile.TemporaryDirectory() as tmp:
         env, cwd = scene(cfg, root, tmp)
         for step in f.get("setup", []):

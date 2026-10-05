@@ -7,11 +7,15 @@ cwd = "{root}"
 PPC_DATA_DIR = "{tmp}"
 
 [facts]
-# init is the only way a market enters the DB; it asks market, cogs, cap, source on stdin.
-setup = [{argv = ["uv", "run", "scripts/ppc.py", "facts", "init"], stdin = "US\n0.2\n500\nowner_conformance_2026-10-05\n"}]
-human = [["uv", "run", "scripts/ppc.py", "facts", "set", "cogs_per_unit_usd", "{value}", "--market", "US", "--klass", "②", "--type", "scalar", "--source", "owner_conformance_2026-10-05"],
-         ["uv", "run", "scripts/ppc.py", "facts", "confirm", "cogs_per_unit_usd", "--market", "US"]]
-agent = [["uv", "run", "scripts/ppc.py", "facts", "set", "cogs_per_unit_usd", "{value}", "--market", "US", "--klass", "②", "--type", "scalar", "--source", "agent_conformance_2026-10-05"]]
+# every ppc fact key is a number (its #139), so the default string values would be refused as input.
+values = ["0.31", "0.77"]
+# init is the only way a market enters the DB. stdin: market, cogs, cap, six optional profit-model
+# answers left blank, source.
+setup = [{argv = ["uv", "run", "scripts/ppc.py", "facts", "init"], stdin = "US\n0.2\n500\n\n\n\n\n\n\nowner_conformance_2026-10-05\n"}]
+# confirm reads the human's retype from /dev/tty (or a relayed --code), never stdin.
+human = [["uv", "run", "scripts/ppc.py", "facts", "set", "cogs_per_unit_usd", "{value}", "--market", "US", "--klass", "②", "--source", "owner_conformance_2026-10-05", "--reason", "conformance"],
+         {argv = ["uv", "run", "scripts/ppc.py", "facts", "confirm", "cogs_per_unit_usd", "--market", "US", "--reason", "conformance"], tty = "{value}"}]
+agent = [["uv", "run", "scripts/ppc.py", "facts", "set", "cogs_per_unit_usd", "{value}", "--market", "US", "--klass", "②", "--source", "agent_conformance_2026-10-05", "--reason", "conformance"]]
 read  = ["uv", "run", "scripts/ppc.py", "facts", "get", "cogs_per_unit_usd", "--market", "US"]
 
 [doctor]
