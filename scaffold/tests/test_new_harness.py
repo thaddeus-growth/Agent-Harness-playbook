@@ -13,7 +13,7 @@
   [3] `git init`, commit, and its own suite through its own CLI
       (`scripts/acme.py test`): RESULT with 0 failed
   [4] every CODEOWNERS path exists
-  [5] every item of the playbook README's day-one checklist maps to a
+  [5] every item of the day-one checklist (docs/stages.md) maps to a
       generated file (scaffold/new_harness.py DAY_ONE)
   [6] the CLI answers: --help lists every verb, verbs --json, doctor
   [7] --update-kit re-vendors and touches nothing else; a second run
@@ -113,6 +113,8 @@ def test_refusals() -> None:
                                      "--cli", "acme", "--prefix", "acme"]),
             ("languages without en first", args(d, "--langs", "zh,en")),
             ("a market twice", args(d, "--markets", "HK,HK")),
+            ("an unknown pack", args(d, "--packs", "video")),
+            ("base as a pack (it always comes)", args(d, "--packs", "base")),
             ("--update-kit on a folder with no harness.toml",
              ["--dir", str(full), "--update-kit"])):
         rc, out, err = scaffold(*argv)
@@ -164,6 +166,11 @@ def test_tree(root: Path) -> None:
           == ("acme-harness", "acme", "ACME", "acme.db")
           and h["markets"] == ["HK", "TW"] and h["languages"] == ["en", "zh"]
           and "scripts/acme.py" in cfg["release"]["must_ship"])
+    kd = root / "scripts" / "kit"
+    check("no --packs: [kit] packs = [], the kit copy holds base and testkit only",
+          cfg["kit"]["packs"] == [] and (kd / "facts.py").is_file()
+          and (kd / "testing" / "suites.py").is_file()
+          and not (kd / "takes.py").exists() and not (kd / "retry.py").exists())
     heads = {"constants.tsv": ["name", "default", "unit", "min", "max",
                                "group", "label_en", "label_zh", "explain",
                                "why"],
@@ -242,7 +249,7 @@ def test_codeowners(root: Path) -> None:
 
 def test_day_one(root: Path) -> None:
     print("\n[5] the day-one checklist")
-    readme = (PLAYBOOK / "README.md").read_text(encoding="utf-8")
+    readme = (PLAYBOOK / "docs" / "stages.md").read_text(encoding="utf-8")
     body = readme.split("## Day-one checklist", 1)[1].split("\n## ", 1)[0]
     items = re.findall(r"^- \[ \] (.+)$", body, re.M)
     check("the checklist has its items", len(items) >= 15, len(items))
@@ -301,11 +308,15 @@ def test_update_kit(root: Path) -> None:
 # ------------------------------------------------------------------ [8]
 
 def test_other_shape() -> None:
-    print("\n[8] no markets, three languages")
+    print("\n[8] no markets, three languages, two packs")
     root = Path(tmp_dir("scaffold-flat-")).resolve() / "acme"
-    rc, out, err = scaffold(*args(root, "--langs", "en,zh,ja"))
+    rc, out, err = scaffold(*args(root, "--langs", "en,zh,ja", "--packs", "data,compliance"))
     check("generated", rc == 0, err)
     cfg = tomllib.loads((root / "harness.toml").read_text(encoding="utf-8"))
+    kd = root / "scripts" / "kit"
+    check("[kit] packs as given; the copy holds them and not the others",
+          cfg["kit"]["packs"] == ["data", "compliance"] and (kd / "retry.py").is_file()
+          and (kd / "copylint.py").is_file() and not (kd / "takes.py").exists())
     check("markets = [], languages en, zh, ja",
           cfg["harness"]["markets"] == []
           and cfg["harness"]["languages"] == ["en", "zh", "ja"])

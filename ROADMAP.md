@@ -30,21 +30,21 @@ Harnesses adopt the kit, learn what is shared and what is not, and the lesson co
 3. Do the one turn **Next sessions** names. Anything else goes to an issue.
 4. Before changing `kit/`: a changed byte the vendor tool copies needs a `VERSION` bump and a regenerated `MANIFEST.sha256` (kit/README, "Upgrades and drift"); a move or rename breaks the harnesses that import it.
 
-## Status (2026-10-01)
+## Status (2026-10-05)
 
-- **Built:** CI and `run_all.py` (9 suites); the kit tier registry (6 core, 11 stack, 32 extra) with its guard test; dead and duplicate parts removed; the Zylos adapter passes on Linux in CI.
-- **Merged / open:** nothing open besides the issues below.
-- **Waits for the owner:** the four decisions under **Open decisions**.
+- **Built:** CI and `run_all.py` (9 suites); kit 0.7.0 with packs and selective vendoring (`kit/packs.tsv`); the kit tier registry (5 core, 11 stack, 33 extra) with its guard test; `tools/fleet.py`; Zylos adapter 0.1.1 on Node 22; the README cut to the overview, the detail in `docs/`; `kit/pull.py` removed.
+- **Merged / open:** the restructure branch (RESTRUCTURE.md phases 2, 4 and 5, and the playbook side of phase 1).
+- **Waits for the owner:** decisions 1 and 3 under **Open decisions**; the harness checkouts for turn 2.
 - **Waits for a client:** nothing.
 
 ## Next sessions
 
 | # | Turn | Needs first | Issue |
 | --- | --- | --- | --- |
-| 1 | Try the Zylos adapter under Node 22 and state the minimum Node; relax the template's Node 24 pin if it holds | nothing | #21 |
-| 2 | Bring the three harnesses to one kit version: stale digest.py mention, CI jobs with no rules, KOL's forked copy upstreamed | each harness owner's review | #20 |
+| 2 | Bring the three harnesses to one kit version: start with `python3 tools/fleet.py status` on the three checkouts; stale digest.py mention, CI jobs with no rules, KOL's forked copy upstreamed | the harness checkouts; each harness owner's review | #20 |
 | 3 | Selective vendoring: a harness takes only the tiers it needs (breaking) | turn 2 done, owner go-ahead, a quiet week for the short-video harness | #19 |
-| 4 | Cut the README to about 2,000 words; split console, adapter and scaffold from the guide | decisions 2 and 3 below | #24 |
+
+Turns 2 to 4 follow [RESTRUCTURE.md](RESTRUCTURE.md) (accepted 2026-10-05): one kit version first, then packs and selective vendoring, then docs. Turn 1 (#21) is done: Zylos adapter 0.1.1, Node 22 minimum. Turn 4 (#24) is done: the README is the overview, the detail is in `docs/`.
 
 ## Backlog
 
@@ -56,9 +56,9 @@ Harnesses adopt the kit, learn what is shared and what is not, and the lesson co
 ## Open decisions
 
 1. **Anthropic source links in the README** (#23). Owner. Recommend: allow-list `www.anthropic.com` in the console leak scan and restore the three links. "No" leaves sources named by title only.
-2. **Which console copy stays**: the playbook's, the SEO harness's or the outreach one's (#24). Owner. Recommend: the playbook's, if any client uses a console at all. "No" keeps three lineages.
+2. ~~**Which console copy stays** (#24).~~ Decided 2026-10-05: the playbook's.
 3. **Does the SEO harness migrate onto the kit; does the outreach scraper take only the guide** (#26). Owner. Recommend: migrate SEO after selective vendoring; outreach takes the guide only.
-4. **Selective vendoring go-ahead and date** (#19). Owner. Recommend: after turn 2. "No" leaves every harness with every tier.
+4. ~~**Selective vendoring go-ahead and date** (#19).~~ Decided 2026-10-05: yes, after turn 2; built in kit 0.7.0 (RESTRUCTURE.md, phase 2).
 
 ## Session end checklist
 

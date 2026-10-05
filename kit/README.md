@@ -18,6 +18,25 @@ python3 kit/tools/vendor.py --harness ../acme-harness --dry-run  # what would ch
 - `tests/` stays behind; every copy gets its own `MANIFEST.sha256`. A second run with nothing new changes nothing and says so.
 - `scaffold/new_harness.py` does this for a new harness, together with the templates, and generates the harness's first tests.
 
+### Packs
+
+Every module belongs to one pack in [packs.tsv](packs.tsv), and a harness vendors only the packs it names in `harness.toml`:
+
+```toml
+[kit]
+packs = ["compliance"]      # base and testkit always come; no [kit] packs = every pack
+```
+
+| Pack | What it holds | Who takes it |
+| --- | --- | --- |
+| `base` | the contract, messages, clock, paths; the database and the human tables, the gate, facts, decisions, pending, the queue, execute and the write guard; the CLI, verbs, doctor, env, auth, runner, stories | every harness |
+| `compliance` | `copylint`, `claimscope`, `phrasebook` | a harness that writes ad copy |
+| `generation` | `takes`, `prices`, `preflight`, `consent` | a harness that pays for AI generation or uses a real person's likeness |
+| `data` | `retry` | a harness that pulls rate-limited APIs |
+| `testkit` | `guards/`, `testing/`, `tools/` | every harness's own tests (keep it in `[release].internal`) |
+
+A module imports only `base` and its own pack, so any choice of packs imports cleanly (`tests/test_packs.py`). A module's message codes (`message_codes.d/<module>.tsv`) travel with it. `vendor.py` refuses to leave out a module the harness's own code imports: it names the file and the pack to add. `scaffold/new_harness.py --packs data,compliance` writes the line for a new harness.
+
 The harness declares itself once, in `harness.toml` at its root ([templates/harness.toml](../templates/harness.toml)); every kit module reads names from it through `kit.config` and hard-codes none:
 
 | Section | What the kit reads |
@@ -43,7 +62,6 @@ Each module's docstring says what it guards and names its test; this is the map.
 | `atomic.py`, `single_instance.py` | A half-written file is never seen (the temp file is fsynced before the rename); a second scheduled run skips | `test_atomic.py` |
 | `runner.py` | How one script runs another and reads its one document; a child's failure keeps its code | `test_runner.py` |
 | `raw.py` | Raw only grows: write-once files, content-hash imports | `test_raw.py` |
-| `pull.py` | A pull is merged into raw by natural key (newer wins per key, per-row `pulledAt`, raw never shrinks, duplicate keys refused); an unreadable raw file is moved aside; a long pull is planned in chunks, saved after each step, a chunk is requested again if a newer pull landed; every gap goes in an append-only ledger with its reason | `test_pull.py` |
 | `paths.py` | The data dir is required and absolute, never the cwd; one resolver for the DB | `test_paths.py` |
 | `env.py` | One env chain (process env → home file → `<DATA_DIR>/.env`), never the cwd; parsed, never sourced | `test_env.py` |
 | `auth.py` | Where a token comes from (`env` or a host `command`); expiry; a token never printed | `test_auth.py` |
@@ -68,7 +86,7 @@ Each module's docstring says what it guards and names its test; this is the map.
 | `guards/` | The structural rules a harness's own tests call: the ssot index, the release archive, layering, the `--json` contract (every verb of every kind has a case: `check_verbs`), adapter boundaries, vendored-copy drift, one clock, agent-eval cases (each names the SKILL.md rule it tests, carries the forbidden-verbs grader generated from the verb table, has an ablation row) | `test_guards.py`, `test_verb_cases.py`, `test_clock.py`, `test_evals.py` |
 | `testing/` | The test convention: `check()`/`finish()`, the RESULT-gated runner, the sandbox env | `test_check.py`, `test_run_tests.py` |
 | `testing/suites.py` | The ten day-one tests every new harness is generated with, as library calls (runner, ssot, layering, boundary, `--json` contract, human tables, gate, release, drift, clock) | `test_suites.py` |
-| `tools/` | `manifest.py` (the fingerprint), `vendor.py` (the plain copy) | `test_manifest.py`, `test_vendor.py` |
+| `tools/` | `manifest.py` (the fingerprint), `vendor.py` (the plain copy, only the packs a harness takes), `packs.py` (the pack table and the import reader) | `test_manifest.py`, `test_vendor.py`, `test_packs.py` |
 
 ## What each guard paid for
 
@@ -81,7 +99,6 @@ Real incidents from the source project, kept with the module that now prevents t
 | `messages.py` | Codes were added to a live harness in one change without removing a key: about 70 at once. |
 | `guards/` (`check_verbs`) | The gate and write verbs sat outside the contract test, so about 40 of their refusals reached the owner's page as "unclassified". |
 | `runner.py` | Three write verbs reported "no output" because they read stderr, while the reason was on stdout. |
-| `pull.py` | Each pull replaced raw and the platform keeps only a few months; a late resumed report put older numbers back; an unreadable raw file was overwritten by one pull's rows; a long pull killed halfway started over and the quota ran out again; a run that cleared the last run's gaps lost the list a gaps-only pull needed. |
 | `retry.py` | Days were lost as rate-limit gaps: the exponential guess retried before the quota refilled and the tries ran out; a throttled day became a day with no data instead of a recorded gap. |
 | `takes.py` | A text-to-speech voice that was not installed wrote a 0.01 s file and exited 0; the empty take was cached and reused by every build. Re-rolls had to be new requests so an approved take could never be lost. |
 | `prices.py` | A price read off a vendor's page was its member price (0.45), not the list price (0.50), and about 30 rows proposed from the vendor's catalog waited on the owner, while the harness read every row as a price and approved spend against prices nobody had confirmed. |

@@ -54,6 +54,14 @@ def test_cli_runs_the_entry_with_the_data_dir():
 
 # --- detach.js -----------------------------------------------------------------------
 
+def running(pid):
+    """Alive and not a zombie (exited, unreaped: an init that never reaps keeps them)."""
+    try:
+        return open(f"/proc/{pid}/stat").read().rsplit(")", 1)[1].split()[0] != "Z"
+    except OSError:  # gone, or not Linux
+        return subprocess.run(["kill", "-0", str(pid)], capture_output=True).returncode == 0
+
+
 def wait_marker(path, marker="SHOP-EXIT"):
     for _ in range(80):
         text = open(path).read() if os.path.exists(path) else ""
@@ -126,9 +134,25 @@ def test_detach_alias_is_the_harness_cli_and_pre_uninstall_stops_jobs():
         job = json.load(open(os.path.join(host.logs, "long.pid")))
         r2 = host.hook("pre-uninstall.js", ZYLOS_DATA_DIR=host.data)
         time.sleep(0.3)
-        gone = subprocess.run(["kill", "-0", str(job["pid"])], capture_output=True).returncode != 0
+        gone = not running(job["pid"])
         assert r.returncode == 0 and r2.returncode == 0 and gone and "stopped detached job long" in r2.stdout \
             and "stopped detached job pull-orders" not in r2.stdout, r2.stdout + r2.stderr
+
+
+def test_a_zombie_job_is_not_alive():
+    # Under an init that never reaps (a container without --init), a finished
+    # job stays a zombie: it must neither block its re-run nor be "stopped".
+    with Host() as host:
+        child = subprocess.Popen(["true"])
+        for _ in range(50):
+            if not running(child.pid):
+                break
+            time.sleep(0.05)
+        try:
+            assert host.lib(f"console.log(JSON.stringify([h.pidAlive({os.getpid()}), h.pidAlive({child.pid})]))") \
+                == [True, False]
+        finally:
+            child.wait()
 
 
 # --- console.js and the ecosystem ------------------------------------------------------

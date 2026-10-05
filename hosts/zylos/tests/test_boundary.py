@@ -117,7 +117,8 @@ def test_the_root_file_template_and_version():
     lines = read("ecosystem.config.cjs.template").rstrip("\n").split("\n")
     assert len(lines) == 3 and "require('./zylos/lib.js').ecosystem()" in lines[2], lines
     assert "apps: []" in lines[2], "a broken manifest must not break core's boot"
-    assert re.fullmatch(r"\d+\.\d+\.\d+\n", read("VERSION")) and read("VERSION") == "0.1.0\n"
+    v = read("VERSION")
+    assert re.fullmatch(r"\d+\.\d+\.\d+\n", v) and f"Version: `VERSION` ({v.strip()})" in read("README.md"), v
 
 
 def test_the_caddy_snippet():

@@ -1,0 +1,53 @@
+module	pack	note
+__init__	base	the package
+config	base	harness.toml, the one binding
+contract	base	--json document, HarnessError, exit codes
+dates	base	the one clock
+messages	base	coded messages
+paths	base	data dir and DB path
+db	base	database with protected human tables
+schema_base	base	the six human tables
+human	base	the gate
+market	base	the scope partition
+registry	base	closed fact/decision keys and thresholds
+raw	base	raw only grows
+facts	base	client_facts write path
+decisions	base	decisions write path
+pending	base	asks waiting on a person
+queue	base	approval queue
+execute	base	dry-run executor
+write_guard	base	allowlist, opt-in, kill switch
+cli	base	the dispatcher
+verbs	base	the verb table
+doctor	base	install diagnosis
+env	base	the env chain
+auth	base	token source and expiry
+runner	base	one script runs another
+stories	base	story checks
+single_instance	base	a second run skips
+atomic	base	no half-written file
+copylint	compliance	banned terms and product facts
+claimscope	compliance	copy within an approved claims record
+phrasebook	compliance	approved and rejected phrases
+takes	generation	paid AI calls planned, priced, approved, kept
+prices	generation	vendor prices from an owner TSV
+preflight	generation	requests checked against the vendor schema
+consent	generation	a real person's likeness under confirmed consent
+retry	data	read retries that honour quotas
+guards.__init__	testkit	
+guards.boundary	testkit	
+guards.clock	testkit	
+guards.drift	testkit	
+guards.evals	testkit	no consumer yet
+guards.json_contract	testkit	
+guards.layering	testkit	
+guards.release	testkit	
+guards.ssot	testkit	
+testing.__init__	testkit	
+testing.check	testkit	
+testing.run_tests	testkit	
+testing.sandbox	testkit	
+testing.suites	testkit	the ten day-one tests
+tools.manifest	testkit	the fingerprint, read by guards.drift
+tools.vendor	testkit	playbook tooling
+tools.packs	testkit	the pack table reader, used by tools.vendor

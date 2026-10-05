@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The kit's tier registry, kit-tiers.tsv at the playbook root (README.md, "The
+"""The kit's tier registry, kit-tiers.tsv at the playbook root (docs/kit-and-tools.md, "The
 admission rule"), held to the kit's source. The registry and this test sit
 outside the bytes a harness vendors (kit/ minus tests/), so a tier change never
 touches a vendored copy or kit/MANIFEST.sha256.
@@ -22,7 +22,7 @@ touches a vendored copy or kit/MANIFEST.sha256.
       (imports it, directly or through the module its "(via X)" names), and a
       skeleton, playbook or zylos consumer has such a file at home
   [6] what the docs say about vendoring is what vendor.py does
-  [7] README.md names the registry and this test
+  [7] docs/kit-and-tools.md names the registry and this test
 
 Each rule is proven on a broken copy of the kit and the registry, one plant
 at a time, each undone before the next. The graph sees static imports only
@@ -48,7 +48,7 @@ NAME = "kit-tiers.tsv"
 COLUMNS = ("module", "tier", "consumers", "evidence", "since", "note")
 TIERS = ("core", "stack", "extra")
 KINDS = ("prod", "skeleton", "test", "tool", "fork")
-WHO = ("video-ads", "kol", "rednote", "skeleton", "seo", "outreach", "source", "zylos", "playbook")   # README.md, "Reading the registry"
+WHO = ("video-ads", "kol", "rednote", "skeleton", "seo", "outreach", "source", "zylos", "playbook")   # docs/kit-and-tools.md, "Reading the registry"
 HARNESSES = ("video-ads", "kol", "rednote")     # the harnesses that vendor the kit: the only `prod`
 HERE = ("skeleton", "playbook", "zylos")        # consumers that live in this repository: their evidence is read
 COUNTED = ("prod", "skeleton")                  # counted toward the cap on extra; only `prod` counts toward core
@@ -296,7 +296,7 @@ def docs_problems(readme: str, unmerged: list[str] | tuple[str, ...] = ()) -> li
     out = []
     if not re.search(r"^#+ The admission rule$", readme, re.M):
         out.append('no "The admission rule" heading')
-    for needle in (NAME, "kit/tests/test_tiers.py", "tier-selective vendoring does not exist",
+    for needle in (NAME, "kit/tests/test_tiers.py", "Packs decide what a harness vendors",
                    "never toward core", "at least two independent harnesses use it in production"):
         if needle not in readme:
             out.append(f"does not say {needle!r}")
@@ -409,8 +409,8 @@ def main() -> int:
              {"kit/newmod.py": '"""x"""\nX = 1\n'})
     cp.plant("a new module in a new package with no row", "extras.thing: a kit module with no row",
              {"kit/extras/thing.py": '"""x"""\nX = 1\n'})
-    cp.plant("a module deleted, its row left", "pull: a row for a module that is not in kit/",
-             {"kit/pull.py": None})
+    cp.plant("a module deleted, its row left", "retry: a row for a module that is not in kit/",
+             {"kit/retry.py": None})
     cp.plant("a row for a module that never existed", "gone: a row for a module that is not in kit/",
              {NAME: table + "gone\textra\t\tx\t0.1.0\tno consumer\n"})
     cp.plant("the same module twice", "config: listed twice",
@@ -449,10 +449,10 @@ def main() -> int:
              {"kit/__init__.py": cp.read("kit/__init__.py") + "\nfrom kit import dates\n"})
 
     print("\n[4] admission: core needs two independent consumers, extra has at most one")
-    cp.plant("a core row with one consumer", "core copylint: 1 independent consumer(s) (video-ads)",
-             {NAME: cell("copylint", "consumers", "video-ads:prod")})
-    cp.plant("a core row whose other consumers are a test and a fork", "core copylint: 1 independent consumer(s)",
-             {NAME: cell("copylint", "consumers", "video-ads:prod; kol:test; seo:fork")})
+    cp.plant("a core row with one consumer", "core dates: 1 independent consumer(s) (video-ads)",
+             {NAME: cell("dates", "consumers", "video-ads:prod")})
+    cp.plant("a core row whose other consumers are a test and a fork", "core dates: 1 independent consumer(s)",
+             {NAME: cell("dates", "consumers", "video-ads:prod; kol:test; seo:fork")})
     cp.plant("a core row with no consumer", "core dates: 0 independent consumer(s) (none)",
              {NAME: cell("dates", "consumers", "")})
     cp.plant("one harness listed twice", "copylint: consumer 'kol' listed twice",
@@ -461,9 +461,10 @@ def main() -> int:
              {NAME: cell("takes", "consumers", "video-ads:prod; kol:prod")})
     cp.plant("the skeleton is a consumer too", "extra takes: 2 independent consumers (skeleton, video-ads)",
              {NAME: cell("takes", "consumers", "video-ads:prod; skeleton:skeleton")})
-    cp.plant("a module nobody uses, its note silent", "pull: nothing imports it",
-             {NAME: cell("pull", "note", "A removal candidate.")})
-    cp.plant("a module nobody uses, in stack", "pull: nothing imports it", {NAME: cell("pull", "tier", "stack")})
+    cp.plant("a module nobody uses, its note silent", "guards.evals: nothing imports it",
+             {NAME: cell("guards.evals", "note", "A removal candidate.")})
+    cp.plant("a module nobody uses, in stack", "guards.evals: nothing imports it",
+             {NAME: cell("guards.evals", "tier", "stack")})
     cp.plant("a module only a fork knows, its note silent", "retry: nothing imports it",
              {NAME: cell("retry", "consumers", "outreach:fork")})
     cp.holds("tests, tools and forks never count: an extra row may list any number of them",
@@ -553,14 +554,14 @@ def main() -> int:
     check("vendor.py has no option that picks tiers (the README says none exists)",
           rc == 0 and "--harness" in out and not re.search(r"\btiers?\b", out, re.I), out)
 
-    print("\n[7] README.md names the registry and this test")
-    readme = (PLAYBOOK / "README.md").read_text(encoding="utf-8")
+    print("\n[7] docs/kit-and-tools.md names the registry and this test")
+    readme = (PLAYBOOK / "docs" / "kit-and-tools.md").read_text(encoding="utf-8")
     check("the README has the admission rule, the registry, the test and the plain statement",
           docs_problems(readme) == [], docs_problems(readme))
     check("the check fails on a README without the section",
           len(docs_problems("# Agent Harness Playbook\n")) == 1 + 5 + len(WHO)
-          and docs_problems(readme.replace("tier-selective vendoring does not exist", "x"))
-          == ["does not say 'tier-selective vendoring does not exist'"])
+          and docs_problems(readme.replace("Packs decide what a harness vendors", "x"))
+          == ["does not say 'Packs decide what a harness vendors'"])
     check("…on a README that lets the skeleton count toward core, or leaves a consumer name out",
           docs_problems(readme.replace("never toward core", "also toward core"))
           == ["does not say 'never toward core'"]

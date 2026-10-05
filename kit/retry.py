@@ -24,7 +24,7 @@ throttle, at most N + 1 times:
 `call(fn, RetryPolicy(...), endpoint=...)` is the puller's variant, for a
 quota that refills on a clock (a report-create call, a rate bucket): it
 raises `GaveUp` instead of returning the last throttle, so a throttled day
-is a recorded gap (kit.pull.record_gap), never a day with no data.
+is a recorded gap (the caller's gap ledger), never a day with no data.
 
   * no wait is shorter than the quota's refill period (`refill_s`, or what
     `refill_from` reads from the reply's headers), even when the exponential

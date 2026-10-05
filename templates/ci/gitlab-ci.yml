@@ -150,7 +150,7 @@ test:
 # node; it reads no credential. Delete this job with the zylos/ folder.
 zylos check:
   stage: check
-  image: node:24-alpine
+  image: node:22-alpine
   rules:
     - when: on_success
   script:
