@@ -99,7 +99,7 @@ GENERATED_TESTS = ("test_run_tests.py", "test_ssot.py", "test_layering.py",
                    "test_human_tables.py", "test_gate.py", "test_release.py",
                    "test_kit_drift.py")
 
-# The playbook README's day-one checklist, item by item (the item's first
+# The day-one checklist in docs/stages.md, item by item (the item's first
 # words), and the generated file(s) that answer it. A new checklist item
 # fails scaffold/tests/test_new_harness.py until it is mapped here.
 DAY_ONE = {

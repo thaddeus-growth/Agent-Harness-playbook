@@ -2,7 +2,7 @@
 
 The step-by-step workflow for building the next harness from this playbook. Any agent can follow it from the files alone: each step says what it produces, whether it can fan out to parallel agents, and who signs its gate with which test. The owner signs only **meaning, stories, numbers, money and release**: in the console, or in chat for the contract and a release. A machine signs everything else.
 
-An agent loads [skills/build-harness/SKILL.md](skills/build-harness/SKILL.md) to follow it. The stages it maps to are in [README.md](README.md); every template is listed in [templates/README.md](templates/README.md).
+An agent loads [skills/build-harness/SKILL.md](skills/build-harness/SKILL.md) to follow it. The stages it maps to are in [docs/stages.md](docs/stages.md); every template is listed in [templates/README.md](templates/README.md).
 
 `$DATA_DIR` below is the client's data folder: recordings, transcripts, intakes, numbers, digests and the prior-art scan live there, never in a code repository. After B1 the harness calls it `<PREFIX>_DATA_DIR`. `<cli>` is the harness's CLI word.
 

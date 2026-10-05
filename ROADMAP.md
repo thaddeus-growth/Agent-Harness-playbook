@@ -43,9 +43,8 @@ Harnesses adopt the kit, learn what is shared and what is not, and the lesson co
 | --- | --- | --- | --- |
 | 2 | Bring the three harnesses to one kit version: start with `python3 tools/fleet.py status` on the three checkouts; stale digest.py mention, CI jobs with no rules, KOL's forked copy upstreamed | the harness checkouts; each harness owner's review | #20 |
 | 3 | Selective vendoring: a harness takes only the tiers it needs (breaking) | turn 2 done, owner go-ahead, a quiet week for the short-video harness | #19 |
-| 4 | Cut the README to about 2,000 words; split console, adapter and scaffold from the guide | decisions 2 and 3 below | #24 |
 
-Turns 2 to 4 follow [RESTRUCTURE.md](RESTRUCTURE.md) (accepted 2026-10-05): one kit version first, then packs and selective vendoring, then docs. Turn 1 (#21) is done: Zylos adapter 0.1.1, Node 22 minimum.
+Turns 2 to 4 follow [RESTRUCTURE.md](RESTRUCTURE.md) (accepted 2026-10-05): one kit version first, then packs and selective vendoring, then docs. Turn 1 (#21) is done: Zylos adapter 0.1.1, Node 22 minimum. Turn 4 (#24) is done: the README is the overview, the detail is in `docs/`.
 
 ## Backlog
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The kit's tier registry, kit-tiers.tsv at the playbook root (README.md, "The
+"""The kit's tier registry, kit-tiers.tsv at the playbook root (docs/kit-and-tools.md, "The
 admission rule"), held to the kit's source. The registry and this test sit
 outside the bytes a harness vendors (kit/ minus tests/), so a tier change never
 touches a vendored copy or kit/MANIFEST.sha256.
@@ -22,7 +22,7 @@ touches a vendored copy or kit/MANIFEST.sha256.
       (imports it, directly or through the module its "(via X)" names), and a
       skeleton, playbook or zylos consumer has such a file at home
   [6] what the docs say about vendoring is what vendor.py does
-  [7] README.md names the registry and this test
+  [7] docs/kit-and-tools.md names the registry and this test
 
 Each rule is proven on a broken copy of the kit and the registry, one plant
 at a time, each undone before the next. The graph sees static imports only
@@ -48,7 +48,7 @@ NAME = "kit-tiers.tsv"
 COLUMNS = ("module", "tier", "consumers", "evidence", "since", "note")
 TIERS = ("core", "stack", "extra")
 KINDS = ("prod", "skeleton", "test", "tool", "fork")
-WHO = ("video-ads", "kol", "rednote", "skeleton", "seo", "outreach", "source", "zylos", "playbook")   # README.md, "Reading the registry"
+WHO = ("video-ads", "kol", "rednote", "skeleton", "seo", "outreach", "source", "zylos", "playbook")   # docs/kit-and-tools.md, "Reading the registry"
 HARNESSES = ("video-ads", "kol", "rednote")     # the harnesses that vendor the kit: the only `prod`
 HERE = ("skeleton", "playbook", "zylos")        # consumers that live in this repository: their evidence is read
 COUNTED = ("prod", "skeleton")                  # counted toward the cap on extra; only `prod` counts toward core
@@ -554,8 +554,8 @@ def main() -> int:
     check("vendor.py has no option that picks tiers (the README says none exists)",
           rc == 0 and "--harness" in out and not re.search(r"\btiers?\b", out, re.I), out)
 
-    print("\n[7] README.md names the registry and this test")
-    readme = (PLAYBOOK / "README.md").read_text(encoding="utf-8")
+    print("\n[7] docs/kit-and-tools.md names the registry and this test")
+    readme = (PLAYBOOK / "docs" / "kit-and-tools.md").read_text(encoding="utf-8")
     check("the README has the admission rule, the registry, the test and the plain statement",
           docs_problems(readme) == [], docs_problems(readme))
     check("the check fails on a README without the section",

@@ -1,6 +1,6 @@
 # Restructuring plan: a smaller parent
 
-Status: **accepted 2026-10-05** (decisions 1 and 2: packs as drawn, phase 1 first). Phase 1 is in progress: step 4 and the comparison tool are done; steps 1 to 3 need the harness checkouts. Phase 2 steps 1 to 5 are done in kit 0.7.0 (packs, selective vendoring, `--packs`); step 6 needs the harness checkouts. Each phase lists the decisions it needs from the owner. Related issues: #19, #20, #22, #24, #26.
+Status: **accepted 2026-10-05** (decisions 1 and 2: packs as drawn, phase 1 first). Phase 1 is in progress: step 4 and the comparison tool are done; steps 1 to 3 need the harness checkouts. Phase 2 steps 1 to 5 are done in kit 0.7.0 (packs, selective vendoring, `--packs`); step 6 needs the harness checkouts. Phases 4 and 5 are done. Phase 3 waits until the harnesses have moved. Each phase lists the decisions it needs from the owner. Related issues: #19, #20, #22, #24, #26.
 
 ## Why
 
@@ -141,6 +141,15 @@ Since the harnesses converge in phase 1, they can converge directly on 0.7.0 and
 3. Make `skills/build-harness/SKILL.md` follow the Agent Skills spec (agentskills.io): `name` and `description` frontmatter, with long material in `references/`.
 
 **Done when** README is 2,000 words or fewer and `test_docs_build.py` passes. A new agent can find the guarantees from README alone.
+
+**Done 2026-10-05.** The README is about 1,400 words: the overview, the pipeline, who decides, trust in the data, the guarantees, how to start, and a map. Every other section moved unchanged into `docs/`, as `stages.md`, `rules.md`, `consoles.md`, `operating.md`, `channels.md` and `kit-and-tools.md`. Its tests now read those files, and a new test checks every link and anchor in the README and `docs/`, and keeps the README to 2,000 words or fewer.
+
+This differs from the steps above in four ways:
+
+- The day-one checklist went to `docs/stages.md`, not `BUILD.md`.
+- Hosting went to `docs/operating.md`, and console material to `docs/consoles.md`, instead of being merged into the adapter's and the console's own READMEs.
+- The incident lessons stay next to the rules they explain. `docs/lessons.md` holds only lessons whose code is gone.
+- Only `skills/build-harness/SKILL.md` follows the Agent Skills spec. `templates/SKILL.md` keeps its top-level `version` and `type`, which the Zylos host reads, so changing it waits on the adapter.
 
 **Breaking?** No.
 

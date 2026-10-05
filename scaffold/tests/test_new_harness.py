@@ -13,7 +13,7 @@
   [3] `git init`, commit, and its own suite through its own CLI
       (`scripts/acme.py test`): RESULT with 0 failed
   [4] every CODEOWNERS path exists
-  [5] every item of the playbook README's day-one checklist maps to a
+  [5] every item of the day-one checklist (docs/stages.md) maps to a
       generated file (scaffold/new_harness.py DAY_ONE)
   [6] the CLI answers: --help lists every verb, verbs --json, doctor
   [7] --update-kit re-vendors and touches nothing else; a second run
@@ -249,7 +249,7 @@ def test_codeowners(root: Path) -> None:
 
 def test_day_one(root: Path) -> None:
     print("\n[5] the day-one checklist")
-    readme = (PLAYBOOK / "README.md").read_text(encoding="utf-8")
+    readme = (PLAYBOOK / "docs" / "stages.md").read_text(encoding="utf-8")
     body = readme.split("## Day-one checklist", 1)[1].split("\n## ", 1)[0]
     items = re.findall(r"^- \[ \] (.+)$", body, re.M)
     check("the checklist has its items", len(items) >= 15, len(items))
