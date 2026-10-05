@@ -25,6 +25,7 @@ Rules *(tests/test_ssot.py)*:
 - Every owner row has a sibling row with the same id, `status` `accepted` or `retired`, and a `decided` reference. A row with no answer behind it is not the owner's.
 - `asked` needs `ask`; `accepted`, `dropped`, `retired` and `signed` need `decided`.
 - A change the owner asks for is a new proposal under a new ask id, never an edit of the answered one.
+- A proposal sent to the owner: its `proposed` cell reads `<column>: <text>` for every owner column but the id (`—` for none), the ask shows that text, and the row says `asked` with the ask's id. The playbook's `build/apply_answers.py` then writes the owner row from it on a yes (BUILD.md, B0.6).
 - Ids never change and are never reused. A retired row stays, marked, never deleted.
 
 ## Stories and policies

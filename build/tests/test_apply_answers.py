@@ -237,7 +237,104 @@ def test_answers_that_are_not_intake_asks_are_skipped():
         _t.owner_answers(w["con"], {"word-sampler": "yes"})
         before = _t.snapshot(w["ssot"])
         code, out = apply(w, answers_file(w), data=False)
-        assert code == 0 and out["skipped"] == [{"id": "word-sampler", "why": "not an intake ask"}], out
+        assert code == 0 and out["skipped"] == [{"id": "word-sampler", "why": "not an intake ask, and no "
+                                                 ".agent.tsv row names it in its ask column"}], out
+        assert _t.snapshot(w["ssot"]) == before
+
+
+# ------------------------------------------------- the builder's own proposals --
+
+STORY = ("priority: M2 human_step: confirm i_want: a weekly page of how often each answer engine names us "
+         "so_that: I see whether the work pays given: the answers were collected that week "
+         "done_when: ① each engine shows its share; ② the week is named.")
+RULE = ("when: a surface has fewer than min_answers answers in a week. do: mark its share as thin. "
+        "params: min_answers. why: a share from a handful of answers misleads. stories: S08")
+
+
+def propose(w, agent, rid, ask, proposed, status="asked"):
+    """A row the builder proposed, sent to the console under `ask`: its
+    .agent.tsv row (status asked, naming the ask) and the console ask."""
+    p = os.path.join(w["ssot"], agent)
+    head = _t.read(p).splitlines()[0].split("\t")
+    cells = {"id": rid, "term": rid, "status": status, "source": "agent:2026-10-01", "ask": ask,
+             "proposed": proposed}
+    with open(p, "a", encoding="utf-8") as f:
+        f.write("\t".join(cells.get(c, "") for c in head) + "\n")
+    a = _t.load(os.path.join(_t.CONSOLE, "examples", "confirm-word.json"))
+    a.update(id=ask, kind="story", title="Adopt this proposal?")
+    code, doc = _t.ask(w["con"], "add", "-", stdin=json.dumps(a))
+    assert code == 0, doc
+
+
+def test_a_yes_to_a_proposed_story_is_its_owner_row_from_the_proposed_text_and_an_accepted_sibling():
+    with _t.workspace() as w:
+        propose(w, "user-stories.agent.tsv", "S08", "story-s08-weekly-share", STORY)
+        _t.owner_answers(w["con"], {"story-s08-weekly-share": "yes"})
+        ans = answers_file(w)
+        code, out = _t.tool("apply_answers.py", "--answers", ans, "--ssot", w["ssot"])   # no intake, no data folder
+        assert code == 0 and out["ok"], out
+        got = out["applied"][0]
+        assert (got["action"], got["kind"], got["ssot_id"], got["id"]) == (
+            "accepted", "story", "S08", "story-s08-weekly-share"), got
+        s = row(os.path.join(w["ssot"], "user-stories.tsv"), "id", "S08")
+        assert s == {"id": "S08", "priority": "M2", "human_step": "confirm",
+                     "i_want": "a weekly page of how often each answer engine names us",
+                     "so_that": "I see whether the work pays", "given": "the answers were collected that week",
+                     "done_when": "① each engine shows its share; ② the week is named"}, s
+        sib = row(os.path.join(w["ssot"], "user-stories.agent.tsv"), "id", "S08")
+        apply_id = next(r["apply"] for r in _t.ask(w["con"], "answers")[1]["answers"])
+        assert sib["status"] == "accepted" and sib["decided"] == "console:" + apply_id, sib
+        assert sib["ask"] == "story-s08-weekly-share" and sib["proposed"] == STORY   # the trail stays
+        assert out["commands"] and shlex.split(out["commands"][0])[3] == apply_id
+        after = _t.snapshot(w["ssot"])
+        code, again = apply(w, ans, data=False)                  # idempotent
+        assert code == 0 and again["applied"] == [] and len(again["already"]) == 1, again
+        assert _t.snapshot(w["ssot"]) == after
+
+
+def test_a_no_to_a_proposed_rule_drops_the_sibling_and_leaves_the_owner_file_alone():
+    with _t.workspace() as w:
+        propose(w, "policies.agent.tsv", "P05", "rule-p05", RULE)
+        owner = _t.read(os.path.join(w["ssot"], "policies.tsv"))
+        _t.owner_answers(w["con"], {"rule-p05": "no"})
+        code, out = apply(w, answers_file(w), data=False)
+        assert code == 0 and out["applied"][0]["action"] == "dropped", out
+        assert out["applied"][0]["kind"] == "rule"
+        assert _t.read(os.path.join(w["ssot"], "policies.tsv")) == owner
+        sib = row(os.path.join(w["ssot"], "policies.agent.tsv"), "id", "P05")
+        assert sib["status"] == "dropped" and sib["decided"].startswith("console:rule-p05@"), sib
+
+
+def test_a_yes_to_a_rule_fills_every_owner_column_or_is_refused_whole():
+    with _t.workspace() as w:
+        propose(w, "policies.agent.tsv", "P05", "rule-p05", RULE)
+        propose(w, "policies.agent.tsv", "P06", "rule-p06", "when: a week has no answers. do: say so.")
+        before = _t.snapshot(w["ssot"])
+        _t.owner_answers(w["con"], {"rule-p05": "yes", "rule-p06": "yes"})
+        code, out = apply(w, answers_file(w), data=False)
+        assert code == 2 and [a["ssot_id"] for a in out["applied"]] == ["P05"], out
+        bad = out["problems"]
+        assert [(p["id"], p["code"]) for p in bad] == [("rule-p06", "proposal_incomplete")], bad
+        assert "params, why, stories" in bad[0]["message"], bad
+        p5 = row(os.path.join(w["ssot"], "policies.tsv"), "id", "P05")
+        assert p5["when"] == "a surface has fewer than min_answers answers in a week" and p5["stories"] == "S08"
+        assert p5["params"] == "min_answers" and p5["do"] == "mark its share as thin", p5
+        p6 = row(os.path.join(w["ssot"], "policies.agent.tsv"), "id", "P06")
+        assert p6["status"] == "asked" and p6["decided"] == "", p6      # untouched: still waiting
+        assert not [r for r in _t.tsv(os.path.join(w["ssot"], "policies.tsv")) if r["id"] == "P06"]
+        assert before != _t.snapshot(w["ssot"])
+
+
+def test_a_proposal_ask_needs_one_open_row_under_a_new_id():
+    with _t.workspace() as w:
+        with open(os.path.join(w["ssot"], "user-stories.tsv"), "a", encoding="utf-8") as f:
+            f.write("S08\tM1\tconfirm\ta\tb\tc\td\n")
+        propose(w, "user-stories.agent.tsv", "S08", "story-s08", STORY)
+        propose(w, "user-stories.agent.tsv", "S09", "story-s09", STORY, status="retired")
+        before = _t.snapshot(w["ssot"])
+        _t.owner_answers(w["con"], {"story-s08": "yes", "story-s09": "yes"})
+        code, out = apply(w, answers_file(w), data=False)
+        assert code == 2 and {p["code"] for p in out["problems"]} == {"id_exists", "not_open"}, out
         assert _t.snapshot(w["ssot"]) == before
 
 
