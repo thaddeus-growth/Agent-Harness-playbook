@@ -3,7 +3,8 @@
 
     python3 scaffold/new_harness.py --name acme-harness --cli acme \\
         --prefix ACME --dir ../acme-harness [--markets AA,BB] \\
-        [--owner @handle] [--repo-home WHERE] [--langs en,zh] [--dry-run]
+        [--packs compliance,data] [--owner @handle] [--repo-home WHERE] \\
+        [--langs en,zh] [--dry-run]
     python3 scaffold/new_harness.py --dir ../acme-harness --update-kit
 
 What it writes (BUILD.md, B1):
@@ -56,7 +57,7 @@ TEMPLATES = PLAYBOOK / "templates"
 SKELETON = Path(__file__).resolve().parent / "skeleton"
 sys.path.insert(0, str(PLAYBOOK))
 
-from kit.tools import vendor  # noqa: E402
+from kit.tools import packs as kit_packs, vendor  # noqa: E402
 
 # template (under templates/) -> target (under the harness)
 RENDERED = {
@@ -172,9 +173,12 @@ def toml_list(items: list[str]) -> str:
     return "[" + ", ".join(f'"{x}"' for x in items) + "]"
 
 
-def render_toml(text: str, markets: list[str], langs: list[str]) -> str:
+def render_toml(text: str, markets: list[str], langs: list[str],
+                packs: list[str] = ()) -> str:
     text = re.sub(r"^markets = \[\][^\n]*", lambda m: m.group(0).replace(
         "[]", toml_list(markets), 1), text, count=1, flags=re.M)
+    text = re.sub(r"^packs = \[\]", "packs = " + toml_list(list(packs)),
+                  text, count=1, flags=re.M)
     text = re.sub(r'^languages = \["en", "zh"\]', "languages = "
                   + toml_list(langs), text, count=1, flags=re.M)
     return text
@@ -248,8 +252,8 @@ def ssot_files(langs: list[str]) -> dict[str, str]:
     return out
 
 
-def plan(values: dict[str, str], markets: list[str], langs: list[str]
-         ) -> dict[str, str]:
+def plan(values: dict[str, str], markets: list[str], langs: list[str],
+         packs: list[str] = ()) -> dict[str, str]:
     """{target path: text} of every file the scaffolder writes itself (the
     vendored kit and console, and .gitattributes, come after)."""
     files: dict[str, str] = {}
@@ -265,7 +269,7 @@ def plan(values: dict[str, str], markets: list[str], langs: list[str]
         text = fill((TEMPLATES / src).read_text(encoding="utf-8"), values,
                     f"templates/{src}")
         if src == "harness.toml":
-            text = render_toml(text, markets, langs)
+            text = render_toml(text, markets, langs, packs)
         files[target] = text
     vendored = {"scripts/kit/raw.py", "console/ask.py", "console/serve.py",
                 "console/ui_rules.tsv", ".gitattributes"}
@@ -337,8 +341,13 @@ def values_of(a: argparse.Namespace) -> tuple[dict[str, str], list[str],
     if not re.match(r"^@[\w./-]+$", owner):
         raise Refused(f"--owner {owner!r}: a handle such as @owner")
     home = a.repo_home or "<<fill: where the repository lives>>"
+    names = set(kit_packs.table(PLAYBOOK / "kit").values()) - set(kit_packs.ALWAYS)
+    packs = [x.strip() for x in (a.packs or "").split(",") if x.strip()]
+    if any(x not in names for x in packs) or len(set(packs)) != len(packs):
+        raise Refused(f"--packs {a.packs!r}: distinct names of "
+                      f"{', '.join(sorted(names))} (base and testkit always come)")
     return ({"name": a.name, "cli": a.cli, "env_prefix": a.prefix,
-             "owner": owner, "repo_home": home}, markets, langs)
+             "owner": owner, "repo_home": home}, markets, langs, packs)
 
 
 def parser() -> argparse.ArgumentParser:
@@ -353,6 +362,9 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--prefix", help="the env prefix, e.g. ACME")
     p.add_argument("--markets", default="", help="the closed set of scopes, "
                    "comma-separated (default: none, no partition)")
+    p.add_argument("--packs", default="", help="kit packs besides base and "
+                   "testkit, comma-separated: compliance, generation, data "
+                   "(default: none)")
     p.add_argument("--langs", default="en,zh", help="languages of the message "
                    "registry, en first (default en,zh)")
     p.add_argument("--owner", help="the owner's handle for CODEOWNERS "
@@ -375,8 +387,8 @@ def main(argv: list[str] | None = None) -> int:
         if a.update_kit:
             return vendor.main(["--harness", str(d)]
                                + (["--dry-run"] if a.dry_run else []))
-        values, markets, langs = values_of(a)
-        files = plan(values, markets, langs)
+        values, markets, langs, packs = values_of(a)
+        files = plan(values, markets, langs, packs)
     except Refused as e:
         print(f"error: {e}", file=sys.stderr)
         return 2

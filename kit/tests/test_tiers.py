@@ -296,7 +296,7 @@ def docs_problems(readme: str, unmerged: list[str] | tuple[str, ...] = ()) -> li
     out = []
     if not re.search(r"^#+ The admission rule$", readme, re.M):
         out.append('no "The admission rule" heading')
-    for needle in (NAME, "kit/tests/test_tiers.py", "tier-selective vendoring does not exist",
+    for needle in (NAME, "kit/tests/test_tiers.py", "Packs decide what a harness vendors",
                    "never toward core", "at least two independent harnesses use it in production"):
         if needle not in readme:
             out.append(f"does not say {needle!r}")
@@ -559,8 +559,8 @@ def main() -> int:
           docs_problems(readme) == [], docs_problems(readme))
     check("the check fails on a README without the section",
           len(docs_problems("# Agent Harness Playbook\n")) == 1 + 5 + len(WHO)
-          and docs_problems(readme.replace("tier-selective vendoring does not exist", "x"))
-          == ["does not say 'tier-selective vendoring does not exist'"])
+          and docs_problems(readme.replace("Packs decide what a harness vendors", "x"))
+          == ["does not say 'Packs decide what a harness vendors'"])
     check("…on a README that lets the skeleton count toward core, or leaves a consumer name out",
           docs_problems(readme.replace("never toward core", "also toward core"))
           == ["does not say 'never toward core'"]

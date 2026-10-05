@@ -97,6 +97,52 @@ def main() -> int:
     check("the playbook itself is refused", rc == 2 and "playbook" in err, err)
     rc, _, err = capture(vendor.main, ["--harness", str(h / "nope")])
     check("a missing harness dir is refused", rc == 2, err)
+
+    print("\n[5] packs")
+    check("with no [kit] packs every pack is vendored (as before packs)",
+          (kd / "takes.py").is_file() and (kd / "retry.py").is_file()
+          and (kd / "guards" / "ssot.py").is_file())
+    (h / "harness.toml").write_text((h / "harness.toml").read_text()
+                                    + '\n[kit]\npacks = ["data"]\n')
+    rc, out, err = capture(vendor.main, ["--harness", str(h), "--kit"])
+    check("[kit] packs = [\"data\"]: base, data and testkit stay; the others go",
+          rc == 0 and "kit packs: base, data, testkit" in out
+          and (kd / "facts.py").is_file() and (kd / "retry.py").is_file()
+          and (kd / "testing" / "suites.py").is_file()
+          and not (kd / "takes.py").exists() and not (kd / "copylint.py").exists(),
+          (rc, out, err))
+    check("a module's message codes go with it; the package's own files stay",
+          not (kd / "message_codes.d" / "takes.tsv").exists()
+          and (kd / "message_codes.d" / "facts.tsv").is_file()
+          and (kd / "message_codes.tsv").is_file() and (kd / "packs.tsv").is_file())
+    check("the smaller copy's manifest is clean", manifest.check(kd) == [])
+    r = subprocess.run(
+        [sys.executable, "-B", "-c",
+         "import sys; sys.path.insert(0, %r); from kit import facts, queue, "
+         "execute, cli, doctor, stories, pending; from kit.testing import suites; "
+         "from kit.guards import drift, evals; print('ok')" % str(h / "scripts")],
+        capture_output=True, text=True,
+        env={k: v for k, v in os.environ.items() if k != "KIT_HARNESS_ROOT"})
+    check("base and testkit import without the packs left out",
+          r.stdout.strip() == "ok", r.stderr)
+
+    (h / "scripts" / "make_ad.py").write_text(
+        "def run():\n    from kit import takes\n    from kit.copylint import lint\n")
+    rc, _, err = capture(vendor.main, ["--harness", str(h), "--kit"])
+    check("a harness file importing a left-out module is refused, named with its pack",
+          rc == 2 and "scripts/make_ad.py: imports kit.copylint (pack compliance)" in err
+          and "scripts/make_ad.py: imports kit.takes (pack generation)" in err, err)
+    (h / "harness.toml").write_text((h / "harness.toml").read_text().replace(
+        'packs = ["data"]', 'packs = ["data", "compliance", "generation"]'))
+    rc, out, _ = capture(vendor.main, ["--harness", str(h), "--kit"])
+    check("adding the packs it imports brings the modules back",
+          rc == 0 and (kd / "takes.py").is_file() and (kd / "copylint.py").is_file()
+          and manifest.check(kd) == [], out)
+    (h / "harness.toml").write_text((h / "harness.toml").read_text().replace(
+        '"generation"]', '"generation", "video"]'))
+    rc, _, err = capture(vendor.main, ["--harness", str(h), "--kit"])
+    check("an unknown pack is refused, naming the packs",
+          rc == 2 and "unknown pack: video" in err and "compliance" in err, err)
     return finish()
 
 

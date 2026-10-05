@@ -53,8 +53,11 @@ Follow [templates/prior-art-scan.md](templates/prior-art-scan.md): one agent per
 ```
 python3 scaffold/new_harness.py --dir ../acme-harness \
   --name acme-harness --cli acme --prefix ACME --markets AA,BB \
-  --langs en,zh --owner @handle --repo-home <where the repository lives>
+  --langs en,zh --owner @handle --repo-home <where the repository lives> \
+  --packs data
 ```
+
+`--packs` names the kit packs the harness takes besides `base` and `testkit` (`compliance`, `generation`, `data`; [kit/README.md](kit/README.md), "Packs"); it can be changed later in `harness.toml` and re-vendored.
 
 - It renders every template with a rendered target (`RENDERED` in `scaffold/new_harness.py`; [templates/README.md](templates/README.md) says which templates are used, not copied, or written by a later step) and fills the placeholders from the builder owner's answers. `<<fill: …>>` stays only where a later step writes: SKILL.md, README.md, references/workflows.md and docs/decision-rights.md (and CLAUDE.md without `--repo-home`).
 - It writes the skeleton the kit runs on: `scripts/<cli>.py` (the kit's dispatcher), `scripts/verbs.py` (every verb and its kind), the kit's facts, decisions, pending, story, queue and execute verbs, `scripts/_lib/schema.py` (the human tables only) and `scripts/_lib/writer.py` (an empty allowlist); every ssot file as its header row, plus `approval_ttl_hours` and the build steps; and exactly the ten tests of [templates/README.md](templates/README.md), each one call into the kit's `kit.testing.suites`.

@@ -1,6 +1,6 @@
 # Restructuring plan: a smaller parent
 
-Status: **accepted 2026-10-05** (decisions 1 and 2: packs as drawn, phase 1 first). Phase 1 is in progress: step 4 and the comparison tool are done; steps 1 to 3 need the harness checkouts. Each phase lists the decisions it needs from the owner. Related issues: #19, #20, #22, #24, #26.
+Status: **accepted 2026-10-05** (decisions 1 and 2: packs as drawn, phase 1 first). Phase 1 is in progress: step 4 and the comparison tool are done; steps 1 to 3 need the harness checkouts. Phase 2 steps 1 to 5 are done in kit 0.7.0 (packs, selective vendoring, `--packs`); step 6 needs the harness checkouts. Each phase lists the decisions it needs from the owner. Related issues: #19, #20, #22, #24, #26.
 
 ## Why
 
@@ -33,7 +33,7 @@ Each kit module belongs to exactly one **pack**. A harness names its packs in `h
 | `data` | retry (pull: see phase 5) | ~560 | harnesses that pull rate-limited APIs (KOL) |
 | `testkit` | guards/*, testing/*, tools/manifest | ~4,000 | every harness's own tests; listed in `[release].internal` so it does not ship |
 
-`tools/vendor.py` itself is never vendored. It is playbook tooling.
+`tools/vendor.py` (and `tools/packs.py`, which it reads) are playbook tooling, kept in `testkit` for now so a harness's copy is unchanged; dropping them from the copy is a later, separate change.
 
 There is one rule: **a pack imports only `base` and itself.** A test enforces it using the import graph, lazy imports included. This replaces the core/stack/extra layering rule. Checked against today's imports, compliance and generation need only base modules (human, atomic, registry, messages, dates), so the rule holds.
 
@@ -102,11 +102,13 @@ This is a prerequisite. Selective vendoring on top of three versions and a fork 
    - Copy only the chosen modules, and their `message_codes.d/` fragments.
    - Write the manifest for that subset. `guards/drift.py` already checks a copy against its own manifest, so it needs no change.
    - **Refuse** to remove a module that the harness's own code still imports, using an AST scan of `scripts_dir` and naming the importing file. This stops a harness from losing a module it uses.
-4. `kit/message_codes.tsv` still holds rows owned by `raw`, `human` and `env`. Move them into those modules' fragments, so each pack's codes travel with it.
+4. ~~Move the `raw`, `human` and `env` rows out of `kit/message_codes.tsv`.~~ Not needed: those three modules are all in `base`, which every harness takes. Fragments of other modules travel with their pack.
 5. `scaffold/new_harness.py --packs base,data`, defaulting to `base`. Add `templates/harness.toml` `[kit] packs`.
 6. Opt each harness into its packs, one PR per harness. Video-ads goes last, in a quiet week, as already planned.
 
 **Done when** each harness vendors only its packs and passes its own suite. `run_all.py` is green.
+
+Since the harnesses converge in phase 1, they can converge directly on 0.7.0 and set `[kit] packs` in the same change: one re-vendor per harness instead of two.
 
 **Breaking?** No for imports. A harness that opts in loses modules it does not import, and the vendor tool's refusal protects the ones it does. Bump the kit **minor** version.
 

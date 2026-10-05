@@ -18,6 +18,25 @@ python3 kit/tools/vendor.py --harness ../acme-harness --dry-run  # what would ch
 - `tests/` stays behind; every copy gets its own `MANIFEST.sha256`. A second run with nothing new changes nothing and says so.
 - `scaffold/new_harness.py` does this for a new harness, together with the templates, and generates the harness's first tests.
 
+### Packs
+
+Every module belongs to one pack in [packs.tsv](packs.tsv), and a harness vendors only the packs it names in `harness.toml`:
+
+```toml
+[kit]
+packs = ["compliance"]      # base and testkit always come; no [kit] packs = every pack
+```
+
+| Pack | What it holds | Who takes it |
+| --- | --- | --- |
+| `base` | the contract, messages, clock, paths; the database and the human tables, the gate, facts, decisions, pending, the queue, execute and the write guard; the CLI, verbs, doctor, env, auth, runner, stories | every harness |
+| `compliance` | `copylint`, `claimscope`, `phrasebook` | a harness that writes ad copy |
+| `generation` | `takes`, `prices`, `preflight`, `consent` | a harness that pays for AI generation or uses a real person's likeness |
+| `data` | `retry`, `pull` | a harness that pulls rate-limited APIs |
+| `testkit` | `guards/`, `testing/`, `tools/` | every harness's own tests (keep it in `[release].internal`) |
+
+A module imports only `base` and its own pack, so any choice of packs imports cleanly (`tests/test_packs.py`). A module's message codes (`message_codes.d/<module>.tsv`) travel with it. `vendor.py` refuses to leave out a module the harness's own code imports: it names the file and the pack to add. `scaffold/new_harness.py --packs data,compliance` writes the line for a new harness.
+
 The harness declares itself once, in `harness.toml` at its root ([templates/harness.toml](../templates/harness.toml)); every kit module reads names from it through `kit.config` and hard-codes none:
 
 | Section | What the kit reads |
