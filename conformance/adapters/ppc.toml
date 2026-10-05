@@ -1,0 +1,18 @@
+# amazon-ads-harness (ppc). `uv run scripts/ppc.py` reads its own PEP 723 header.
+[harness]
+name = "ppc"
+cwd = "{root}"
+
+[env]
+PPC_DATA_DIR = "{tmp}"
+
+[facts]
+# init is the only way a market enters the DB; it asks market, cogs, cap, source on stdin.
+setup = [{argv = ["uv", "run", "scripts/ppc.py", "facts", "init"], stdin = "US\n0.2\n500\nowner_conformance_2026-10-05\n"}]
+human = [["uv", "run", "scripts/ppc.py", "facts", "set", "cogs_per_unit_usd", "{value}", "--market", "US", "--klass", "②", "--type", "scalar", "--source", "owner_conformance_2026-10-05"],
+         ["uv", "run", "scripts/ppc.py", "facts", "confirm", "cogs_per_unit_usd", "--market", "US"]]
+agent = [["uv", "run", "scripts/ppc.py", "facts", "set", "cogs_per_unit_usd", "{value}", "--market", "US", "--klass", "②", "--type", "scalar", "--source", "agent_conformance_2026-10-05"]]
+read  = ["uv", "run", "scripts/ppc.py", "facts", "get", "cogs_per_unit_usd", "--market", "US"]
+
+[doctor]
+argv = ["uv", "run", "scripts/ppc.py", "doctor"]

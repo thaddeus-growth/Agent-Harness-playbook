@@ -2,7 +2,7 @@
 
 How to build an **agent harness** — a small, tested tool an AI agent operates for a business owner — from the first client meeting to a system running in production, with the human in the loop at the right places and nowhere else.
 
-Distilled from an eight-day build of an advertising harness (read-only data pulls, reports, a guarded write path, a web console and a remote host agent): about 850 commits, and about 180 merge requests in the last four days. Most lessons below are something that project paid for. Some come from harnesses built after it (a short-video ad harness, a KOL harness, a RedNote harness), some from a harness that ported the same code from the same source project (an SEO harness), and some from Anthropic's published guidance; each says so, and a lesson seen only once or not yet proven says so. Building for another channel? Start at [the reuse map](docs/channels.md#reusing-the-harness-for-other-channels).
+Distilled from an eight-day build of an advertising harness (read-only data pulls, reports, a guarded write path, a web console and a remote host agent): about 850 commits, and about 180 merge requests in the last four days. Most lessons below are something that project paid for. Some come from harnesses built after it (a short-video ad harness, a KOL harness, a RedNote harness), some from a harness that ported the same code from the same source project (an SEO harness), and some from Anthropic's published guidance; each says so, and a lesson seen only once or not yet proven says so. Building for another channel? Start at [the reuse map](docs/channels.md#reusing-the-harness-for-other-channels). What every harness must keep, however it is written, and a check you can run against one: [conformance/INVARIANTS.md](conformance/INVARIANTS.md).
 
 This repository is the parent of every harness: a shared kit each harness vendors, the build workflow, templates, an owner console and a host adapter. A harness adds only its channel: its pulls, reports, registries and the hooks the kit calls. The details live in [docs/](docs/); this page is the overview.
 
@@ -136,4 +136,5 @@ Each guarantee is code in [`kit/`](kit/) with a test that fails when it breaks (
 | [`console/`](console/) | The owner console: where the asks go |
 | [`hosts/zylos/`](hosts/zylos/) | The host adapter, the worked example for any other host |
 | [`scaffold/`](scaffold/), [`build/`](build/), [`templates/`](templates/) | The generator, the build-time tools, the templates |
+| [`conformance/`](conformance/INVARIANTS.md) | The invariants every harness keeps, and a black-box check that drives a harness's CLI from an adapter kept here |
 | [`tools/`](tools/) | Playbook tooling: `fleet.py` |

@@ -1,0 +1,17 @@
+# SEO-tools-harness (seoh). Needs Python 3.11+ for the harness itself: `uv` supplies it.
+[harness]
+name = "seoh"
+cwd = "{root}"
+
+[env]
+SEOH_WORKSPACE = "{tmp}"
+
+[facts]
+setup = [["uv", "run", "--python", "3.12", "python", "bin/seoh", "case-init", "c", "--client-domain", "example.com"]]
+human = [["uv", "run", "--python", "3.12", "python", "bin/seoh", "--case", "{tmp}/c", "fact-set", "icp", "{value}", "--by", "human", "--decided", "chat:conformance", "--source", "conformance", "--reason", "check"]]
+agent = [["uv", "run", "--python", "3.12", "python", "bin/seoh", "--case", "{tmp}/c", "fact-set", "icp", "{value}", "--by", "agent", "--source", "conformance", "--reason", "check"]]
+read  = ["uv", "run", "--python", "3.12", "python", "bin/seoh", "--case", "{tmp}/c", "sql", "select key,value,state from h_fact where key='icp'"]
+
+[doctor]
+setup = [["uv", "run", "--python", "3.12", "python", "bin/seoh", "case-init", "c", "--client-domain", "example.com"]]
+argv = ["uv", "run", "--python", "3.12", "python", "bin/seoh", "--case", "{tmp}/c", "doctor"]
