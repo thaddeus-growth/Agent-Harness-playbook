@@ -86,7 +86,7 @@ Each module's docstring says what it guards and names its test; this is the map.
 | `guards/` | The structural rules a harness's own tests call: the ssot index, the release archive, layering, the `--json` contract (every verb of every kind has a case: `check_verbs`), adapter boundaries, vendored-copy drift, one clock, agent-eval cases (each names the SKILL.md rule it tests, carries the forbidden-verbs grader generated from the verb table, has an ablation row) | `test_guards.py`, `test_verb_cases.py`, `test_clock.py`, `test_evals.py` |
 | `testing/` | The test convention: `check()`/`finish()`, the RESULT-gated runner, the sandbox env | `test_check.py`, `test_run_tests.py` |
 | `testing/suites.py` | The ten day-one tests every new harness is generated with, as library calls (runner, ssot, layering, boundary, `--json` contract, human tables, gate, release, drift, clock) | `test_suites.py` |
-| `tools/` | `manifest.py` (the fingerprint), `vendor.py` (the plain copy) | `test_manifest.py`, `test_vendor.py` |
+| `tools/` | `manifest.py` (the fingerprint), `vendor.py` (the plain copy, only the packs a harness takes), `packs.py` (the pack table and the import reader) | `test_manifest.py`, `test_vendor.py`, `test_packs.py` |
 
 ## What each guard paid for
 

@@ -102,9 +102,11 @@ def imports(source: str, known: set[str]) -> set[str]:
     out: set[str] = set()
 
     def target(dotted: str, names: list[str]) -> None:
+        init = f"{dotted}.__init__" if dotted else "__init__"
         if dotted in known:
             out.add(dotted)
-        init = f"{dotted}.__init__" if dotted else "__init__"
+        elif not names and init in known:     # `import kit`, `import kit.guards`: the package itself
+            out.add(init)
         for n in names:
             sub = f"{dotted}.{n}" if dotted else n
             if sub in known:

@@ -50,6 +50,9 @@ def main() -> int:
           packs.imports(src, known) == {"config", "guards.ssot", "guards.__init__",
                                         "tools.manifest", "__init__", "takes"},
           packs.imports(src, known))
+    check("`import kit` and `import kit.guards` are the packages' __init__",
+          packs.imports("import kit\nimport kit.guards\n", known) == {"__init__", "guards.__init__"},
+          packs.imports("import kit\nimport kit.guards\n", known))
     check("a file's module", (packs.module_of("facts.py", set()), packs.module_of("guards/ssot.py", set()),
                               packs.module_of("message_codes.d/takes.tsv", {"takes"}),
                               packs.module_of("message_codes.d/_README.txt", {"takes"}),

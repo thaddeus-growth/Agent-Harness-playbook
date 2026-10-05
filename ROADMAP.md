@@ -30,11 +30,11 @@ Harnesses adopt the kit, learn what is shared and what is not, and the lesson co
 3. Do the one turn **Next sessions** names. Anything else goes to an issue.
 4. Before changing `kit/`: a changed byte the vendor tool copies needs a `VERSION` bump and a regenerated `MANIFEST.sha256` (kit/README, "Upgrades and drift"); a move or rename breaks the harnesses that import it.
 
-## Status (2026-10-01)
+## Status (2026-10-05)
 
-- **Built:** CI and `run_all.py` (9 suites); the kit tier registry (6 core, 11 stack, 32 extra) with its guard test; dead and duplicate parts removed; the Zylos adapter passes on Linux in CI.
-- **Merged / open:** nothing open besides the issues below.
-- **Waits for the owner:** the four decisions under **Open decisions**.
+- **Built:** CI and `run_all.py` (9 suites); kit 0.7.0 with packs and selective vendoring (`kit/packs.tsv`); the kit tier registry (5 core, 11 stack, 33 extra) with its guard test; `tools/fleet.py`; Zylos adapter 0.1.1 on Node 22; the README cut to the overview, the detail in `docs/`; `kit/pull.py` removed.
+- **Merged / open:** the restructure branch (RESTRUCTURE.md phases 2, 4 and 5, and the playbook side of phase 1).
+- **Waits for the owner:** decisions 1 and 3 under **Open decisions**; the harness checkouts for turn 2.
 - **Waits for a client:** nothing.
 
 ## Next sessions
