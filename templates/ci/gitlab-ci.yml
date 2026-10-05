@@ -1,13 +1,13 @@
 # A harness's whole CI on GitLab, from the first commit. Copy it to the repo
-# root as .gitlab-ci.yml, point tests/run.py, the second suite and adapter/ at your own paths,
+# root as .gitlab-ci.yml, point tests/run.py and adapter/ at your own paths,
 # add your platforms to the secret scan, and fill in the host versions.
 #
 #   secret scan   every change: no credential-shaped text in the checkout
 #   story id      merge requests: the title names its story or policy
 #   test          every change: the offline suite, dependencies cached
+#   zylos check   every change: the Zylos adapter's manifest agrees with its files
 #   adapter smoke only when the host adapter changes: against each host version
 #
-# The story id job is templates/ci/story-id.yml, folded in: keep one copy.
 # One stage, so every job runs at once and one failure never hides another.
 stages: [check]
 
@@ -65,6 +65,10 @@ secret scan:
       glpat-[0-9A-Za-z_-]{20}
       gh[pousr]_[0-9A-Za-z]{36}
       github_pat_[0-9A-Za-z_]{22,}
+      # Slack tokens (bot, user, app, refresh)
+      xox[abpr]-[0-9A-Za-z-]{10,}
+      # API keys that start with sk-; a word that only ends in "sk" ("task-...") is not one
+      (^|[^0-9A-Za-z])sk-[0-9A-Za-z_-]{32,}
       # queue URLs: region, account and name disclose infrastructure even without a key
       sqs\.[a-z0-9-]+\.amazonaws\.com/[0-9]+/[A-Za-z0-9_-]+
       # --- Channel slot: your platforms' credential shapes. Keep what you use, add yours ---
@@ -96,6 +100,13 @@ secret scan:
 # as this job, by none of the next 77. Merge request pipelines only: GitLab
 # gives the title there. The title reaches the shell as a variable, never as
 # script text.
+#
+# Copied on its own into a CI file whose `stages:` list has no `check`, this
+# job needs a `stage:` from that list (a job with no `stage:` runs in GitLab's
+# default `test` stage). On GitHub Actions the title gets the same treatment:
+# pass it through env, never into the script text, then run the same pattern
+# on it:
+#   env: { TITLE: "${{ github.event.pull_request.title }}" }
 story id:
   stage: check
   image: alpine:3.20
@@ -133,6 +144,17 @@ test:
     - pip install -q uv
   script:
     - uv run tests/run.py
+
+# The Zylos adapter (zylos/, hosts/zylos/README.md) must agree with its
+# manifest, the SKILL.md frontmatter and the root ecosystem file. Needs only
+# node; it reads no credential. Delete this job with the zylos/ folder.
+zylos check:
+  stage: check
+  image: node:24-alpine
+  rules:
+    - when: on_success
+  script:
+    - node zylos/lib.js check
 
 # The host adapter against each host-platform version it supports. Runs
 # only when the adapter or this file changes, so the main suite stays

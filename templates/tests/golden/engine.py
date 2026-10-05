@@ -200,19 +200,47 @@ def run_case(argv: list[str], env: dict, cwd, stdin: str | None = None,
 
 
 # ------------------------------------------------------------------ a tree
+def verb_call_words(node: ast.AST, where: str) -> tuple[str, ...]:
+    """The words of one `Verb(words, ...)` entry of a verb list: its first
+    argument (or `words=`), a literal tuple of strings. Anything else is
+    refused, never skipped: a verb skipped here would get no case."""
+    if isinstance(node, ast.Call):
+        first = node.args[0] if node.args else next(
+            (k.value for k in node.keywords if k.arg == "words"), None)
+        try:
+            words = ast.literal_eval(first) if first is not None else None
+        except ValueError:
+            words = None
+        if (isinstance(words, (tuple, list)) and words
+                and all(isinstance(w, str) and w for w in words)):
+            return tuple(words)
+    raise SystemExit(f"{where}, line {getattr(node, 'lineno', '?')}: an entry "
+                     f"of {C.VERB_TABLE} is not a Verb(words, ...) call with "
+                     "literal words")
+
+
 def verbs_of(tree: Path) -> set[tuple[str, ...]]:
-    """The keys of cases.ENTRY's cases.VERB_TABLE, read with ast: importing
-    a dispatcher may load the operator's env files and credentials."""
-    src = (tree / C.ENTRY).read_text(encoding="utf-8")
+    """The verbs of cases.VERB_TABLE in cases.VERB_FILE (default cases.ENTRY),
+    read with ast: importing a dispatcher may load the operator's env files
+    and credentials. Two forms: a dict whose keys are the verbs, or a list of
+    `Verb(words, ...)` calls, the form the playbook's scaffolder writes in
+    scripts/verbs.py (kit.verbs)."""
+    name = getattr(C, "VERB_FILE", None) or C.ENTRY
+    src = (tree / name).read_text(encoding="utf-8")
     for node in ast.walk(ast.parse(src)):
         targets = (node.targets if isinstance(node, ast.Assign) else
                    [node.target] if isinstance(node, ast.AnnAssign) else [])
-        if (any(getattr(t, "id", None) == C.VERB_TABLE for t in targets)
-                and isinstance(node.value, ast.Dict)):
+        if not any(getattr(t, "id", None) == C.VERB_TABLE for t in targets):
+            continue
+        if isinstance(node.value, ast.Dict):
             keys = [ast.literal_eval(k) for k in node.value.keys if k]
             return {tuple(k) if isinstance(k, (tuple, list)) else (k,)
                     for k in keys}
-    raise SystemExit(f"no {C.VERB_TABLE} dict in a tree's {C.ENTRY}")
+        if isinstance(node.value, (ast.List, ast.Tuple)):
+            return {verb_call_words(e, f"a tree's {name}")
+                    for e in node.value.elts}
+    raise SystemExit(f"no {C.VERB_TABLE} dict or list of Verb(...) calls in a "
+                     f"tree's {name}")
 
 
 def has_verb(args: list[str], verbs: set) -> bool:

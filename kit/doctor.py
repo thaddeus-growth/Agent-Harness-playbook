@@ -25,7 +25,11 @@ names its fix in `next`):
   platform_lock  a harness hook (prior art #11: a rule set in the platform
                  itself, below the gate): "set" ok, "unknown" warns; no hook,
                  no line
-  verbs          every script of the verb table exists
+  verbs          every script of the verb table exists; the non-dev verbs
+                 without `examples` (their --help teaches the agent nothing
+                 by example) are one info line, never a warning, so
+                 `--strict` stays green on a harness that has not written
+                 them yet
   kit_tty        KIT_TTY (the gate's test seam) set outside a test warns
 
 then the harness's own checks: `check(ctx)` callables that call
@@ -394,6 +398,13 @@ def check_verbs(ctx: Context) -> None:
     if not missing:
         ctx.ok("verbs", msg("doctor_verbs_ok", f"{len(ctx.verbs)} verb(s), "
                             f"every script present", count=len(ctx.verbs)))
+    bare = [" ".join(v.words) for v in ctx.verbs
+            if v.kind != "dev" and not getattr(v, "examples", ())]
+    if bare:
+        ctx.info("verbs", msg(
+            "doctor_verbs_no_examples", f"{len(bare)} verb(s) list no "
+            f"examples, so their --help ends with none: {', '.join(bare)}",
+            count=len(bare), verbs=", ".join(bare)))
 
 
 def check_kit_tty(ctx: Context) -> None:

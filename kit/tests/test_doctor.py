@@ -3,7 +3,8 @@
 on the fake "shop" harness.
 
   [1] a fresh install: every built-in line; no DB is info, no market warns;
-      "writes: off" is ok; a secret's value is never shown
+      "writes: off" is ok; a secret's value is never shown; the non-dev
+      verbs without examples are one info line (never a warning)
   [2] the write switches: off (ok), kill env and STOP file (ok, off), ON
       (info), a value that is not 1 (warn)
   [3] the data dir: unset, relative, inside the checkout (warn, with the
@@ -132,7 +133,26 @@ def test_fresh() -> None:
           and w[0]["message_code"]["code"] == "doctor_writes_off"
           and w[0]["message_code"]["params"]["reason"]["code"] == "write_off")
     check("every verb's script is present",
-          codes(doc, "verbs") == ["doctor_verbs_ok"])
+          codes(doc, "verbs")[0] == "doctor_verbs_ok")
+    bare = found(doc, "verbs", "info")
+    lacking = [" ".join(v.words) for v in VERBS if not v.examples]
+    check("the verbs without examples: ONE info line naming them (never a "
+          "warning: --strict stays green)",
+          codes(doc, "verbs") == ["doctor_verbs_ok", "doctor_verbs_no_examples"]
+          and len(bare) == 1 and not found(doc, "verbs", "warn")
+          and bare[0]["message_code"]["params"]
+          == {"count": len(lacking), "verbs": ", ".join(lacking)}
+          and "facts list" not in lacking and "facts get" in lacking, bare)
+    taught = [Verb(v.words, v.script, v.kind, v.takes_market,
+                   v.needs_data_dir, v.answers,
+                   v.examples or (" ".join(v.words),)) for v in VERBS]
+    _, _, _, d2 = run(data, "--json", verbs=[
+        *taught, Verb(("test",), "../tests/run.py", "dev", False, False)])
+    check("every non-dev verb with examples (a dev verb needs none): no line",
+          codes(d2, "verbs")[0] in ("doctor_verbs_ok",
+                                    "doctor_verb_script_missing")
+          and "doctor_verbs_no_examples" not in codes(d2, "verbs"),
+          codes(d2, "verbs"))
     check("summary and healthy", doc["summary"]["warn"] == 1
           and doc["healthy"] is True and doc["message_code"]["code"]
           == "doctor_summary_warnings")
@@ -362,7 +382,8 @@ def test_hooks() -> None:
     _, _, _, doc = run(data, "--json",
                        verbs=[*VERBS, Verb(("gone",), "gone.py", "read")])
     check("a verb whose script is missing: a warning naming it",
-          codes(doc, "verbs") == ["doctor_verb_script_missing"]
+          [c["message_code"]["code"] for c in found(doc, "verbs", "warn")]
+          == ["doctor_verb_script_missing"]
           and found(doc, "verbs")[0]["message_code"]["params"]
           == {"verb": "gone", "script": "gone.py"})
     seen = {}

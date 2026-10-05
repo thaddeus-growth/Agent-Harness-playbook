@@ -7,6 +7,10 @@ stages: [check]
 # One pipeline per change: a merge request's own pipeline when the branch has
 # one open (every job runs there, so the MR shows the whole result), else the
 # branch pipeline. Tags run too, so a release tag is tested as it is.
+#
+# Every job below states its `rules:`. A job with no rules runs only in branch
+# pipelines, never in a merge request's, so a merge request pipeline could turn
+# green with no test run.
 workflow:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -22,10 +26,12 @@ workflow:
 secret scan:
   stage: check
   image: alpine:3.20
+  rules:
+    - when: on_success
   script:
     - |
       if grep -rEn --exclude-dir=.git --exclude=.gitlab-ci.yml --exclude=.env.example \
-          'BEGIN( [A-Z]+)* PRIVATE KEY|AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{30,}|xox[abpr]-[0-9A-Za-z-]{10,}|sk-[A-Za-z0-9_-]{32,}' \
+          'BEGIN( [A-Z]+)* PRIVATE KEY|AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{30,}|glpat-[0-9A-Za-z_-]{20}|github_pat_[0-9A-Za-z_]{22,}|xox[abpr]-[0-9A-Za-z-]{10,}|(^|[^0-9A-Za-z])sk-[A-Za-z0-9_-]{32,}' \
           --include='*.py' --include='*.json' --include='*.md' --include='*.yml' \
           --include='*.yaml' --include='*.toml' --include='*.tsv' --include='*.txt' \
           --include='*.env' --include='*.js' --include='*.html' .; then
@@ -57,6 +63,8 @@ story id:
 {{cli}} test:
   stage: check
   image: python:3.12-bookworm
+  rules:
+    - when: on_success
   variables:
     UV_CACHE_DIR: .uv-cache
   cache:

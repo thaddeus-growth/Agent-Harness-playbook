@@ -34,6 +34,11 @@ dispatcher; its routing table became the verb table):
      `+ cmd` trace goes to stderr (stdout stays the script's one document;
      a `--code` value is masked); the exit code is the script's (a signal
      = 128 + its number).
+  7. `<cli> <verb> -h/--help`: the script's own help, then, when it exited
+     0, the verb's `Examples:` block (each line prefixed by the cli name)
+     and its `JSON keys: a, b` line from the verb table (kit.verbs.
+     help_tail; nothing when the verb declares neither). Only on the
+     verb's own --help: a group's --help stays the one-line listing.
 
 Built-ins: `<cli> doctor [--live] [--strict] [--json]` (kit.doctor, with the
 harness's own checks and platform-lock hook) and `<cli> verbs [--json]`
@@ -245,4 +250,9 @@ class Dispatcher:
             rc = subprocess.run(cmd, env=os.environ).returncode
         except KeyboardInterrupt:
             return 130
+        if rc == 0 and set(rest) & set(HELP):
+            tail = _verbs.help_tail(v, self.cli)
+            if tail:
+                sys.stdout.write(tail)
+                sys.stdout.flush()
         return 128 - rc if rc < 0 else rc

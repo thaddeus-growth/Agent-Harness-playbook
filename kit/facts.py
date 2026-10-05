@@ -11,6 +11,10 @@ Ported from the reference harness's scripts/facts.py. What it guards:
     itself appends a history row, which moves that version, so a code
     works once. `unconfirm` lowers trust and needs no gate. There is no
     bypass flag.
+  * A client's own confirmation is theirs (`confirm --for-client NAME`,
+    kit.human.client_name): bound into the code's subject, recorded as
+    `client:<name>` with the operator who passed the gate in the reason;
+    no other path writes a `client:` author.
   * A confirmation belongs to the value that was confirmed. A `set` that
     changes the value makes it pending again. A same-value `set` writes
     no history and does not bump updated_at.
@@ -420,9 +424,15 @@ def cmd_confirm(run: _Run) -> dict | None:
     or the relayed --code bound to {key: value} at the key's last history
     id. `--value V` confirms the human's own value instead (validated like
     `set`, and the challenge binds V). The market declaration is confirmed
-    here too (`confirm market_declared`), without the door it opens."""
+    here too (`confirm market_declared`), without the door it opens.
+    `--for-client NAME`: the client's own confirmation, passed through the
+    operator's channel: the name is in the code's subject (an operator's
+    code never passes for it, nor back), history and the row record
+    `client:<name>`, a typed value's source is `client:<name> <date>`, and
+    the reason keeps who passed the gate (` [operator=…]`)."""
     a, con = run.args, run.con
     reason = human.why(a.reason)
+    client = human.client_name(a.for_client)
     typed = None if a.value is None else _stored(run, a.key, a.value)
     m = _market(run, a.market, door=a.key != MARKET_KEY)
     existing = _fetch(con, m, a.key)
@@ -439,11 +449,14 @@ def cmd_confirm(run: _Run) -> dict | None:
     was = "" if old in (None, value) else f" (replacing {old})"
     channel = human.confirm(
         f"`{_cli()} facts confirm`",
-        f"{a.key} [{m}] = {value}{was} — retype the value to confirm it: ",
+        human.client_prompt(client)
+        + f"{a.key} [{m}] = {value}{was} — retype the value to confirm it: ",
         value, code=a.code,
-        subj=human.subject("facts confirm", m, "fact", {a.key: value}, last))
-    reason += human.relay_audit(channel, a.relay_user, a.relay_at)
-    by = human.changed_by(channel)
+        subj=human.subject("facts confirm", m, "fact", {a.key: value}, last,
+                           client))
+    reason += (human.relay_audit(channel, a.relay_user, a.relay_at)
+               + human.client_audit(channel, client))
+    by = human.changed_by(channel, client)
     with db.keep_human_rows(run.spec, con):
         if (_last_id(con, m, a.key) != last
                 or _state(_fetch(con, m, a.key)) != _state(existing)):
@@ -455,13 +468,13 @@ def cmd_confirm(run: _Run) -> dict | None:
                 [shlex.join([_cli(), "facts", "get", a.key, "--market", m])])
         at = human.now()
         if existing is None:
-            source = human.typed_source()
+            source = human.typed_source(client)
             con.execute(f"INSERT INTO {FACTS} (market, key, value, "
                         f"is_assumption, source, updated_at, changed_by) "
                         f"VALUES (?,?,?,0,?,?,?)",
                         (m, a.key, value, source, at, by))
         elif old != value:
-            source = human.typed_source()
+            source = human.typed_source(client)
             con.execute(f"UPDATE {FACTS} SET value=?, is_assumption=0, "
                         f"source=?, updated_at=?, changed_by=? "
                         f"WHERE market=? AND key=?",
@@ -958,7 +971,7 @@ def _parser(cli: str) -> argparse.ArgumentParser:
              "confirms the human's own value instead")
     sp.add_argument("--value", help="the value the human confirms instead "
                     "of the pending one (validated like `set`)")
-    human.add_gate_args(sp)
+    human.add_gate_args(sp, for_client=True)
     sp = add("unconfirm", cmd_unconfirm, "confirmed → pending (anyone, "
              "agents included: it only lowers trust)")
     sp.add_argument("--reason", help="why it is doubted (required)")

@@ -1,0 +1,26 @@
+# Every suite of the playbook on every push and pull request: `python3 run_all.py`
+# (see run_all.py). No secrets and no write access: the job only reads the checkout.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  suites:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      # Node 24 is the LTS the Zylos adapter's tests were run on. `lts/*` would move to the
+      # next LTS on its own; change this line when the adapter has been tried on it.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - run: python3 run_all.py

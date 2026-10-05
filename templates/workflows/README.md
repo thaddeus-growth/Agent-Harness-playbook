@@ -114,7 +114,7 @@ The orchestrating session can restart in the middle of a run. *Paid for:* it res
 
 ## Tests
 
-`python3 templates/workflows/tests/run.py` needs git and node.
+`python3 templates/workflows/tests/run.py` needs git and node. The tests run inside the playbook: the runner is the kit's test gate, imported from the playbook's root, so copy the scripts and `refcheck.py` into a project and leave `tests/` behind.
 
 - `test_flow.py` runs both scripts under node through `tests/sim.js`, with scripted agent replies.
 - `test_refcheck.py` builds throw-away repos.

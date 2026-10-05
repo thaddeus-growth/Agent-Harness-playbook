@@ -26,6 +26,7 @@ doctor_platform_lock_set	detail	platform rule: set {detail}	平台规则：已�
 doctor_platform_lock_unknown	detail	platform rule: unknown — ask the client's admin to set the platform's own limit on what agents may do, then record it {detail}	平台规则：未知——请客户的管理员在平台上设置助手可做事项的限制，然后记录下来 {detail}
 doctor_verb_script_missing	verb,script	`{verb}` has no script at {script}	命令 `{verb}` 找不到脚本 {script}
 doctor_verbs_ok	count	{count} verb(s), every script present	{count} 个命令，脚本都在
+doctor_verbs_no_examples	count,verbs	{count} verb(s) list no examples, so their --help ends with none: {verbs}	{count} 个命令没有登记示例，它们的 --help 末尾没有示例调用：{verbs}
 doctor_kit_tty	var	{var} is set: the human gate's test seam stands in for the terminal (tests only)	设置了 {var}：人工确认的测试替身正在代替终端（只应在测试中）
 doctor_check_crashed	check,detail	the check {check} crashed: {detail}	检查 {check} 出错：{detail}
 doctor_summary_warnings	warnings,failures	{warnings} warning(s), {failures} failure(s) — each names its fix above	{warnings} 个警告，{failures} 个失败——每项上面都写了修复方法

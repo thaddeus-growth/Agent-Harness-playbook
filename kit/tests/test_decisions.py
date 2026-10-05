@@ -22,7 +22,11 @@ entry date, the snapshot) come back here as the hooks a harness passes.
   6. confirm --json: the challenge as data, then what was written; a
      refusal is still one document.
   7. confirm --value: the human's own value, validated, bound, retyped;
-     set + confirm history; needs no pending row.
+     set + confirm history; needs no pending row. confirm --for-client:
+     the client's name in the code's subject (the operator's code never
+     passes for it, nor back), rows and history by client:<name>, the
+     operator in the reason, a typed value's source client:<name> <date>;
+     a blank name is refused.
   8. withdraw: pending values only, all or nothing, history old = pending
      / new = in force; afterwards nothing pending, confirm refuses it,
      confirm --value and a new set still work.
@@ -667,6 +671,59 @@ def test_confirm_value() -> None:
                       SHA], tty=[SHA.lower()])
     check("a sha256 --value is stored canonical and retyped that way",
           rc == 0 and eff("product", "SKU-A", "artwork") == SHA.lower(), out)
+    print("  -- --for-client: the client's own confirmation")
+    cid = "9404"
+    run(["set", "campaign", cid, "channel", "organic"])
+    base = ["confirm", "campaign", cid, "channel", "--json"]
+    rc, out, _ = run([*base, "--for-client", "  ", *RELAY], secret=True)
+    check("a blank --for-client: client_name_empty, nothing written",
+          rc == 2 and coded(out)[0] == "client_name_empty"
+          and stored("campaign", cid, "channel")[1] == "pending", out)
+    rc, out, _ = run(base, secret=True)
+    op_code = one_doc(out)["params"]["confirm_code"]
+    rc, out, _ = run([*base, "--for-client", "Acme  Pumps"], secret=True)
+    d = one_doc(out)
+    cl_code = d["params"]["confirm_code"]
+    check("the client's challenge: the name in the subject and the summary",
+          rc == 2 and d["subject"]["client"] == "Acme Pumps"
+          and "client:Acme Pumps" in d["error"], d)
+    n = top()
+    rc, out, _ = run([*base, "--for-client", "Acme Pumps", "--code", op_code,
+                      *RELAY], secret=True)
+    check("the operator's code never passes for the client's",
+          op_code == cl_code or (rc == 2 and coded(out)[0]
+                                 == "confirm_code_mismatch" and top() == n),
+          out)
+    rc, out, _ = run([*base, "--code", cl_code, *RELAY], secret=True)
+    check("...nor the client's for the operator's",
+          op_code == cl_code or (rc == 2 and coded(out)[0]
+                                 == "confirm_code_mismatch" and top() == n),
+          out)
+    rc, out, _ = run([*base, "--for-client", "Acme Pumps", "--code", cl_code,
+                      *RELAY], secret=True)
+    d = one_doc(out)
+    operator = f" [operator={human.changed_by('relay')}]"
+    check("the client's code: in force, changed_by client:<name>",
+          rc == 0 and d["changed_by"] == "client:Acme Pumps"
+          and eff("campaign", cid, "channel") == "organic", out)
+    check("...history by client:<name>, the relay audit and the operator in "
+          "the reason", hist(n) == [(cid, "channel", "organic", "organic",
+                                     "client:Acme Pumps", "confirm",
+                                     "test" + AUDIT + operator, "confirmed")],
+          hist(n))
+    with closing(con()) as c:
+        r = decisions.row(c, "US", "campaign", cid, "channel")
+    check("...and the row itself", r["changed_by"] == "client:Acme Pumps", r)
+    n = top()
+    rc, out, _ = run(["confirm", "campaign", cid, "channel", "--value",
+                      "paid", "--for-client", "Acme"], tty=["paid"])
+    with closing(con()) as c:
+        src = decisions.row(c, "US", "campaign", cid, "channel")["source"]
+    check("--value --for-client at a terminal: set + confirm by client:Acme, "
+          "source client:Acme <date>",
+          rc == 0 and [h[4:6] for h in hist(n)]
+          == [("client:Acme", "set"), ("client:Acme", "confirm")]
+          and src == f"client:Acme {TODAY}", (out, hist(n), src))
     rc, out, _ = run(["confirm", "product", "SKU-Q", "stage", "--json"])
     check("no row and no --value: decision_not_found",
           rc == 2 and coded(out) == ("decision_not_found", {

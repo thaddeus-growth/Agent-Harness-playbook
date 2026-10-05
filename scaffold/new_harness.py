@@ -8,12 +8,14 @@
 
 What it writes (BUILD.md, B1):
 
-  * every template with a target (templates/README.md), placeholders
-    filled ({{name}}, {{cli}}, {{env_prefix}}, {{owner}}, {{repo_home}}):
-    harness.toml, CLAUDE.md, SKILL.md, README.md, references/workflows.md,
-    .gitignore, .gitlab-ci.yml, .gitlab/CODEOWNERS, docs/ (decision rights,
-    the install and triage checklists, the data bug classes,
-    the doctor's checks), ssot/README.md.
+  * every template with a rendered target (RENDERED below; templates/README.md
+    lists the others as used, not copied, or written by a later build step),
+    placeholders filled ({{name}}, {{cli}}, {{env_prefix}}, {{owner}},
+    {{repo_home}}): harness.toml, CLAUDE.md, SKILL.md, README.md,
+    references/workflows.md, .gitignore, .gitlab-ci.yml, .gitlab/CODEOWNERS,
+    docs/ (decision rights, the install and triage checklists, the data bug
+    classes, the doctor's checks, the owner review loop, vendor API
+    discovery, the session handoff), ssot/README.md.
     `<<fill: …>>` stays only in the files the build fills later (FILLED);
   * ssot/: every registry and owner file as its header row, plus the
     constants row the kit's write path reads (approval_ttl_hours), the

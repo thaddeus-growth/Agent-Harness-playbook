@@ -5,11 +5,13 @@ an example: it fits the fake harness the tests build (tests/fake_harness.py),
 shaped the way the playbook recommends. Replace each with your harness's.
 
 What the engine needs from a harness:
-  * One dispatcher (ENTRY) holding its verbs as a dict (VERB_TABLE) whose
-    keys are tuples of words, e.g. {("report", "summary"): ...}. It is read
-    with ast, never imported: importing a dispatcher may load the operator's
-    env files and credentials. Cases follow the table, so a new verb gets a
-    case without an edit here.
+  * One dispatcher (ENTRY) and a verb table (VERB_TABLE) in a file (VERB_FILE,
+    the dispatcher itself unless you name another): a dict whose keys are
+    tuples of words, e.g. {("report", "summary"): ...}, or a list of
+    Verb(words, ...) calls, e.g. [Verb(("report", "summary"), "x.py", "read")].
+    The file is read with ast, never imported: importing a dispatcher may load
+    the operator's env files and credentials. Cases follow the table, so a new
+    verb gets a case without an edit here.
   * Every clock read goes through a seam (SEAMS): a function returning an
     aware UTC datetime ("now") or a date ("today"). A clock read anywhere
     else is not pinned: under --today it still reads the real day.
@@ -19,6 +21,19 @@ What the engine needs from a harness:
 
 Every case runs in the engine's own interpreter (that is how the seams get
 patched), so list your harness's dependencies in engine.py's PEP 723 header.
+
+A harness that scaffold/new_harness.py wrote (the playbook's kit vendored at
+scripts/kit/) already has all four. Its verbs are the list in scripts/verbs.py,
+not a dict in the dispatcher, so name both files. kit.dates.now is its one
+clock (patching it pins today, host_today and market_day too),
+kit.runner.script_cmd starts every child verb, and the data folder is
+<PREFIX>_DATA_DIR:
+
+    ENTRY = "scripts/<cli>.py"          VERB_FILE = "scripts/verbs.py"
+    VERB_TABLE = "VERBS"                SYS_PATH = ("scripts",)
+    SEAMS = (("kit.dates", "now", "now"), ("kit.dates", "today", "today"))
+    RUNNER = ("kit.runner", "script_cmd")
+    DATA_ENV = "<PREFIX>_DATA_DIR"      REFUSE_ARGS = ("--apply",)
 """
 
 from __future__ import annotations
@@ -28,7 +43,8 @@ from pathlib import Path
 
 # ------------------------------------------------------------ the harness
 ENTRY = "tool.py"                   # tree-relative; every case runs it
-VERB_TABLE = "VERBS"                # its dict of verbs, read with ast
+VERB_FILE = ENTRY                   # tree-relative; the file holding VERB_TABLE
+VERB_TABLE = "VERBS"                # its dict or list of verbs, read with ast
 SYS_PATH = (".",)                   # tree-relative, first on a case's sys.path
 SEAMS = (("lib.clock", "now", "now"),        # (module, function, now|today)
          ("lib.clock", "today", "today"))
