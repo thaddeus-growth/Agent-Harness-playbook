@@ -13,6 +13,9 @@ kol-clients), never inside the harness checkout. What it writes, under
 
   * bin/<cli>: the harness pinned to this client, <PREFIX>_DATA_DIR =
     ./workspace; <PREFIX>_HARNESS (env) points at another checkout;
+    <PREFIX>_PYTHON (env, default python3) names the interpreter, and every
+    wrapper refuses, in one line naming that variable, one older than
+    Python 3.11 (the kit needs tomllib; macOS's own python3 is 3.9);
   * bin/console: this client's owner console (the harness's vendored
     console/serve.py), log in workspace/console; the first run appends a
     random <PREFIX>_CONFIRM_CODE_SECRET to workspace/.env (0600, never
@@ -97,15 +100,31 @@ def render(text: str, values: dict) -> str:
     return text
 
 
+MIN_PYTHON = (3, 11)
+
+
+def python_check(p: str, name: str) -> str:
+    """The lines every wrapper starts with: the interpreter is
+    ${<P>_PYTHON:-python3}, and one older than MIN_PYTHON (or none) is
+    refused in one line that names the variable to set."""
+    want = ".".join(map(str, MIN_PYTHON))
+    return f"""py="${{{p}_PYTHON:-python3}}"
+"$py" -c 'import sys; sys.exit(sys.version_info < {MIN_PYTHON})' 2>/dev/null || {{
+  echo "{name}: $py is not Python {want} or newer (or was not found); set {p}_PYTHON to one" >&2
+  exit 1
+}}
+"""
+
+
 def files(a, n: dict, gates: list[str], relay: list[str]) -> dict[str, tuple[str, int]]:
     """{relative path: (content, mode)} of the client folder."""
     cli, p = n["cli"], n["prefix"]
     home = f'"${{{p}_HARNESS:-{a.harness}}}"'
     wrapper = f"""#!/bin/sh
 # {a.title}: {cli} pinned to this client's workspace ({p}_DATA_DIR = ./workspace).
-# {p}_HARNESS points at another harness checkout.
-export {p}_DATA_DIR="$(cd "$(dirname "$0")/../workspace" && pwd)"
-exec python3 {home}/{n['scripts']}/{cli}.py "$@"
+# {p}_HARNESS points at another harness checkout; {p}_PYTHON names the interpreter.
+{python_check(p, "bin/" + cli)}export {p}_DATA_DIR="$(cd "$(dirname "$0")/../workspace" && pwd)"
+exec "$py" {home}/{n['scripts']}/{cli}.py "$@"
 """
     console = f"""#!/bin/sh
 # {a.title}'s owner console: what `{cli} pending` lists, answered in the
@@ -113,22 +132,22 @@ exec python3 {home}/{n['scripts']}/{cli}.py "$@"
 # relayed one-time code. The first run switches relayed confirmation on: a
 # random {p}_CONFIRM_CODE_SECRET appended to workspace/.env (0600), never printed.
 set -e
-root="$(cd "$(dirname "$0")/.." && pwd)"
+{python_check(p, "bin/console")}root="$(cd "$(dirname "$0")/.." && pwd)"
 envf="$root/workspace/.env"
 if ! grep -qs '^{p}_CONFIRM_CODE_SECRET=' "$envf"; then
   (umask 077; printf '{p}_CONFIRM_CODE_SECRET=%s\\n' "$(openssl rand -hex 32)" >> "$envf")
 fi
 export {p}_DATA_DIR="$root/workspace" CONSOLE_DIR="$root/workspace/console"
 mkdir -p "$CONSOLE_DIR" && chmod 700 "$CONSOLE_DIR"
-exec python3 {home}/console/serve.py --dir "$CONSOLE_DIR" --title "{a.title}" \\
+exec "$py" {home}/console/serve.py --dir "$CONSOLE_DIR" --title "{a.title}" \\
   --lang {a.lang} --port "${{{p}_CONSOLE_PORT:-{a.port}}}" \\
   --relay-cmd "$root/bin/{cli}" --relay-verbs "{','.join(relay)}" "$@"
 """
     ask = f"""#!/bin/sh
 # The agent's side of {a.title}'s console (console/ask.py), pinned to workspace/console.
-root="$(cd "$(dirname "$0")/.." && pwd)"
+{python_check(p, "bin/ask")}root="$(cd "$(dirname "$0")/.." && pwd)"
 export CONSOLE_DIR="$root/workspace/console"
-exec python3 {home}/console/ask.py "$@"
+exec "$py" {home}/console/ask.py "$@"
 """
     deny = [f"Bash({pre}bin/{cli} {g}:*)" for g in gates
             for pre in ("./", "")]

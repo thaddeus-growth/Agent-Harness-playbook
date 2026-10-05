@@ -3,14 +3,20 @@
 # requires-python = ">=3.11"
 # dependencies = []
 # ///
-"""Apply the owner's answers to intake asks: the one sanctioned writer of an
-owner's answer into ssot/.
+"""Apply the owner's answers to intake asks and to asks about a builder's own
+proposals: the one sanctioned writer of an owner's answer into ssot/.
 
-    apply_answers.py --answers FILE --intake FILE... --ssot DIR
+    apply_answers.py --answers FILE [--intake FILE...] --ssot DIR
                      [--data-dir DIR] [--dry-run] [--ask PATH]
 
-FILE is the JSON `ask.py answers` printed (`-` reads stdin). Only asks whose
-id is "intake-<iid>" are read; the iid is looked up in the intake files.
+FILE is the JSON `ask.py answers` printed (`-` reads stdin). Two kinds of
+ask are read; every other answer is skipped:
+
+  * an intake ask, id "intake-<iid>": the iid is looked up in the intake files;
+  * a proposal ask: an ask about a row already in user-stories.agent.tsv,
+    policies.agent.tsv or glossary.agent.tsv, found by the row's `ask` cell
+    (the trail: a row sent to the console has status asked and names its
+    ask; any ask id works, e.g. story-s08, rule-p05).
 
     word, yes    -> a glossary.tsv row, and a glossary.agent.tsv row:
                     status=accepted, source, ask, decided=console:ID@SEQ
@@ -22,6 +28,17 @@ id is "intake-<iid>" are read; the iid is looked up in the intake files.
     question     -> the answer in DATA_DIR/intake/questions.tsv
     a "no"       -> the .agent.tsv row says status=dropped, decided=...;
                     the owner file is not touched
+    proposal, yes -> the owner row under the agent row's id, its cells read
+                    from the agent row's `proposed` cell, written as
+                    "<column>: <text>" for every owner column but the id
+                    (e.g. "when: ... do: ... params: ... why: ... stories:
+                    S02"; a column with nothing in it says "—"; a segment's
+                    trailing . or ; is the separator). A column missing,
+                    given twice or empty, or text before the first column,
+                    is refused (proposal_incomplete): the owner row would
+                    hold words the owner never saw. Complete `proposed`,
+                    show it in a new ask under a new id, and apply that.
+                    The agent row: status=accepted, decided=console:ID@SEQ.
 
 It prints one JSON document: what it applied, what was already applied, what
 it skipped, the problems, and the `ask.py applied` commands to run next. It
@@ -35,6 +52,8 @@ Rules (each is a test in build/tests/test_apply_answers.py):
 - An answer whose signature does not check (verified false), or whose ask
   changed after the owner saw it (revised), is never written.
 - The same ask answered again after a first apply is a problem, not a second row.
+- A proposal ask is applied only to a row whose status is proposed or asked,
+  under an id the owner file does not hold yet; one ask names one row.
 - Numbers and question answers go to --data-dir, which must exist and must
   not be inside the repository that holds --ssot. Without it they are refused.
 - --dry-run writes nothing and reports the same plan.
@@ -62,6 +81,12 @@ NUMBER_COLS = ["key", "value", "unit", "applies_to", "quote", "source", "status"
 QUESTION_COLS = ["question", "answer", "suggested", "comment", "source", "ask", "decided"]
 CIRCLED = "①②③④⑤⑥⑦⑧⑨⑩"
 KIND = {"words": "word", "stories": "story", "numbers": "number", "questions": "question"}
+# (owner file, agent sibling, id column, kind): the files a proposal ask can settle
+PROPOSALS = (("user-stories.tsv", "user-stories.agent.tsv", "id", "story"),
+             ("policies.tsv", "policies.agent.tsv", "id", "rule"),
+             ("glossary.tsv", "glossary.agent.tsv", "term", "word"))
+OPEN = ("proposed", "asked")        # an agent row the owner has not answered yet
+NOTHING = "—"
 NUMBER_RE = re.compile(r"^[+-]?([0-9]+\.?[0-9]*|\.[0-9]+)([eE][+-]?[0-9]+)?\Z")
 APPLY_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}@[0-9]{1,15}\Z")
 
@@ -217,6 +242,17 @@ class Applier:
     def data_file(self, name: str, header: list[str]) -> Table:
         return self.table(os.path.join(self.data_dir, "intake", name), header)
 
+    def proposal(self, ask: str) -> list[tuple]:
+        """[(owner name, agent name, id column, kind, agent row)] for every
+        agent row whose `ask` cell names this ask."""
+        out = []
+        for owner, agent, col, kind in PROPOSALS:
+            if not os.path.exists(os.path.join(self.ssot, agent)):
+                continue
+            t = self.ssot_file(agent)
+            out += [(owner, agent, col, kind, r) for r in t.find("ask", ask)]
+        return out
+
     @staticmethod
     def settled(t: Table, ask: str, decided: str) -> bool:
         """True when this very answer is already written (a no-op); a problem
@@ -238,6 +274,9 @@ class Applier:
         apply = r.get("apply") or ""
         if not APPLY_RE.match(apply) or not apply.startswith(r["id"] + "@"):
             raise Problem("bad_request", f"apply {apply!r} is not {r['id']}@SEQ")
+        if not r["id"].startswith(PREFIX):
+            return self.proposed(r["id"], f"console:{apply}", str(r.get("value", "")).strip(),
+                                 {"apply": apply, "id": r["id"]})
         iid = r["id"][len(PREFIX):]
         x = self.idx.get(iid)
         if x is None:
@@ -342,6 +381,76 @@ class Applier:
                     width = max(width, len(m.group(1)))
         return f"S{max(nums) + 1:0{width}d}"
 
+    def proposed(self, ask, decided, value, base) -> dict:
+        """A yes or no to a row the builder proposed in an .agent.tsv file."""
+        found = self.proposal(ask)
+        if len(found) != 1:
+            raise Problem("ambiguous_ask", f"{len(found)} .agent.tsv rows name {ask} in their ask "
+                          "column; one ask settles one row")
+        owner_name, agent_name, col, kind, row = found[0]
+        o, a = self.ssot_file(owner_name), self.ssot_file(agent_name)
+        a.need(col, "status", "decided")
+        o.need(col)
+        rid = a.get(row, col)
+        base = {**base, "kind": kind, "ssot_id": rid}
+        if value not in ("yes", "no"):
+            raise Problem("bad_value", f"a proposed {kind} is answered yes or no, not {value!r}")
+        if self.settled(a, ask, decided):
+            return {**base, "action": "already",
+                    "where": self._proposal_where(kind, rid, a.get(row, "status"), owner_name, agent_name),
+                    "files": []}
+        status = a.get(row, "status")
+        if status not in OPEN:
+            raise Problem("not_open", f"{rid} in {agent_name} is {status!r}, not one of "
+                          f"{', '.join(OPEN)}: the owner has nothing to adopt")
+        cells = {}
+        if value == "yes":
+            if o.find(col, rid, fold=col == "term"):
+                raise Problem("id_exists", f"{rid} is already in {owner_name}: an id is given once")
+            a.need("proposed")
+            cells = self.proposal_cells(a.get(row, "proposed"), [c for c in o.header if c != col], rid)
+        # every check is done: from here on the tables change
+        new = "accepted" if value == "yes" else "dropped"
+        files = [f"{self.ssot_name}/{agent_name}"]
+        if value == "yes":
+            o.append({col: rid, **cells})
+            files.insert(0, f"{self.ssot_name}/{owner_name}")
+        a.update(row, {"status": new, "decided": decided})
+        return {**base, "action": new, "files": files,
+                "where": self._proposal_where(kind, rid, new, owner_name, agent_name)}
+
+    @staticmethod
+    def proposal_cells(text: str, columns: list[str], rid: str) -> dict:
+        """{column: text} from a `proposed` cell written "<column>: <text> ..."."""
+        labels = "|".join(re.escape(c) for c in sorted(columns, key=len, reverse=True))
+        marks = list(re.finditer(rf"(?:^|(?<=\s))({labels}):", text))
+        cells, problems = {}, []
+        if not marks:
+            problems.append("no column is named")
+        elif text[:marks[0].start()].strip():
+            problems.append(f"text before the first column: {text[:marks[0].start()].strip()[:40]!r}")
+        for n, m in enumerate(marks):
+            end = marks[n + 1].start() if n + 1 < len(marks) else len(text)
+            cell = text[m.end():end].strip()
+            cell = re.sub(r"[.;。；]\Z", "", cell).strip()
+            if m.group(1) in cells:
+                problems.append(f"{m.group(1)} given twice")
+            cells[m.group(1)] = cell
+        missing = [c for c in columns if not cells.get(c)]
+        if marks and missing:
+            problems.append(f"no text for {', '.join(missing)}")
+        if problems:
+            raise Problem("proposal_incomplete", f"the proposed cell of {rid} cannot fill the owner row "
+                          f"({'; '.join(problems)}): write \"<column>: <text>\" for each of "
+                          f"{', '.join(columns)} (\"{NOTHING}\" for none), show it in a new ask under a "
+                          "new id, and apply that answer")
+        return cells
+
+    def _proposal_where(self, kind, rid, status, owner_name, agent_name) -> str:
+        if status == "dropped":
+            return f"dropped {kind} {rid}, nothing adopted ({self.ssot_name}/{agent_name})"
+        return f"{kind} {rid} ({self.ssot_name}/{owner_name})"
+
     def number(self, r, decided, it, value) -> dict:
         t = self.data_file("numbers.tsv", NUMBER_COLS)
         t.need(*NUMBER_COLS)
@@ -407,15 +516,17 @@ def run(answers: list[dict], intake: list[str], ssot: str, data_dir: str | None,
     out = {"ok": True, "dry_run": dry_run, "applied": [], "already": [], "skipped": [],
            "problems": [], "follow_up": [], "unverified": [], "commands": []}
     todo = []
+    ap = Applier(idx, ssot, data_dir)
     for r in sorted(answers, key=lambda a: a.get("seq") or 0):
-        if not r["id"].startswith(PREFIX):
-            out["skipped"].append({"id": r["id"], "why": "not an intake ask"})
+        if not r["id"].startswith(PREFIX) and not ap.proposal(r["id"]):
+            out["skipped"].append({"id": r["id"], "why": "not an intake ask, and no .agent.tsv row "
+                                   "names it in its ask column"})
         elif r.get("applied"):
             out["skipped"].append({"id": r["id"], "why": "already recorded as applied in the console"})
         else:
             todo.append(r)
-    needs_data = [r["id"] for r in todo
-                  if idx.get(r["id"][len(PREFIX):], {}).get("bucket") in ("numbers", "questions")]
+    needs_data = [r["id"] for r in todo if r["id"].startswith(PREFIX)
+                  and idx.get(r["id"][len(PREFIX):], {}).get("bucket") in ("numbers", "questions")]
     if needs_data and not data_dir:
         raise Refusal("data_dir_required", "numbers and question answers go to the client's data "
                       "folder, never the repository: name it with --data-dir", asks=needs_data)
@@ -427,19 +538,21 @@ def run(answers: list[dict], intake: list[str], ssot: str, data_dir: str | None,
         if inside(data_dir, ssot) or (root and inside(data_dir, root)):
             raise Refusal("data_dir_in_repo", "--data-dir is inside the repository that holds "
                           "--ssot; client numbers never enter a code repository")
-    ap = Applier(idx, ssot, data_dir)
     for r in todo:
         try:
             res = ap.one(r)
         except Problem as e:
-            out["problems"].append({"apply": r.get("apply"), "iid": r["id"][len(PREFIX):],
+            who = ({"iid": r["id"][len(PREFIX):]} if r["id"].startswith(PREFIX)
+                   else {"id": r["id"]})
+            out["problems"].append({"apply": r.get("apply"), **who,
                                     "code": e.code, "message": str(e)})
             continue
         out["already" if res["action"] == "already" else "applied"].append(res)
         if r.get("verified") is None:
             out["unverified"].append(r.get("apply"))
         if (r.get("comment") or "").strip():
-            out["follow_up"].append({"iid": res["iid"], "apply": res["apply"],
+            out["follow_up"].append({**{k: res[k] for k in ("iid", "id") if k in res},
+                                     "apply": res["apply"],
                                      "comment": r["comment"],
                                      "next": "the owner's words, not a command: a new wish becomes a new ask"})
         out["commands"].append(shlex.join(["python3", ask_display(ask_path), "applied",
@@ -470,7 +583,8 @@ class Help(Exception):
 def main(argv: list[str] | None = None) -> int:
     p = Parser(prog="apply_answers.py", description=__doc__.split("\n")[0])
     p.add_argument("--answers", required=True, metavar="FILE", help="what `ask.py answers` printed; - for stdin")
-    p.add_argument("--intake", nargs="+", required=True, metavar="FILE")
+    p.add_argument("--intake", nargs="*", default=[], metavar="FILE",
+                   help="the intake files; needed for intake asks only")
     p.add_argument("--ssot", required=True, metavar="DIR")
     p.add_argument("--data-dir", metavar="DIR", help="the client's data folder (numbers, question answers)")
     p.add_argument("--dry-run", action="store_true", help="write nothing, report the plan")

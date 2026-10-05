@@ -10,7 +10,8 @@ vendored into scripts/kit, a git repository with a generated
       other engineering token), a restated threshold, a sibling that lost
       an id, duplicate ids, a stray tab, a bad owner kind, a missing reader
       or test, a bad id column, a missing code symbol, a banned term, the
-      held ratchet, a deleted id (vs git HEAD), a Chinese index header
+      held ratchet, a deleted id (vs git HEAD), a Chinese index header;
+      an agent-only row proposed or asked is fine, accepted is not
   [2] release: an archive shipping tests/, a planning file or dropping
       SKILL.md, a registry with a reader left out, an opened .tsv not
       shipped, a stale internal entry, the vendored kit made internal
@@ -398,6 +399,13 @@ def test_ssot(root: Path) -> None:
     with planted(root, ua, append="S04\tproposed\t—\n"):
         clean("an agent-only row with status proposed is fine",
               ssot.check_index(root))
+    with planted(root, ua, append="S04\tasked\t—\n"):
+        clean("an agent-only row with status asked (sent to the console, "
+              "not answered yet) is fine", ssot.check_index(root))
+    with planted(root, ua, append="S04\taccepted\t—\n"):
+        caught("an agent-only row with status accepted is not",
+               ssot.check_index(root), "ssot/user-stories.agent.tsv: ids "
+               "differ", "only in the agent file ['S04']")
     with planted(root, us, append="S01\tagain\tagain\n"):
         caught("a duplicate id", ssot.check_index(root),
                "ssot/user-stories.tsv: duplicate id(s) ['S01']")

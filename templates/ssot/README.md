@@ -25,12 +25,13 @@ Rules *(tests/test_ssot.py)*:
 - Every owner row has a sibling row with the same id, `status` `accepted` or `retired`, and a `decided` reference. A row with no answer behind it is not the owner's.
 - `asked` needs `ask`; `accepted`, `dropped`, `retired` and `signed` need `decided`.
 - A change the owner asks for is a new proposal under a new ask id, never an edit of the answered one.
+- A proposal sent to the owner: its `proposed` cell reads `<column>: <text>` for every owner column but the id (`—` for none), the ask shows that text, and the row says `asked` with the ask's id. The playbook's `build/apply_answers.py` then writes the owner row from it on a yes (BUILD.md, B0.6).
 - Ids never change and are never reused. A retired row stays, marked, never deleted.
 
 ## Stories and policies
 
 - A story says what outcome counts as done; a policy says "when X, do Y", names thresholds only by name and lists the stories it serves. An acceptance item cites a policy id instead of restating the rule.
-- A story's progress is the agent file's `progress` column: `partial` (names an open blocker in `blocking_issue` and the items left), `done` (has a row in `story_checks.tsv`), `merged` (points at its home story, whose check covers it). Work the owner has not adopted yet is an agent-only row with `status` `proposed`: a legal home for it before the owner adopts it. Test that each progress points at something live: a closed blocker behind a `partial` story is drift.
+- A story's progress is the agent file's `progress` column: `partial` (names an open blocker in `blocking_issue` and the items left), `done` (has a row in `story_checks.tsv`), `merged` (points at its home story, whose check covers it). Work the owner has not adopted yet is an agent-only row with `status` `proposed`, or `asked` once an ask carries it to the console: a legal home for it before the owner answers. Test that each progress points at something live: a closed blocker behind a `partial` story is drift.
 - A policy's approval is the owner's answer: its sibling's `status` `accepted` with the `decided` that approved it, or `retired` (keeps its id, names no threshold). A rule the owner has not approved yet is an agent-only row with `status` `proposed` and its wording in `proposed` (P01 in `policies.agent.tsv`): code may propose from it, never execute.
 - Show the owner the number of drafts waiting in `proposed` columns as one ask; unseen, they pile up across reviews.
 

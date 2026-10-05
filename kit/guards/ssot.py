@@ -26,8 +26,10 @@ owner-file lint.
     an entry that no longer fails is itself a problem, so the list only
     shrinks;
   * an `X.agent.tsv` whose owner sibling `X.tsv` exists carries the same
-    ids (agent rows whose status is `proposed` aside: the owner has not
-    adopted them yet); an agent file with no owner sibling is agent-only;
+    ids (agent rows whose status is `proposed` or `asked` aside: the owner
+    has not adopted them yet; an `asked` row's `ask` reference is the
+    trail check's, kit.testing.suites.trail_problems); an agent file with
+    no owner sibling is agent-only;
   * ids are never deleted: every id an owner or agent file held at git
     HEAD is still there (retire a row, never delete or renumber it);
     skipped per file when git or the file at HEAD is absent;
@@ -38,7 +40,8 @@ Parameters, all optional, in harness.toml `[guards.ssot]`:
 index_columns {file, owner, reader, test, id, purpose -> header name},
 owner_kinds, cli_verbs, none ("—"), table_prefixes, file_exts, held
 [[file, id, column]…], banned_terms, status_column ("status"),
-proposed_statuses (["proposed"]).
+proposed_statuses (["proposed", "asked"]: the statuses of a row the
+owner has not adopted yet).
 
 Deviations (SPEC §guards): these parameters live in [guards.ssot], not
 [ssot], because kit.config requires every [ssot] value to be a path
@@ -72,6 +75,9 @@ KINDS = ("owner", "agent", "registry")
 HUMAN_TABLES = ("client_facts", "client_facts_history", "decisions_history",
                 "action_queue", "action_effects")
 FILE_EXTS = ("py", "tsv", "json", "toml", "sh")
+# An agent row the owner has not adopted yet: the agent's idea, or one sent
+# to the console and not answered (templates/ssot/README.md, the trail).
+PROPOSED = ("proposed", "asked")
 
 
 @dataclass(frozen=True)
@@ -113,7 +119,7 @@ def rules(root: Path | str | None = None,
         held=frozenset(tuple(h) for h in g.get("held", ())),
         banned=dict(g.get("banned_terms", {})),
         status_column=str(g.get("status_column", "status")),
-        proposed=tuple(g.get("proposed_statuses", ("proposed",))),
+        proposed=tuple(g.get("proposed_statuses", PROPOSED)),
         constants=constants,
         message_codes=(cfg.ssot.get("message_codes") or "").strip("/")
         or None)
