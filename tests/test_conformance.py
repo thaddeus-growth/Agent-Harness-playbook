@@ -101,5 +101,45 @@ def test_the_shipped_adapters_parse_and_name_only_known_sections():
         assert "harness" in cfg and "name" in cfg["harness"], n
 
 
+TTY_FAKE = '''
+import json, os, sys
+verb, *rest = sys.argv[1:]
+state = os.path.join(os.environ["FAKE_DIR"], "s.json")
+db = json.load(open(state)) if os.path.exists(state) else {}
+if verb == "set":
+    float(rest[0])                            # a typed fact: a number or nothing
+    if db.get("confirmed") and rest[0] != db["value"]:
+        sys.exit("confirmed: an agent may not change it")
+    db.update(value=rest[0], confirmed=False)
+elif verb == "confirm":
+    with open("/dev/tty") as t:              # the human, never stdin
+        print("retype the value: ", end="", flush=True)
+        if t.readline().strip() != db["value"]:
+            sys.exit("mistyped")
+    db["confirmed"] = True
+elif verb == "get":
+    print(db.get("value"))
+json.dump(db, open(state, "w"))
+'''
+
+
+def test_typed_values_and_a_tty_confirm():
+    """A harness with numeric facts whose confirm reads /dev/tty passes through `values` and a `tty` step."""
+    base = '["python3", "{root}/fake.py"'
+    t = ('[harness]\nname = "fake"\n[env]\nFAKE_DIR = "{tmp}"\n[facts]\nvalues = ["0.31", "0.77"]\n'
+         f'human = [{base}, "set", "{{value}}"], {{argv = {base}, "confirm"], tty = "{{value}}"}}]\n'
+         f'agent = [{base}, "set", "{{value}}"]]\nread = {base}, "get"]\n')
+    import contextlib
+    import io
+    with tempfile.TemporaryDirectory() as root:
+        open(f"{root}/fake.py", "w").write(TTY_FAKE)
+        open(f"{root}/a.toml", "w").write(t)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = ck.main([f"{root}/a.toml", "--root", root])
+    out = buf.getvalue()
+    assert rc == 0 and "PASS  C1" in out, out
+
+
 if __name__ == "__main__":
     _t.main(globals())

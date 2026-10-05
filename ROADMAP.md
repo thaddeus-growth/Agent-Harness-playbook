@@ -48,7 +48,7 @@ Turns 2 to 4 follow [RESTRUCTURE.md](RESTRUCTURE.md) (accepted 2026-10-05): one 
 
 ## Backlog
 
-- `amazon-ads-harness` fails conformance check C1: `facts set` on a confirmed fact replaces the value and the fact stays confirmed, so an agent can change what the owner signed (`conformance/INVARIANTS.md`, first run 2026-10-05). Filed as thaddeus-growth-hacking/amazon-ads-harness#448; the kit's `facts` had the same gap and refuses it since kit 0.8.0. Fix in that repository; rerun `python3 conformance/check.py conformance/adapters/ppc.toml --root <checkout>`
+- `amazon-ads-harness` passed conformance C1 and C2 on 2026-10-05 after its fix for thaddeus-growth-hacking/amazon-ads-harness#448 (`facts set` and `facts rollback` refuse to replace a confirmed value). The ppc adapter now follows its current CLI: numeric `values`, `init`'s profit-model prompts, `--reason`, no `--type`, and the confirm retyped on a terminal (`tty`).
 - The scaffold sets up Zylos itself: vendors the adapter, writes the manifest, passes `node zylos/lib.js check` (#25)
 - Quality evals in every harness; SEO and outreach adoption (#26)
 - Kit modules with no or one user: delete, move or keep; recheck `copylint` after KOL merges (#22)
