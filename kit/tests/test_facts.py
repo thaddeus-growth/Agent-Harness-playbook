@@ -13,7 +13,8 @@ banner is harness code and stays there).
   3. The declaration is confirmed through the gate by a relayed code
      (challenge as data, then the code with its audit); init at a
      terminal (the KIT_TTY seam) confirms it by retyping the market.
-  4. set is pending; a changed value is pending again; a same-value set
+  4. set is pending; a changed value is pending again; set or rollback
+     over a confirmed value is refused (7); a same-value set
      writes no history and keeps updated_at; --source / --reason needed.
   5. confirm: TTY retype; a mistype, no terminal, no secret are refused;
      a relayed code needs its audit, confirms exactly the value it was
@@ -535,6 +536,21 @@ def test_rollback() -> None:
                             "key='unit_cost' AND action='init'").fetchone()[0]
         fee_id = c.execute("SELECT MIN(id) FROM client_facts_history WHERE "
                            "key='fee_pct'").fetchone()[0]
+    confirmed = fact("unit_cost")
+    last = top()
+    for argv in (["set", "unit_cost", "6", "--source", "agent_guess"],
+                 ["rollback", "unit_cost", "--to", str(init_id)]):
+        rc, out, err = run([*argv, "--reason", "r", "--json"])
+        d = one_doc(out)
+        check(f"{argv[0]} over a confirmed value: refused, coded, nothing "
+              f"written, both ways forward named",
+              rc == 2 and d["code"] == "fact_set_confirmed"
+              and d["params"]["action"] == argv[0] and top() == last
+              and fact("unit_cost") == confirmed and confirmed[1] == 0
+              and any(" unconfirm unit_cost " in n for n in d["next"])
+              and any(" confirm unit_cost " in n and "--value" in n
+                      for n in d["next"]), (rc, out))
+    run(["unconfirm", "unit_cost", "--reason", "quote in doubt"])
     last = top()
     rc, out, err = run(["rollback", "unit_cost", "--to", str(init_id),
                         "--reason", "quote was wrong", "--json"])
@@ -623,6 +639,8 @@ def test_numeric_contract() -> None:
                         "--reason", "r", "--json"])
     check("a threshold within bounds: stored canonical (0.30 -> 0.3)",
           rc == 0 and fact("threshold_max_step")[:2] == ("0.3", 1), out)
+    if fact("fee_pct")[1] == 0:
+        run(["unconfirm", "fee_pct", "--reason", "bounds check"])
     for value in ("0", "100", "0.5"):
         rc, out, err = run(["set", "fee_pct", value, "--source", "s",
                             "--reason", "r"])
@@ -823,8 +841,8 @@ def test_markets_and_reads() -> None:
     rc, out, err = run(["history", "unit_cost", "--market", "US", "--json"])
     d = one_doc(out)
     check("history KEY --json: every row of the key, in order",
-          rc == 0 and [r["action"] for r in d["history"]][:4]
-          == ["init", "set", "confirm", "rollback"]
+          rc == 0 and [r["action"] for r in d["history"]][:5]
+          == ["init", "set", "confirm", "unconfirm", "rollback"]
           and d["market"] == "US", d)
     rc, out, err = run(["history", "--market", "US"])
     check("history (every key, text)", rc == 0 and "market_declared" in out
@@ -847,6 +865,8 @@ def test_restore() -> None:
         dumped = c.execute("SELECT market, key, value, is_assumption FROM "
                            "client_facts ORDER BY market, key").fetchall()
     for key, value in (("unit_cost", "7"), ("monthly_cap", "9")):
+        if fact(key, "US")[1] == 0:
+            run(["unconfirm", key, "--market", "US", "--reason", "oops"])
         run(["set", key, value, "--market", "US", "--source", "s",
              "--reason", "oops"])
     check("two facts moved since the backup",

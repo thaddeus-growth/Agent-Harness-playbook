@@ -15,8 +15,10 @@ Ported from the reference harness's scripts/facts.py. What it guards:
     kit.human.client_name): bound into the code's subject, recorded as
     `client:<name>` with the operator who passed the gate in the reason;
     no other path writes a `client:` author.
-  * A confirmation belongs to the value that was confirmed. A `set` that
-    changes the value makes it pending again. A same-value `set` writes
+  * A confirmation belongs to the value that was confirmed. A `set` (or
+    `rollback`) never replaces a confirmed value: it is refused, naming
+    `unconfirm` (lower trust, recorded) and `confirm --value` (a person's
+    new value). A `set` that changes a pending value keeps it pending. A same-value `set` writes
     no history and does not bump updated_at.
   * A value is checked where it is typed (kit.registry.FactKeys, and
     Thresholds for `threshold_<name>` keys): only registered keys, within
@@ -277,6 +279,19 @@ def _apply_set(con: sqlite3.Connection, m: str, key: str, stored: str,
         return "new", msg(
             "fact_set_new", f"set {key} [{m}] = {stored} (new, pending until "
             f"a human confirms it)", key=key, market=m, value=stored)
+    if existing["value"] != stored and not existing["is_assumption"]:
+        # A value a person confirmed is never replaced by an ungated write:
+        # the confirmed number would vanish from the table every rule reads.
+        # Lowering trust is its own recorded step; a new value is a person's.
+        cli = _cli()
+        raise HarnessError(msg(
+            "fact_set_confirmed", f"{key} [{m}] = {existing['value']} was "
+            f"confirmed by a person; {action} does not replace it with "
+            f"{stored}. Nothing was written", key=key, market=m,
+            value=existing["value"], new=stored, action=action),
+            [shlex.join([cli, "facts", "unconfirm", key, "--market", m]),
+             shlex.join([cli, "facts", "confirm", key, "--market", m,
+                         "--value", stored])])
     if existing["value"] != stored:
         # A confirmation belongs to the value confirmed: a new value is
         # pending again, or a placeholder would inherit the confirmation.
