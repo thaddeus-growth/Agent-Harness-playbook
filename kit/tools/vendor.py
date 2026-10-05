@@ -12,6 +12,11 @@
                version it was vendored with (the console has none of its
                own).
 
+The kit copy holds only the packs the harness takes (kit/tools/packs.py):
+`[kit] packs = [...]` in its harness.toml, plus base and testkit; with no
+`[kit] packs`, every pack. A module the harness's own code imports is never
+left out: the run is refused, naming the importing file and the pack to add.
+
 Each copy leaves out tests/, __pycache__, *.pyc and .DS_Store; a file
 the playbook no longer has is removed from the copy; then the copy's
 MANIFEST.sha256 is (re)written, so the harness's drift guard fails on any
@@ -32,9 +37,10 @@ import tomllib
 from pathlib import Path
 
 try:
-    from kit.tools import manifest
+    from kit.tools import manifest, packs
 except ImportError:                  # run as a script: kit/tools is on sys.path
     import manifest                  # type: ignore[no-redef]
+    import packs                     # type: ignore[no-redef]
 
 PLAYBOOK = Path(__file__).resolve().parents[2]
 
@@ -47,10 +53,29 @@ def scripts_dir(harness: Path) -> str:
     return str(raw.get("harness", {}).get("scripts_dir") or "scripts")
 
 
-def plan(src: Path, dest: Path, extra: dict[str, bytes]) -> dict[str, list]:
+def kit_files(kit_dir: Path, taken: set[str]) -> set[str]:
+    """The kit files that belong to the packs `taken` (the package's own files always)."""
+    table = packs.table(kit_dir)
+    known = set(table)
+    return {rel for rel in manifest.files(kit_dir)
+            if (m := packs.module_of(rel, known)) is None or table.get(m) in taken}
+
+
+def left_out(harness: Path, kit_dir: Path, dest: Path, taken: set[str]) -> list[str]:
+    """`file: imports kit.X (pack P)` for each import of a module the copy would not hold."""
+    table = packs.table(kit_dir)
+    return [f"{f}: imports kit.{m} (pack {table[m]})"
+            for m, fs in sorted(packs.harness_imports(harness, dest, set(table)).items())
+            if table[m] not in taken for f in fs]
+
+
+def plan(src: Path, dest: Path, extra: dict[str, bytes],
+         only: set[str] | None = None) -> dict[str, list]:
     """{added, updated, removed, unchanged} relpaths for syncing `src` (plus
-    `extra` = {relpath: bytes} written only into the copy) into `dest`."""
-    want = {rel: (src / rel).read_bytes() for rel in manifest.files(src)}
+    `extra` = {relpath: bytes} written only into the copy) into `dest`;
+    `only`, when given, is the subset of `src` files to copy."""
+    want = {rel: (src / rel).read_bytes() for rel in manifest.files(src)
+            if only is None or rel in only}
     want.update(extra)
     have = set(manifest.files(dest)) if dest.is_dir() else set()
     out: dict[str, list] = {"added": [], "updated": [], "removed": [],
@@ -68,8 +93,8 @@ def plan(src: Path, dest: Path, extra: dict[str, bytes]) -> dict[str, list]:
 
 
 def sync(src: Path, dest: Path, extra: dict[str, bytes], *,
-         dry_run: bool = False) -> dict[str, list]:
-    p = plan(src, dest, extra)
+         dry_run: bool = False, only: set[str] | None = None) -> dict[str, list]:
+    p = plan(src, dest, extra, only)
     if dry_run:
         return p
     for rel in p["added"] + p["updated"]:
@@ -127,19 +152,32 @@ def main(argv: list[str] | None = None) -> int:
     version = (PLAYBOOK / "kit" / "VERSION").read_text("utf-8").strip()
     jobs = []
     if args.kit or both:
-        jobs.append(("kit", PLAYBOOK / "kit",
-                     harness / scripts_dir(harness) / "kit", {}))
+        kit_dir, dest = PLAYBOOK / "kit", harness / scripts_dir(harness) / "kit"
+        try:
+            taken = packs.chosen(harness, kit_dir)
+        except packs.PackError as e:
+            print(f"error: {e}", file=sys.stderr)
+            return 2
+        missing = left_out(harness, kit_dir, dest, taken)
+        if missing:
+            print("error: the harness imports kit modules outside the packs it takes; "
+                  "add their packs to [kit] packs in harness.toml:", file=sys.stderr)
+            for line in missing:
+                print(f"  {line}", file=sys.stderr)
+            return 2
+        print(f"kit packs: {', '.join(sorted(taken))}")
+        jobs.append(("kit", kit_dir, dest, {}, kit_files(kit_dir, taken)))
     if args.console or both:
         src = PLAYBOOK / "console"
         extra = ({} if (src / "VERSION").is_file()
                  else {"VERSION": (version + "\n").encode()})
-        jobs.append(("console", src, harness / "console", extra))
-    for label, src, dest, extra in jobs:
+        jobs.append(("console", src, harness / "console", extra, None))
+    for label, src, dest, extra, only in jobs:
         if dest.is_symlink():
             print(f"error: {dest} is a symlink; a vendored copy must be "
                   f"plain files", file=sys.stderr)
             return 2
-        p = sync(src, dest, extra, dry_run=args.dry_run)
+        p = sync(src, dest, extra, dry_run=args.dry_run, only=only)
         report(label + (" (dry run)" if args.dry_run else ""), dest,
                harness, p, version)
     return 0

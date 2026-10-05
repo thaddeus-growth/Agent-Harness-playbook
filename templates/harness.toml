@@ -13,6 +13,12 @@ languages = ["en", "zh"]         # every message code row has one meaning_<lang>
 markets = []                     # the closed set of scopes, for example ["HK", "TW"]; [] = no scope partition
 home_env_file = ""               # an optional env file in the home folder, for example "~/.{{cli}}.env"; "" = none
 
+[kit]
+# The kit packs this harness vendors (the playbook's kit/packs.tsv) besides base and
+# testkit, which it always takes: "compliance" (ad copy), "generation" (paid AI
+# generation, real people), "data" (rate-limited pulls). Re-vendor after a change.
+packs = []
+
 [ssot]
 dir = "ssot"
 message_codes = "ssot/message_codes.tsv"

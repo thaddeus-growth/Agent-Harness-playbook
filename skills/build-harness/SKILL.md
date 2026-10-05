@@ -1,8 +1,9 @@
 ---
 name: build-harness
 description: Build a new agent harness for a client from the Agent Harness Playbook, from recorded client meetings to a tested release, following BUILD.md step by step (B0 to B10). Use when asked to start, scaffold, continue or resume a harness build, turn client meetings into stories and registries, or take a harness to its first release. Do NOT use to operate a finished harness day to day; that is the harness's own SKILL.md.
-version: 0.1.0
-type: workflow
+metadata:
+  version: "0.1.0"
+  type: workflow
 ---
 
 # Build a harness

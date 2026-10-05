@@ -12,7 +12,7 @@ The adapter targets **zylos-core ≥ 0.7.1** and uses only core's documented sur
 
 The harness itself never refers to `zylos/`. Delete the folder, the Zylos keys of the frontmatter and the root `ecosystem.config.cjs`, and the harness still runs anywhere.
 
-Version: `VERSION` (0.1.0). Tests: `python3 hosts/zylos/tests/run.py` (Python stdlib, needs `node`).
+Version: `VERSION` (0.1.1). Tests: `python3 hosts/zylos/tests/run.py` (Python stdlib, needs `node`). Needs Node 22 or newer; CI runs the adapter's tests on Node 22.
 
 ## What a harness copies, and what it writes
 

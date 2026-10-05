@@ -186,10 +186,10 @@ def stated_test_counts(text: str) -> list[str]:
 def test_the_docs_say_how_many_tests_a_new_harness_starts_with_and_it_is_the_real_number():
     assert stated_test_counts("generates the nine day-one tests; the ten tests a new harness starts with") == ["nine", "ten"]
     want = NUMBER_WORDS[len(GENERATED)]
-    for rel, n in (("README.md", 2), (BUILD, 1)):
+    for rel, n in (("docs/kit-and-tools.md", 2), (BUILD, 1)):
         said = stated_test_counts(doc(rel))
         assert len(said) == n and set(said) == {want}, (rel, said, want)
-    assert set(stated_test_counts(doc("README.md").replace("the ten tests", "the nine tests"))) != {want}   # a stale count shows
+    assert set(stated_test_counts(doc("docs/kit-and-tools.md").replace("the ten tests", "the nine tests"))) != {want}   # a stale count shows
 
 
 def test_every_harness_test_named_is_one_the_scaffolder_generates():
@@ -382,7 +382,8 @@ def test_every_placeholder_is_one_the_templates_readme_explains():
 def test_harness_toml_parses_and_holds_what_the_kit_reads():
     with open(os.path.join(REPO, "templates/harness.toml"), "rb") as f:
         cfg = tomllib.load(f)
-    assert set(cfg) == {"harness", "ssot", "release", "layers"}
+    assert set(cfg) == {"harness", "kit", "ssot", "release", "layers"}
+    assert cfg["kit"] == {"packs": []}, "a new harness takes base and testkit; --packs adds more"
     assert {"name", "cli", "env_prefix", "db_file", "scripts_dir", "languages", "markets", "home_env_file"} \
         <= set(cfg["harness"])
     assert [f"meaning_{lang}" for lang in cfg["harness"]["languages"]] == header("templates/ssot/message_codes.tsv")[2:]
@@ -618,7 +619,7 @@ def zylos_claim_problems(readme: str, adapter: str) -> list[str]:
 
 
 def test_the_readme_does_not_promise_more_of_the_zylos_adapter_than_the_adapters_own_readme():
-    adapter, readme = doc("hosts/zylos/README.md"), doc("README.md")
+    adapter, readme = doc("hosts/zylos/README.md"), doc("docs/channels.md")
     assert ADAPTER_LIMIT in adapter, "the adapter's README no longer says it is fake-host only: settle the top-level claim"
     assert zylos_claim_problems(readme, adapter) == [], zylos_claim_problems(readme, adapter)
     assert zylos_claim_problems(readme.replace("and the Zylos adapter on a real zylos-core", ""), adapter)   # the list that was silent
@@ -762,6 +763,55 @@ def test_every_build_tool_command_the_docs_print_uses_real_flags():
         shown = set(FLAG.findall(rest))
         assert shown <= known[script], (rel, script, sorted(shown - known[script]))
     assert "--pick" in known.get("build/intake_to_asks.py", {"--pick"})
+
+
+
+GUIDE = ["README.md"] + sorted(f"docs/{n}" for n in os.listdir(os.path.join(REPO, "docs")) if n.endswith(".md"))
+MD_LINK = re.compile(r"\]\(([^)\s]+)\)")
+
+
+def anchors(rel: str) -> set[str]:
+    """GitHub's heading anchors of a Markdown file."""
+    heads = re.findall(r"^#{1,6} (.+)$", doc(rel), re.M)
+    return {re.sub(r"[^\w\- ]", "", h.strip().lower()).replace(" ", "-") for h in heads}
+
+
+def link_problems(rel: str, text: str) -> list[str]:
+    """Relative links in `text` (as written in `rel`) whose file or #anchor is not there."""
+    out = []
+    for target in MD_LINK.findall(text):
+        if re.match(r"[a-z]+:", target):
+            continue
+        path, _, anchor = target.partition("#")
+        dest = os.path.normpath(os.path.join(os.path.dirname(rel), path)) if path else rel
+        if not os.path.exists(os.path.join(REPO, dest)):
+            out.append(f"{rel}: {target} (no {dest})")
+        elif anchor and dest.endswith(".md") and anchor not in anchors(dest):
+            out.append(f"{rel}: {target} (no heading #{anchor} in {dest})")
+    return out
+
+
+def test_every_link_in_the_readme_and_docs_resolves():
+    assert len(GUIDE) >= 6, GUIDE
+    for rel in GUIDE:
+        assert link_problems(rel, doc(rel)) == [], link_problems(rel, doc(rel))
+    assert link_problems("docs/x.md", "[a](../README.md#who-decides-what) [b](../nope.md) [c](rules.md#nope)") == [
+        "docs/x.md: ../nope.md (no nope.md)", "docs/x.md: rules.md#nope (no heading #nope in docs/rules.md)"]
+    assert len(doc("README.md").split()) <= 2000, "the README is the overview; the detail goes in docs/"
+
+
+SKILL_KEYS = {"name", "description", "license", "compatibility", "metadata", "allowed-tools"}   # agentskills.io/specification
+
+
+def test_the_build_skill_follows_the_agent_skills_spec():
+    head = doc(SKILL).split("---\n")[1]
+    keys = re.findall(r"^([\w-]+):", head, re.M)
+    assert set(keys) <= SKILL_KEYS and {"name", "description"} <= set(keys), keys
+    name = re.search(r"^name: (.+)$", head, re.M)[1].strip()
+    desc = re.search(r"^description: (.+)$", head, re.M)[1].strip()
+    assert re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", name) and len(name) <= 64, name
+    assert name == os.path.basename(os.path.dirname(SKILL)), "the name is the skill's folder"
+    assert 0 < len(desc) <= 1024, len(desc)
 
 
 if __name__ == "__main__":

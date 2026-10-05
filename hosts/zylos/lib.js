@@ -679,8 +679,21 @@ function procStart(pid) {
   return r.status === 0 && r.stdout.trim() ? `ps:${r.stdout.trim()}` : null;
 }
 
+// A zombie (exited, not yet reaped) is not alive: under an init that never
+// reaps, such as a container started without --init, a finished job stays a
+// zombie and would block its own re-run and be "stopped" at uninstall.
 function pidAlive(pid) {
-  try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; }
+  try { process.kill(pid, 0); } catch (e) { if (e.code !== 'EPERM') return false; }
+  return procState(pid) !== 'Z';
+}
+
+function procState(pid) {
+  try {
+    const stat = fs.readFileSync(`/proc/${pid}/stat`, 'utf8'); // Linux
+    return stat.charAt(stat.lastIndexOf(')') + 2);
+  } catch { /* not Linux, or gone */ }
+  const r = spawnSync('ps', ['-o', 'stat=', '-p', String(pid)], { encoding: 'utf8' }); // macOS, BSD
+  return r.status === 0 ? r.stdout.trim().charAt(0) : '';
 }
 
 function readJob(file) {

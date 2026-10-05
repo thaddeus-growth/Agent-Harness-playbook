@@ -2,7 +2,7 @@
 
 The step-by-step workflow for building the next harness from this playbook. Any agent can follow it from the files alone: each step says what it produces, whether it can fan out to parallel agents, and who signs its gate with which test. The owner signs only **meaning, stories, numbers, money and release**: in the console, or in chat for the contract and a release. A machine signs everything else.
 
-An agent loads [skills/build-harness/SKILL.md](skills/build-harness/SKILL.md) to follow it. The stages it maps to are in [README.md](README.md); every template is listed in [templates/README.md](templates/README.md).
+An agent loads [skills/build-harness/SKILL.md](skills/build-harness/SKILL.md) to follow it. The stages it maps to are in [docs/stages.md](docs/stages.md); every template is listed in [templates/README.md](templates/README.md).
 
 `$DATA_DIR` below is the client's data folder: recordings, transcripts, intakes, numbers, digests and the prior-art scan live there, never in a code repository. After B1 the harness calls it `<PREFIX>_DATA_DIR`. `<cli>` is the harness's CLI word.
 
@@ -53,8 +53,11 @@ Follow [templates/prior-art-scan.md](templates/prior-art-scan.md): one agent per
 ```
 python3 scaffold/new_harness.py --dir ../acme-harness \
   --name acme-harness --cli acme --prefix ACME --markets AA,BB \
-  --langs en,zh --owner @handle --repo-home <where the repository lives>
+  --langs en,zh --owner @handle --repo-home <where the repository lives> \
+  --packs data
 ```
+
+`--packs` names the kit packs the harness takes besides `base` and `testkit` (`compliance`, `generation`, `data`; [kit/README.md](kit/README.md), "Packs"); it can be changed later in `harness.toml` and re-vendored.
 
 - It renders every template with a rendered target (`RENDERED` in `scaffold/new_harness.py`; [templates/README.md](templates/README.md) says which templates are used, not copied, or written by a later step) and fills the placeholders from the builder owner's answers. `<<fill: …>>` stays only where a later step writes: SKILL.md, README.md, references/workflows.md and docs/decision-rights.md (and CLAUDE.md without `--repo-home`).
 - It writes the skeleton the kit runs on: `scripts/<cli>.py` (the kit's dispatcher), `scripts/verbs.py` (every verb and its kind), the kit's facts, decisions, pending, story, queue and execute verbs, `scripts/_lib/schema.py` (the human tables only) and `scripts/_lib/writer.py` (an empty allowlist); every ssot file as its header row, plus `approval_ttl_hours` and the build steps; and exactly the ten tests of [templates/README.md](templates/README.md), each one call into the kit's `kit.testing.suites`.

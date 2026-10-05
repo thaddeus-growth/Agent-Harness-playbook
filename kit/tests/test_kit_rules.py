@@ -30,9 +30,9 @@ CONSOLE = _shop.PLAYBOOK / "console"
 STD = set(sys.stdlib_module_names) | {"__future__"}
 BANNED = re.compile(r"\b(amazon|ppc|spapi|kol|lark|zylos|meta_\w*)\b",
                     re.I)
-# kit/tools/vendor.py falls back to `import manifest` (its sibling) when it
+# kit/tools/vendor.py falls back to `import manifest` and `import packs` (its siblings) when it
 # runs as a script with kit/tools on sys.path
-SIBLING = {("tools/vendor.py", "manifest")}
+SIBLING = {("tools/vendor.py", "manifest"), ("tools/vendor.py", "packs")}
 
 
 def modules(base: Path, skip_tests: bool = True) -> list[Path]:

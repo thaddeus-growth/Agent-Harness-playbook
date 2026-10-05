@@ -1,11 +1,11 @@
 """The docs say only what the code does.
 
-The console's README and AGENT.md, the top README's console section and the two
+The console's README and AGENT.md, the console section of docs/consoles.md and the two
 templates that name the console are read as text and held against the tools:
 every path, flag, verb, limit and diagram they show is real; the quick start runs
 as written (a real `ask.py`, a real `serve.py`) and prints what the README says it
 prints; each rule the docs give the agent or the operator is one the code keeps
-(and each is stated in words a reader can find); the top README promises no more
+(and each is stated in words a reader can find); docs/consoles.md promises no more
 than the console does; and nothing a commit here would publish, bytecode
 included, is a path, key, address or link that must not be public. A doc that
 drifts from the code fails here, and so does a code change the docs no longer
@@ -44,7 +44,7 @@ import relay  # noqa: E402
 import run as runner  # noqa: E402
 import serve  # noqa: E402
 
-CONSOLE, AGENT, TOP = "console/README.md", "console/AGENT.md", "README.md"
+CONSOLE, AGENT, TOP = "console/README.md", "console/AGENT.md", "docs/consoles.md"
 QUEUE, INSTR = "templates/owner-queue-item.md", "templates/AGENT_INSTRUCTIONS.md"
 DOCS = (CONSOLE, AGENT, TOP, QUEUE, INSTR)
 HARNESS_FLAGS = {"--value", "--reason", "--json", "--code", "--relay-user", "--relay-at"}   # a harness's, not ours
@@ -505,7 +505,7 @@ def test_the_decision_record_is_told_as_the_code_does_it():
 
 
 def test_the_top_readme_does_not_promise_what_the_console_does_not_do():
-    top = doc(TOP)
+    top = "\n".join(doc(p) for p in ("README.md", TOP, "docs/rules.md"))   # the guide, wherever a section moved
     typed = {k: v for k, v in example("provide-number.json").items() if k not in ("recommend", "gate")}
     assert core.validate_ask(typed)[1] == []                                 # a typed value may go without a recommendation
     choose = {k: v for k, v in example("choose-priority.json").items() if k != "recommend"}
