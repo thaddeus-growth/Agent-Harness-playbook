@@ -1,6 +1,6 @@
 # Restructuring plan: a smaller parent
 
-Status: **proposed, 2026-10-05.** Nothing below has been done yet. Each phase lists the decisions it needs from the owner. Related issues: #19, #20, #22, #24, #26.
+Status: **accepted 2026-10-05** (decisions 1 and 2: packs as drawn, phase 1 first). Phase 1 is in progress: step 4 and the comparison tool are done; steps 1 to 3 need the harness checkouts. Each phase lists the decisions it needs from the owner. Related issues: #19, #20, #22, #24, #26.
 
 ## Why
 
@@ -83,10 +83,10 @@ Answer the decisions at the end of this file. Nothing else starts until decision
 
 This is a prerequisite. Selective vendoring on top of three versions and a fork would only multiply the drift.
 
-1. Diff KOL's 0.3.1 copy against the playbook, seven modules plus the console. For each change, either upstream it here as a fix with a test or drop it.
+1. Run `python3 tools/fleet.py status <video-ads> <kol> <rednote>` from this checkout (full history, not a shallow clone). For each copy (kit, console, `zylos/`) it gives the version and a verdict: `in sync`, `behind` (re-vendor, nothing lost) or `local changes`. It lists each file that differs as `older` (an earlier playbook version, named), `local` (in no version the playbook ever had), `missing` or `extra`. `python3 tools/fleet.py diff <kol> kit/facts.py` shows one file. For each `local` file in KOL's 0.3.1 copy, either upstream the change here as a fix with a test, or drop it.
 2. Release that as a kit patch version.
 3. Re-vendor video-ads, KOL and RedNote. Fix the CI jobs that have no `rules:` (BUILD.md, B10).
-4. Fix the Zylos adapter test that fails under Node 22 (`hosts/zylos/tests/test_bin.py`, #21), so `run_all.py` is fully green.
+4. ~~Fix the Zylos adapter test that fails under Node 22 (#21).~~ Done in adapter 0.1.1. The cause was not Node: a finished job left as a zombie, under an init that never reaps (a container without `--init`), counted as running. Node 22 is now the stated minimum, and CI runs on it.
 
 **Done when** all three harnesses hold the same `VERSION`, their drift tests pass on `main`, and KOL has no local kit edits.
 

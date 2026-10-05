@@ -41,12 +41,11 @@ Harnesses adopt the kit, learn what is shared and what is not, and the lesson co
 
 | # | Turn | Needs first | Issue |
 | --- | --- | --- | --- |
-| 1 | Try the Zylos adapter under Node 22 and state the minimum Node; relax the template's Node 24 pin if it holds | nothing | #21 |
-| 2 | Bring the three harnesses to one kit version: stale digest.py mention, CI jobs with no rules, KOL's forked copy upstreamed | each harness owner's review | #20 |
+| 2 | Bring the three harnesses to one kit version: start with `python3 tools/fleet.py status` on the three checkouts; stale digest.py mention, CI jobs with no rules, KOL's forked copy upstreamed | the harness checkouts; each harness owner's review | #20 |
 | 3 | Selective vendoring: a harness takes only the tiers it needs (breaking) | turn 2 done, owner go-ahead, a quiet week for the short-video harness | #19 |
 | 4 | Cut the README to about 2,000 words; split console, adapter and scaffold from the guide | decisions 2 and 3 below | #24 |
 
-A proposed restructure that reorders turns 2 to 4 (one kit version, then packs and selective vendoring, then docs) is in [RESTRUCTURE.md](RESTRUCTURE.md); it waits on the owner's decisions there.
+Turns 2 to 4 follow [RESTRUCTURE.md](RESTRUCTURE.md) (accepted 2026-10-05): one kit version first, then packs and selective vendoring, then docs. Turn 1 (#21) is done: Zylos adapter 0.1.1, Node 22 minimum.
 
 ## Backlog
 
