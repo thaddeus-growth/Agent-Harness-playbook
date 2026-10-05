@@ -9,7 +9,10 @@
       `gated` verb is denied through the wrapper in .claude/settings.json,
       hand edits under workspace/ are denied, and the console relays the
       gated verbs ending in confirm / approve / answer (not restore)
-  [4] bin/<cli> pins <PREFIX>_DATA_DIR to the workspace; the scripts parse
+  [4] bin/<cli> pins <PREFIX>_DATA_DIR to the workspace and runs
+      <PREFIX>_PYTHON; every wrapper refuses an interpreter older than
+      3.11 (or none), set or found as python3, in one line naming
+      <PREFIX>_PYTHON, before it touches anything; the scripts parse
   [5] refusals, exit 2 with one line: a folder that is not empty, a
       clients folder inside the harness, a path with no harness.toml, a
       bad client id; a second client prints the index row instead
@@ -120,15 +123,34 @@ def main() -> int:
               "bin/console"), launch)
 
     print("[4] the wrapper")
+    clean = {k: v for k, v in os.environ.items() if not k.startswith("ACME_")}
     r = subprocess.run([str(f / "bin" / "acme"), "status", "--json"],
                        capture_output=True, text=True, timeout=60,
-                       env={k: v for k, v in os.environ.items()
-                            if not k.startswith("ACME_")})
+                       env={**clean, "ACME_PYTHON": sys.executable})
     doc = json.loads(r.stdout or "{}")
     check("bin/acme pins ACME_DATA_DIR to the workspace and passes argv",
           os.path.realpath(doc.get("data_dir") or "")
           == str((f / "workspace").resolve())
           and doc.get("argv") == ["status", "--json"], r.stdout + r.stderr)
+    old = Path(tmp_dir("old-python-"))
+    (old / "python3").write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+    (old / "python3").chmod(0o755)                  # answers the check as 3.9 would
+    before = sorted(str(x) for x in f.rglob("*"))
+    for b in ("bin/acme", "bin/console", "bin/ask"):
+        for what, env in (
+                ("ACME_PYTHON older than 3.11", {**clean, "ACME_PYTHON": str(old / "python3")}),
+                ("ACME_PYTHON not found", {**clean, "ACME_PYTHON": str(old / "none")}),
+                ("python3 on PATH older than 3.11",
+                 {**clean, "PATH": f"{old}:/usr/bin:/bin"})):
+            r = subprocess.run([str(f / b), "status"], capture_output=True,
+                               text=True, timeout=60, env=env)
+            check(f"{b} refuses {what}: exit 1, one line naming ACME_PYTHON",
+                  r.returncode == 1 and r.stdout == ""
+                  and len(r.stderr.strip().splitlines()) == 1
+                  and "set ACME_PYTHON" in r.stderr
+                  and b in r.stderr, (r.returncode, r.stdout, r.stderr))
+    check("a refused wrapper wrote nothing (no .env, no console folder)",
+          sorted(str(x) for x in f.rglob("*")) == before)
     for b in ("bin/acme", "bin/console", "bin/ask"):
         r = subprocess.run(["sh", "-n", str(f / b)], capture_output=True,
                            text=True)

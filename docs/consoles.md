@@ -56,7 +56,7 @@ flowchart TB
 
 A harness serves many clients; each client is one folder in a clients repository, never inside the harness checkout. *Seen twice:* the SEO harness's `seo-researches` (three sites and a `_method` folder) and the KOL harness's `kol-clients`. `python3 scaffold/new_client.py --harness H --clients C --client ID --title T` writes it:
 
-- `bin/<cli>` pins the data root to `./workspace` (git-ignored: database, raw, backups, the console log, `.env`, and `intake/`, the drop folder for whatever a person collected from the client). One wrapper per client means no session runs against another client's data.
+- `bin/<cli>` pins the data root to `./workspace` (git-ignored: database, raw, backups, the console log, `.env`, and `intake/`, the drop folder for whatever a person collected from the client). One wrapper per client means no session runs against another client's data. Every wrapper runs `<PREFIX>_PYTHON` (default `python3`) and refuses, in one line naming that variable, an interpreter older than Python 3.11: macOS's own `python3` is 3.9 and the kit needs `tomllib`. *Seen once:* the GEO (China) harness's first client.
 - `bin/console` is that client's owner console with the harness's gate verbs relayed; `bin/ask` is the agent's side.
 - `CLAUDE.md` is the agent's brief ([template](../templates/client/CLAUDE.md)); `reports/` is for people, with one `handoff-YYYY-MM-DD.md` per session ([template](../templates/client-handoff.md)).
 - `.claude/settings.json` denies every `gated` verb through the wrapper and hand edits under `workspace/`. Claude Code applies deny rules in every permission mode, so they stop the agent asking; the harness's gate still decides.
