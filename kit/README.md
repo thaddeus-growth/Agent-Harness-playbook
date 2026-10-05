@@ -32,7 +32,7 @@ packs = ["compliance"]      # base and testkit always come; no [kit] packs = eve
 | `base` | the contract, messages, clock, paths; the database and the human tables, the gate, facts, decisions, pending, the queue, execute and the write guard; the CLI, verbs, doctor, env, auth, runner, stories | every harness |
 | `compliance` | `copylint`, `claimscope`, `phrasebook` | a harness that writes ad copy |
 | `generation` | `takes`, `prices`, `preflight`, `consent` | a harness that pays for AI generation or uses a real person's likeness |
-| `data` | `retry`, `pull` | a harness that pulls rate-limited APIs |
+| `data` | `retry` | a harness that pulls rate-limited APIs |
 | `testkit` | `guards/`, `testing/`, `tools/` | every harness's own tests (keep it in `[release].internal`) |
 
 A module imports only `base` and its own pack, so any choice of packs imports cleanly (`tests/test_packs.py`). A module's message codes (`message_codes.d/<module>.tsv`) travel with it. `vendor.py` refuses to leave out a module the harness's own code imports: it names the file and the pack to add. `scaffold/new_harness.py --packs data,compliance` writes the line for a new harness.
@@ -62,7 +62,6 @@ Each module's docstring says what it guards and names its test; this is the map.
 | `atomic.py`, `single_instance.py` | A half-written file is never seen (the temp file is fsynced before the rename); a second scheduled run skips | `test_atomic.py` |
 | `runner.py` | How one script runs another and reads its one document; a child's failure keeps its code | `test_runner.py` |
 | `raw.py` | Raw only grows: write-once files, content-hash imports | `test_raw.py` |
-| `pull.py` | A pull is merged into raw by natural key (newer wins per key, per-row `pulledAt`, raw never shrinks, duplicate keys refused); an unreadable raw file is moved aside; a long pull is planned in chunks, saved after each step, a chunk is requested again if a newer pull landed; every gap goes in an append-only ledger with its reason | `test_pull.py` |
 | `paths.py` | The data dir is required and absolute, never the cwd; one resolver for the DB | `test_paths.py` |
 | `env.py` | One env chain (process env → home file → `<DATA_DIR>/.env`), never the cwd; parsed, never sourced | `test_env.py` |
 | `auth.py` | Where a token comes from (`env` or a host `command`); expiry; a token never printed | `test_auth.py` |
@@ -100,7 +99,6 @@ Real incidents from the source project, kept with the module that now prevents t
 | `messages.py` | Codes were added to a live harness in one change without removing a key: about 70 at once. |
 | `guards/` (`check_verbs`) | The gate and write verbs sat outside the contract test, so about 40 of their refusals reached the owner's page as "unclassified". |
 | `runner.py` | Three write verbs reported "no output" because they read stderr, while the reason was on stdout. |
-| `pull.py` | Each pull replaced raw and the platform keeps only a few months; a late resumed report put older numbers back; an unreadable raw file was overwritten by one pull's rows; a long pull killed halfway started over and the quota ran out again; a run that cleared the last run's gaps lost the list a gaps-only pull needed. |
 | `retry.py` | Days were lost as rate-limit gaps: the exponential guess retried before the quota refilled and the tries ran out; a throttled day became a day with no data instead of a recorded gap. |
 | `takes.py` | A text-to-speech voice that was not installed wrote a 0.01 s file and exited 0; the empty take was cached and reused by every build. Re-rolls had to be new requests so an approved take could never be lost. |
 | `prices.py` | A price read off a vendor's page was its member price (0.45), not the list price (0.50), and about 30 rows proposed from the vendor's catalog waited on the owner, while the harness read every row as a price and approved spend against prices nobody had confirmed. |

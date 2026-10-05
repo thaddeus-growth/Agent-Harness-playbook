@@ -57,9 +57,9 @@ Turns 2 to 4 follow [RESTRUCTURE.md](RESTRUCTURE.md) (accepted 2026-10-05): one 
 ## Open decisions
 
 1. **Anthropic source links in the README** (#23). Owner. Recommend: allow-list `www.anthropic.com` in the console leak scan and restore the three links. "No" leaves sources named by title only.
-2. **Which console copy stays**: the playbook's, the SEO harness's or the outreach one's (#24). Owner. Recommend: the playbook's, if any client uses a console at all. "No" keeps three lineages.
+2. ~~**Which console copy stays** (#24).~~ Decided 2026-10-05: the playbook's.
 3. **Does the SEO harness migrate onto the kit; does the outreach scraper take only the guide** (#26). Owner. Recommend: migrate SEO after selective vendoring; outreach takes the guide only.
-4. **Selective vendoring go-ahead and date** (#19). Owner. Recommend: after turn 2. "No" leaves every harness with every tier.
+4. ~~**Selective vendoring go-ahead and date** (#19).~~ Decided 2026-10-05: yes, after turn 2; built in kit 0.7.0 (RESTRUCTURE.md, phase 2).
 
 ## Session end checklist
 

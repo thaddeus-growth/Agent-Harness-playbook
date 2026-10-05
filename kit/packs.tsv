@@ -34,7 +34,6 @@ prices	generation	vendor prices from an owner TSV
 preflight	generation	requests checked against the vendor schema
 consent	generation	a real person's likeness under confirmed consent
 retry	data	read retries that honour quotas
-pull	data	merge pulls into raw; no consumer yet (RESTRUCTURE.md phase 5)
 guards.__init__	testkit	
 guards.boundary	testkit	
 guards.clock	testkit	

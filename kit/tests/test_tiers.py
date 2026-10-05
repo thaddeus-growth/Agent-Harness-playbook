@@ -409,8 +409,8 @@ def main() -> int:
              {"kit/newmod.py": '"""x"""\nX = 1\n'})
     cp.plant("a new module in a new package with no row", "extras.thing: a kit module with no row",
              {"kit/extras/thing.py": '"""x"""\nX = 1\n'})
-    cp.plant("a module deleted, its row left", "pull: a row for a module that is not in kit/",
-             {"kit/pull.py": None})
+    cp.plant("a module deleted, its row left", "retry: a row for a module that is not in kit/",
+             {"kit/retry.py": None})
     cp.plant("a row for a module that never existed", "gone: a row for a module that is not in kit/",
              {NAME: table + "gone\textra\t\tx\t0.1.0\tno consumer\n"})
     cp.plant("the same module twice", "config: listed twice",
@@ -449,10 +449,10 @@ def main() -> int:
              {"kit/__init__.py": cp.read("kit/__init__.py") + "\nfrom kit import dates\n"})
 
     print("\n[4] admission: core needs two independent consumers, extra has at most one")
-    cp.plant("a core row with one consumer", "core copylint: 1 independent consumer(s) (video-ads)",
-             {NAME: cell("copylint", "consumers", "video-ads:prod")})
-    cp.plant("a core row whose other consumers are a test and a fork", "core copylint: 1 independent consumer(s)",
-             {NAME: cell("copylint", "consumers", "video-ads:prod; kol:test; seo:fork")})
+    cp.plant("a core row with one consumer", "core dates: 1 independent consumer(s) (video-ads)",
+             {NAME: cell("dates", "consumers", "video-ads:prod")})
+    cp.plant("a core row whose other consumers are a test and a fork", "core dates: 1 independent consumer(s)",
+             {NAME: cell("dates", "consumers", "video-ads:prod; kol:test; seo:fork")})
     cp.plant("a core row with no consumer", "core dates: 0 independent consumer(s) (none)",
              {NAME: cell("dates", "consumers", "")})
     cp.plant("one harness listed twice", "copylint: consumer 'kol' listed twice",
@@ -461,9 +461,10 @@ def main() -> int:
              {NAME: cell("takes", "consumers", "video-ads:prod; kol:prod")})
     cp.plant("the skeleton is a consumer too", "extra takes: 2 independent consumers (skeleton, video-ads)",
              {NAME: cell("takes", "consumers", "video-ads:prod; skeleton:skeleton")})
-    cp.plant("a module nobody uses, its note silent", "pull: nothing imports it",
-             {NAME: cell("pull", "note", "A removal candidate.")})
-    cp.plant("a module nobody uses, in stack", "pull: nothing imports it", {NAME: cell("pull", "tier", "stack")})
+    cp.plant("a module nobody uses, its note silent", "guards.evals: nothing imports it",
+             {NAME: cell("guards.evals", "note", "A removal candidate.")})
+    cp.plant("a module nobody uses, in stack", "guards.evals: nothing imports it",
+             {NAME: cell("guards.evals", "tier", "stack")})
     cp.plant("a module only a fork knows, its note silent", "retry: nothing imports it",
              {NAME: cell("retry", "consumers", "outreach:fork")})
     cp.holds("tests, tools and forks never count: an extra row may list any number of them",

@@ -146,7 +146,7 @@ Since the harnesses converge in phase 1, they can converge directly on 0.7.0 and
 
 ### Phase 5: remove what has no consumer (#22)
 
-- **`pull.py`** has no importer anywhere. Delete it, along with its message codes and test. Before deleting, record its design notes in `docs/lessons.md` (merge by natural key, chunked resume, gap ledger). Then compare dlt and Airbyte's Amazon Ads source, which re-pulls the last 3 days by default, before writing a pull layer again.
+- ~~**`pull.py`** has no importer anywhere.~~ Done in kit 0.7.0. Delete it, along with its message codes and test. Before deleting, record its design notes in `docs/lessons.md` (merge by natural key, chunked resume, gap ledger). Then compare dlt and Airbyte's Amazon Ads source, which re-pulls the last 3 days by default, before writing a pull layer again.
 - **`guards/evals.py`** is new (0.6.0) and BUILD.md B8 relies on it. Keep it in `testkit`. Delete it if no harness calls it by kit 0.9.
 - Each remaining one-consumer module stays in its pack. Packs make this cheap: a harness that doesn't need a module never receives it.
 
@@ -187,6 +187,8 @@ These belong in each channel harness, never in the parent:
 | Docs move breaks links | `test_docs_build.py` already fails on a named path that does not exist. Move sections, don't rewrite them. |
 
 ## Decisions for the owner
+
+All five decided 2026-10-05 as recommended: 1 and 2 first, then 3, 4 and 5. Done: 3 (`pull.py` removed in kit 0.7.0, its notes in [docs/lessons.md](docs/lessons.md)) and 4 (`copylint` is extra in `kit-tiers.tsv` until KOL's branch merges). 5 waits on phase 4 as recommended.
 
 1. **Packs, and their names and contents** as in the table above. The specific question is whether KOL takes the whole `compliance` pack for `copylint` alone. The recommendation is yes: it is 1.1k lines, and splitting further adds a pack for one module.
 2. **Phase 1 first.** All harnesses converge on one kit version before selective vendoring. Recommended: yes.
