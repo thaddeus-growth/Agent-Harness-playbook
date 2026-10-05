@@ -48,7 +48,6 @@ The files a new harness starts from. The build workflow, [BUILD.md](../BUILD.md)
 | [install-checklist.md](install-checklist.md) | B9 | `docs/install-checklist.md` | The install message, what the host agent reports after every install, scheduled tasks, and what a host agent can reach |
 | [triage-checklist.md](triage-checklist.md) | B10 | `docs/triage-checklist.md` | Judging an agent-filed issue; the triage line that routes it |
 | [verify-challenge.md](verify-challenge.md) | B10 | (used, not copied) | Reader and skeptic prompts for a report from outside |
-| [evals.md](evals.md), [evals/ablate.py](evals/ablate.py), [evals/cases.tsv](evals/cases.tsv) | B8 | (used, not copied) | The eval method: every case run twice, once with the rule's text deleted, so an eval counts only if it fails without its rule; pressure cases; the tool that builds the twins and scores the pairs |
 | [tests/golden/](tests/golden/README.md) (below) | B1, B10 | `tests/golden/` | The golden-diff engine, committed before the first refactor |
 | [workflows/](workflows/README.md) (below) | B4 to B10 | `.claude/workflows/` | Workflow scripts for building with many agents, and the ref check before any push |
 | [tests/](tests/README.md) (below) | B1 | (used, not copied) | The standalone test kit: a copy-as-is option, not what the scaffolder generates |
