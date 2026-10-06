@@ -32,3 +32,32 @@ The rules, each learned from one of those bugs:
   and is cut off by the next write; any other broken line raises.
 
 Its neighbours stay in the kit: `kit/raw.py` (write-once raw files), `kit/atomic.py` (the write), `kit/single_instance.py` (one run at a time) and `kit/retry.py` (`call` waits at least the quota's refill period; `GaveUp` carries the reason a gap is recorded with).
+
+## Paid generation jobs (from adcut-harness, its first real batch, 2026-10-06)
+
+A background job generates paid takes (a video model behind a hosted workflow), renders, checks and exports each file under
+a code. The first real batch ran three times before one pair of files was usable. The fixes are in adcut-harness
+(merge requests 9 and 10 and the lessons commit after them); the rules carry to any harness that pays per generated asset.
+
+*Paid for:* the plan priced a re-run that the job then skipped (the codes were exported, and a code names one file); a
+provider task finished and was paid, its download failed, and the resumed job refused the take as already paid, so the only
+way on was to send it again; QC passed files whose generated takes had burned their own captions in and showed an invented
+product, because QC reads the finished video, not the takes.
+
+The rules:
+
+- A plan prices only what the run will do. An item the run skips (already exported, already cached) is priced 0 and
+  named as skipped, or the person approves money that is never spent and the work they wanted is not done.
+- An identity that names a delivered file is never reused for a different file. A fix after delivery is a new identity
+  (a new batch, new codes) with a one-command path to make it; the old ones are retired, not overwritten.
+- A paid call is resumable by its provider task id. Write the id before waiting on the result; a later run that finds the
+  id fetches that task instead of sending a new one, and settles the reservation the first run left, so one call is
+  charged once. A task the provider failed is set aside, so the next run may send afresh.
+- Look at the generated parts, not only the finished product. A generator adds what it was told not to (captions despite
+  "no captions"), and draws what it was not given a picture of (a product it was told to hold). Check the raw takes, and
+  warn at authoring time on instructions that need a reference the generator does not have.
+- Prefer a free cover to a paid retry when the defect is in a known place (footage over the lower third), and verify it
+  on a free sample render before asking a person to click.
+- When a download fails, test the host before resuming: a local proxy can route one storage host to a dead exit while
+  the API host works.
+- A command handed to a person is one complete line they can paste, including the environment it needs.
