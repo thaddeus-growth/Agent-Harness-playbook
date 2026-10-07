@@ -3,6 +3,8 @@ name: {{name}}
 description: "<<fill: one paragraph. What the harness does, read-only, through the `{{cli}}` CLI; what it owns (its data, its rules, proposals a human approves); the questions to use it for, in the client's words; and what NOT to use it for, naming where those belong.>>"
 version: 0.1.0
 type: capability
+# Zylos reads version and type here. claude.ai and the Skills API refuse them at the top level:
+# upload the copy `python3 scripts/kit/tools/skill_upload.py . OUT_DIR` writes (metadata.version, metadata.type).
 ---
 
 # {{name}}
