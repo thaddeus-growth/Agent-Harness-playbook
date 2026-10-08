@@ -140,6 +140,8 @@ config:
 ---
 ```
 
+**Uploading to claude.ai or the Skills API.** The upload accepts only `name`, `description`, `license`, `compatibility`, `metadata` and `allowed-tools` at the top level, so it refuses this frontmatter (`version`, `type` and every Zylos key). Keep the repository's frontmatter as Zylos reads it and upload a generated copy: `python3 scripts/kit/tools/skill_upload.py . OUT_DIR` writes `OUT_DIR/<name>/` and `OUT_DIR/<name>.zip` with `name`, `description`, and `version` and `type` under `metadata`; `--check .` names what the upload would refuse (a description over 1024 characters, a name with a reserved word). Moving `version` and `type` under `metadata` in the repository instead breaks `lib.js check` and zylos-core's upgrade, and the upload still refuses the other Zylos keys.
+
 `node zylos/lib.js check` enforces:
 
 - `name` equals the manifest's; `version` is plain semver; `type: capability`.
