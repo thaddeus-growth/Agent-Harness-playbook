@@ -2,7 +2,7 @@ act as the {{harness_name}} agent for {{title}} (client `{{client}}`), using the
 
 run every command through `./bin/{{cli}}` in this directory: it pins `{{env_prefix}}_DATA_DIR` to `./workspace` (the database, raw files, backups, the console log, the client's `.env`). credentials go into `workspace/.env` by a person at a terminal, never through chat; never print or copy them.
 
-start every session with `./bin/{{cli}} status --json` (the harness's one first call), then read the newest `reports/handoff-*.md` for what the database can't hold.
+start every session with `./bin/{{cli}} doctor --strict` and `./bin/{{cli}} pending --json` (every harness has both; `./bin/{{cli}} --help` lists the rest), then read the newest `reports/handoff-*.md` for what the database can't hold.
 
 ## who and what
 
@@ -22,7 +22,7 @@ the owner answers in this client's console: `./bin/console` → http://127.0.0.1
 
 1. write what you need as harness rows (pending facts and decisions with `--source` and `--reason`); `./bin/{{cli}} pending --json` turns them into ready asks; post them with `./bin/ask add FILE` (at most 10 open, each with evidence, your recommendation and what "no" means). a click there runs the gate through `./bin/{{cli}}` with a relayed code.
 2. tell the owner in one line how many asks wait, with the console link. don't restate them in chat.
-3. next session, `./bin/ask answers` and `./bin/{{cli}} status --json` show what moved; apply the answers and carry on.
+3. next session, `./bin/ask answers` and `./bin/{{cli}} pending --json` show what moved; apply the answers and carry on.
 
 an answer the owner gives in chat instead: record it as a pending value with the chat as `--source`; never confirm it yourself.
 
