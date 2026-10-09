@@ -24,8 +24,9 @@ Context windows end mid-project. Each session closes one turn of the build loop 
 1. Run tests green, then republish the review page to the same URL.
 2. Update ROADMAP **Status** (what is done, dated) and **Next sessions** (the next turn and what it needs from the owner).
 3. Update memory notes only for facts the repo can't hold.
-4. Tell the owner, in one screen: what they can look at now, what you need from them, what the next session will do.
-5. When the session served a client, end with a **Distil** list: each insight goes to a harness issue or MR, a proposed story or policy, or is marked client-only. A rule seen on one client stays proposed until a client with another business model confirms it.
+4. Refresh the owner's progress page from ROADMAP ([skills/progress-page](../skills/progress-page/SKILL.md)); the page is a view, the roadmap is the source.
+5. Tell the owner, in one screen: what they can look at now, what you need from them, what the next session will do.
+6. When the session served a client, end with a **Distil** list: each insight goes to a harness issue or MR, a proposed story or policy, or is marked client-only. A rule seen on one client stays proposed until a client with another business model confirms it.
 
 ## Rules
 
