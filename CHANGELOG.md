@@ -17,6 +17,15 @@ scaffold, console, docs, conformance.
   add its line under Unreleased, or say `[no changelog]` in its title. Tested by running the
   job's own shell on sample file lists.
 
+## [0.10.1] - 2026-10-10
+### Changed
+- `TakeStore.approve(version=)`: a caller may bind the spend code to its own approval record (the
+  newest history id the approval moves) instead of the ledger's length. A Make page open while
+  another job on the same project charges the ledger kept going stale, so the person clicked
+  again (adcut-harness, once, after it queued Makes clicked during a running job). The default
+  (None) is the ledger's length, as before; a caller that passes its own version keeps the code
+  single use and checks the cap again before it pays.
+
 ## [0.10.0] - 2026-10-10
 ### Added
 - `kit/guards/changelog.py` and `kit.testing.suites.changelog`: `CHANGELOG.md` starts with
