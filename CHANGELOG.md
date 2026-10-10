@@ -12,6 +12,10 @@ scaffold, console, docs, conformance.
 
 ### Other
 - Client template: the first call is `doctor` and `pending`, not a status verb (#55).
+- `templates/CHANGELOG.md`, rendered into every new harness, and a `changelog` job in both CI
+  templates: a merge request that changes the code, a registry, the skill or the console must
+  add its line under Unreleased, or say `[no changelog]` in its title. Tested by running the
+  job's own shell on sample file lists.
 
 ## [0.9.0] - 2026-10-08 · `7569fb2`
 ### Added

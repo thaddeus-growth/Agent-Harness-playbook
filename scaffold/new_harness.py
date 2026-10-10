@@ -69,6 +69,7 @@ RENDERED = {
     "gitignore": ".gitignore",
     "gitlab-ci.yml": ".gitlab-ci.yml",
     "CODEOWNERS": ".gitlab/CODEOWNERS",
+    "CHANGELOG.md": "CHANGELOG.md",
     "decision-rights.md": "docs/decision-rights.md",
     "install-checklist.md": "docs/install-checklist.md",
     "triage-checklist.md": "docs/triage-checklist.md",

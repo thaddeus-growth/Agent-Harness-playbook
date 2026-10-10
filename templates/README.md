@@ -15,7 +15,8 @@ The files a new harness starts from. The build workflow, [BUILD.md](../BUILD.md)
 | [harness.toml](harness.toml) | B1 | `harness.toml` | The harness's names, languages, scopes, layers and release lists |
 | [AGENT_INSTRUCTIONS.md](AGENT_INSTRUCTIONS.md) | B1 | `CLAUDE.md` | Invariants only, each naming its test |
 | [CODEOWNERS](CODEOWNERS) | B1 | `.gitlab/CODEOWNERS` | Protected paths for the risky list |
-| [gitlab-ci.yml](gitlab-ci.yml) | B1 | `.gitlab-ci.yml` | Secret scan, story id in the title, the RESULT-gated test job; every job states its `rules:` (a harness scaffolded before that adds them by hand: BUILD.md, B10) |
+| [CHANGELOG.md](CHANGELOG.md) | B1, B9 | `CHANGELOG.md` | What a host or an agent can see changed, newest first; a visible change adds its line under Unreleased (CI job `changelog`), a release renames it |
+| [gitlab-ci.yml](gitlab-ci.yml) | B1 | `.gitlab-ci.yml` | Secret scan, story id in the title, a changelog line for a visible change, the RESULT-gated test job; every job states its `rules:` (a harness scaffolded before that adds them by hand: BUILD.md, B10) |
 | [ci/gitlab-ci.yml](ci/gitlab-ci.yml) | B1 | (used, not copied) | The fuller CI to grow into: the secret-scan pattern file with a channel slot, a dependency cache, the story-id job with its GitHub Actions note, a check of the Zylos adapter and an adapter smoke job for each host version. gitlab-ci.yml is its short form |
 | [evals/](evals/README.md), [evals/fixture-build.sh](evals/fixture-build.sh) | B8 | `evals/`, `evals/fixture/build.sh` | Agent-behaviour evals: the case layout, the ablation table, the offline rules `kit.guards.evals` holds, and the fixture builder that refuses a checkout holding client data |
 | [gitignore](gitignore) | B1 | `.gitignore` | Secrets, the console's log, client data |
