@@ -1,0 +1,238 @@
+<title>PROJECT NAME</title>
+<style>
+/* Layout: one column. Completion first, then scope risk, architecture check, cleanup; the flow figure and the appendix last. Colour: blue = a person, green = built, amber = partial, red = not built or a risk. */
+:root {
+  --bg: #f5f7f6;
+  --surface: #ffffff;
+  --fg: #18231f;
+  --muted: #5a6964;
+  --line: #d9e1de;
+  --accent: #1f5fbf;
+  --accent-soft: #e6eefb;
+  --ok: #1e7a4c;
+  --ok-soft: #e2f3ea;
+  --warn: #9a6a00;
+  --warn-soft: #fbf0d3;
+  --gap: #a3362f;
+  --gap-soft: #f9e4e2;
+  --ai: #6b3fa0;
+  --ai-soft: #efe7f8;
+  --sans: "IBM Plex Sans", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, "Noto Sans SC", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111614; --surface: #19201d; --fg: #e4ebe8; --muted: #98a7a1; --line: #2a3531;
+    --accent: #7fb0ff; --accent-soft: #1d2b44; --ok: #6fd3a0; --ok-soft: #163325;
+    --warn: #e8bd5a; --warn-soft: #3a2f12; --gap: #f19a93; --gap-soft: #3b1f1d;
+    --ai: #c9a6f2; --ai-soft: #2c2140; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111614; --surface: #19201d; --fg: #e4ebe8; --muted: #98a7a1; --line: #2a3531;
+  --accent: #7fb0ff; --accent-soft: #1d2b44; --ok: #6fd3a0; --ok-soft: #163325;
+  --warn: #e8bd5a; --warn-soft: #3a2f12; --gap: #f19a93; --gap-soft: #3b1f1d;
+  --ai: #c9a6f2; --ai-soft: #2c2140; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--sans); line-height: 1.7; padding-inline: 16px; padding-block: 28px 64px; }
+main { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+h1 { font-size: 1.9rem; font-weight: 600; margin: 0; text-wrap: balance; }
+h2 { font-size: 1.2rem; font-weight: 600; margin: 0 0 6px; text-wrap: balance; }
+h3 { font-size: 0.98rem; font-weight: 600; margin: 0 0 8px; }
+p { margin: 0; }
+.lede { color: var(--muted); max-width: 46em; margin-top: 8px; }
+.sub { color: var(--muted); max-width: 48em; margin-bottom: 14px; font-size: 0.93rem; }
+.meta { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); margin-top: 10px; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px; margin-top: 18px; }
+.fact { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; min-width: 0; }
+.fact b { display: block; font-size: 1.05rem; font-weight: 600; }
+.fact span { color: var(--muted); font-size: 0.86rem; }
+.fact.risk { border-color: var(--gap); }
+.pill { display: inline-block; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.gap { background: var(--gap-soft); color: var(--gap); }
+.pill.none { background: var(--bg); color: var(--muted); border: 1px solid var(--line); }
+.pill.you { background: var(--accent-soft); color: var(--accent); }
+.who { display: inline-block; font-size: 0.76rem; font-weight: 600; padding: 1px 7px; border-radius: 4px; margin: 0 4px 4px 0; white-space: nowrap; }
+.who.you { background: var(--accent-soft); color: var(--accent); }
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.scroll.fig { padding: 12px; }
+.scroll.fig svg { min-width: 860px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.89rem; }
+table.wide { min-width: 820px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+th { font-size: 0.74rem; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; background: var(--bg); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.stage { font-weight: 600; white-space: nowrap; }
+td.id { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+td.cmd { font-family: var(--mono); font-size: 0.76rem; color: var(--muted); }
+td.c { text-align: center; white-space: nowrap; }
+code { font-family: var(--mono); font-size: 0.8rem; background: var(--accent-soft); color: var(--accent); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; min-width: 0; }
+.box.warnbox { border-left: 3px solid var(--warn); }
+.box.okbox { border-left: 3px solid var(--ok); }
+.box.gapbox { border-left: 3px solid var(--gap); }
+ul.plain { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 8px; font-size: 0.92rem; }
+.k { font-weight: 600; }
+.small { font-size: 0.84rem; color: var(--muted); }
+figure { margin: 0; }
+figcaption { font-size: 0.84rem; color: var(--muted); margin-top: 8px; max-width: 60em; }
+.label { font-family: var(--mono); font-size: 0.95rem; overflow-wrap: anywhere; }
+.q { display: grid; grid-template-columns: 2.6em minmax(0, 1fr); gap: 4px 10px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.q:last-child { border-bottom: 0; padding-bottom: 0; }
+.q:first-child { padding-top: 0; }
+.q .num { font-family: var(--mono); color: var(--muted); font-size: 0.85rem; padding-top: 2px; }
+.q .done { color: var(--ok); }
+
+/* Completion track: one segment per stage, three rows (built, checked on synthetic data, run on real data). Change the column count to the number of stages. */
+.track { display: grid; grid-template-columns: 7.5em repeat(8, minmax(0, 1fr)); gap: 4px; align-items: center; font-size: 0.78rem; }
+.track .rl { color: var(--muted); white-space: nowrap; }
+.track .hd { font-family: var(--mono); font-size: 0.74rem; color: var(--muted); text-align: center; }
+.seg { height: 22px; border-radius: 4px; border: 1px solid var(--line); background: var(--bg); }
+.seg.ok { background: var(--ok); border-color: var(--ok); }
+.seg.part { background: repeating-linear-gradient(135deg, var(--warn) 0 6px, var(--warn-soft) 6px 12px); border-color: var(--warn); }
+.seg.no { background: var(--gap-soft); border-color: var(--gap); border-style: dashed; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.8rem; color: var(--muted); margin-top: 10px; }
+.legend i { display: inline-block; width: 14px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; border: 1px solid var(--line); }
+.legend i.ok { background: var(--ok); border-color: var(--ok); }
+.legend i.part { background: repeating-linear-gradient(135deg, var(--warn) 0 3px, var(--warn-soft) 3px 6px); border-color: var(--warn); }
+.legend i.no { background: var(--gap-soft); border-color: var(--gap); border-style: dashed; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--line); vertical-align: -1px; }
+.dot.ok { background: var(--ok); border-color: var(--ok); }
+.dot.part { background: var(--warn-soft); border-color: var(--warn); }
+.dot.no { background: transparent; border-color: var(--gap); border-style: dashed; }
+
+.verdict { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px; }
+.verdict .v { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.verdict .v .head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.verdict .v .head b { font-size: 1rem; }
+.verdict .v p { font-size: 0.86rem; color: var(--muted); }
+ol.steps { margin: 0; padding-left: 1.4em; display: flex; flex-direction: column; gap: 10px; font-size: 0.92rem; }
+ol.steps li::marker { font-family: var(--mono); color: var(--muted); }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; }
+details > summary { cursor: pointer; font-weight: 600; }
+details[open] > summary { margin-bottom: 12px; }
+.dg { width: 100%; height: auto; display: block; }
+.dg .node { fill: var(--surface); stroke: var(--line); stroke-width: 1.2; }
+.dg .node.built { stroke: var(--ok); stroke-width: 1.5; }
+.dg .node.part { stroke: var(--warn); stroke-width: 1.5; }
+.dg .node.todo { fill: var(--gap-soft); stroke: var(--gap); stroke-width: 1.4; stroke-dasharray: 6 4; }
+.dg .node.ext { fill: var(--bg); stroke: var(--muted); stroke-dasharray: 4 3; }
+.dg .node.you { fill: var(--accent-soft); stroke: var(--accent); }
+.dg .bnd { fill: none; stroke: var(--fg); stroke-width: 1.2; stroke-dasharray: 7 5; }
+.dg .t { font: 600 13px var(--sans); fill: var(--fg); }
+.dg .s { font: 400 11.5px var(--sans); fill: var(--muted); }
+.dg .m { font: 500 11px var(--mono); fill: var(--muted); }
+.dg .lbl { font: 400 11px var(--sans); fill: var(--muted); }
+.dg .ln { stroke: var(--muted); stroke-width: 1.3; fill: none; }
+.dg .ln.side { stroke-dasharray: 4 3; }
+.dg .ah { fill: var(--muted); }
+.dg .ck { stroke-width: 1; }
+.dg .ck.ai { fill: var(--ai-soft); stroke: var(--ai); }
+.dg .ck.tool { fill: var(--bg); stroke: var(--muted); }
+.dg .ck.you { fill: var(--accent-soft); stroke: var(--accent); }
+.dg .ck.gap { fill: var(--gap-soft); stroke: var(--gap); }
+.dg .ckt { font: 500 11px var(--sans); }
+.dg .ckt.ai { fill: var(--ai); }
+.dg .ckt.tool { fill: var(--muted); }
+.dg .ckt.you { fill: var(--accent); }
+.dg .ckt.gap { fill: var(--gap); }
+.dg .lay { fill: var(--surface); stroke: var(--line); }
+.dg .lay.hi { fill: var(--accent-soft); stroke: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 560px) { .track { grid-template-columns: 5.5em repeat(8, minmax(0, 1fr)); } .track .rl { white-space: normal; line-height: 1.2; } }
+</style>
+
+<main>
+  <header>
+    <h1>PROJECT NAME</h1>
+    <p class="lede">EXAMPLE: two or three sentences. What is built, what has run on real data, and the one risk that matters most.</p>
+    <p class="meta">vN · YYYY-MM-DD · main abc1234 · N tests pass · kit X.Y.Z</p>
+    <div class="facts">
+      <div class="fact"><b>EXAMPLE: 4 of 8 stages built</b><span>One line saying which.</span></div>
+      <div class="fact"><b>EXAMPLE: run on real data: 0 of 6</b><span>What they wait for.</span></div>
+      <div class="fact risk"><b>EXAMPLE: promised &gt; built</b><span>Where the plan outruns the code.</span></div>
+      <div class="fact"><b>EXAMPLE: cleanup done</b><span>What is left and when.</span></div>
+    </div>
+  </header>
+
+  <section aria-labelledby="prog">
+    <h2 id="prog">Completion</h2>
+    <p class="sub">Three gates per stage: built; checked on synthetic data; run on the client's real data.</p>
+    <div class="box">
+      <div class="track" role="img" aria-label="Completion of 8 stages: write the numbers here">
+        <span></span>
+        <span class="hd">A1</span><span class="hd">A2</span><span class="hd">A3</span><span class="hd">B1</span><span class="hd">C1</span><span class="hd">C2</span><span class="hd">D1</span><span class="hd">E1</span>
+        <span class="rl">built</span>
+        <span class="seg no"></span><span class="seg part"></span><span class="seg ok"></span><span class="seg ok"></span><span class="seg ok"></span><span class="seg ok"></span><span class="seg no"></span><span class="seg part"></span>
+        <span class="rl">synthetic</span>
+        <span class="seg"></span><span class="seg ok"></span><span class="seg ok"></span><span class="seg ok"></span><span class="seg ok"></span><span class="seg ok"></span><span class="seg"></span><span class="seg ok"></span>
+        <span class="rl">real data</span>
+        <span class="seg"></span><span class="seg part"></span><span class="seg no"></span><span class="seg no"></span><span class="seg no"></span><span class="seg no"></span><span class="seg"></span><span class="seg no"></span>
+      </div>
+      <div class="legend"><span><i class="ok"></i>done</span><span><i class="part"></i>partial</span><span><i class="no"></i>should be done, is not</span><span><i></i>not applicable (not built)</span></div>
+    </div>
+    <div class="scroll" role="region" aria-label="Completion by stage" tabindex="0" style="margin-top:16px">
+      <table class="wide">
+        <thead><tr><th>Stage</th><th>Built</th><th>Synthetic</th><th>Real</th><th>What exists today</th><th>What blocks it</th></tr></thead>
+        <tbody>
+          <tr><td class="stage">A1 EXAMPLE</td><td class="c"><span class="dot ok"></span></td><td class="c"><span class="dot ok"></span></td><td class="c"><span class="dot no"></span></td><td>The verbs, as <code>code</code></td><td>The owner's item, by its roadmap id</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="scope">
+    <h2 id="scope">Scope risk: what was promised and what is built</h2>
+    <p class="sub">Only when a plan or contract exists. One row per promised item; a red pill where the first weeks cannot deliver it.</p>
+    <div class="scroll" role="region" aria-label="Plan against built" tabindex="0">
+      <table class="wide">
+        <thead><tr><th>Promised</th><th>When</th><th>Built today</th><th>Gap</th></tr></thead>
+        <tbody>
+          <tr><td class="stage">EXAMPLE item</td><td>week 1</td><td>what exists</td><td><span class="pill gap">not built</span> why</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="arch">
+    <h2 id="arch">Architecture check</h2>
+    <p class="sub">Numbers come from commands run this session (line counts, test counts, verb counts).</p>
+    <div class="verdict">
+      <div class="v"><div class="head"><b>Decoupling</b><span class="pill ok">good</span></div><p>EXAMPLE: one sentence of evidence.</p></div>
+      <div class="v"><div class="head"><b>Focus</b><span class="pill ok">good</span></div><p>EXAMPLE.</p></div>
+      <div class="v"><div class="head"><b>Minimalism</b><span class="pill warn">overlap</span></div><p>EXAMPLE.</p></div>
+      <div class="v"><div class="head"><b>Scope</b><span class="pill gap">differs from the plan</span></div><p>EXAMPLE.</p></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="clean">
+    <h2 id="clean">Cleanup</h2>
+    <div class="cols">
+      <div class="box okbox"><h3>Done</h3><ol class="steps"><li><b>EXAMPLE:</b> what, with its roadmap id.</li></ol></div>
+      <div class="box warnbox"><h3>Later, and what it waits for</h3><ol class="steps"><li><b>EXAMPLE:</b> what, and the evidence it needs first.</li></ol></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="road">
+    <h2 id="road">Roadmap (open items only)</h2>
+    <div class="scroll" role="region" aria-label="Roadmap" tabindex="0">
+      <table class="wide">
+        <thead><tr><th>Id</th><th>What</th><th>State</th></tr></thead>
+        <tbody>
+          <tr><td class="id">X1</td><td>EXAMPLE</td><td><span class="pill gap">waits for W3</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="you">
+    <h2 id="you">Waiting on you</h2>
+    <div class="box">
+      <div class="q"><span class="num">W3</span><p>EXAMPLE: the one thing needed, who gives it, what it unblocks.</p></div>
+      <div class="q"><span class="num done">done</span><p>EXAMPLE: what closed since the last version.</p></div>
+    </div>
+  </section>
+</main>
