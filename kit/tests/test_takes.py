@@ -23,6 +23,9 @@
  10. An unconfirmed price: an item is confirmed unless the plan says not;
      the allowance never covers a plan with an unconfirmed paid price (the
      gate asks), and the gate's prompt and the approval name how many.
+ 11. A caller's own version: the code is bound to it, not to the ledger's
+     length, so another plan's charge on the same ledger leaves it good;
+     another version refuses it.
 """
 
 import io
@@ -339,6 +342,34 @@ def test_unconfirmed_prices() -> None:
           ok and ok["approved_by"].endswith("@tty"), ok)
 
 
+def test_caller_version() -> None:
+    print("\n[11] a caller's own version: another plan's charge leaves the code good")
+    s = store()
+    os.environ[SECRET] = "test-secret"
+    try:
+        plan = s.plan([({"n": 1}, True, 3.0)])
+        kw = {"cap": 10, "scope": "p", "currency": "CNY"}
+        e = raises(lambda: s.approve(plan, reason="r", version=7, **kw),
+                   human.CodeRequired)
+        check("the subject carries the caller's version, not the ledger's length",
+              e and e.subject["version"] == 7, e and e.subject)
+        code = e.confirm_code
+        s.charge("c" * 64, 1.0, approved_by="x@relay", reason="another plan")
+        check("another version refuses the code",
+              code_of(lambda: s.approve(plan, reason="r", code=code,
+                                        version=8, **AUDIT, **kw))
+              == "confirm_code_mismatch")
+        ok = s.approve(plan, reason="r", code=code, version=7, **AUDIT, **kw)
+        check("a charge by another plan on the same ledger leaves it good",
+              ok and ok["approved_by"].endswith("@relay"), ok)
+        check("the cap is still checked against the ledger as it is now",
+              code_of(lambda: s.approve(plan, reason="r", code=code, version=7,
+                                        **AUDIT, **{**kw, "cap": 3.5}))
+              == "take_cap_exceeded")
+    finally:
+        os.environ.pop(SECRET, None)
+
+
 if __name__ == "__main__":
     test_made_once_and_kept()
     test_broken_take()
@@ -350,4 +381,5 @@ if __name__ == "__main__":
     test_ledger()
     test_closure()
     test_unconfirmed_prices()
+    test_caller_version()
     raise SystemExit(finish())

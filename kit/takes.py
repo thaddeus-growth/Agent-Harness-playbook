@@ -34,6 +34,12 @@ What it guards:
     plan's paid items, with the ledger's length as the version. A charge
     moves that version, so a code approves this plan once. --reason is
     required and a relayed approval carries its relay audit.
+  * A caller may bind the code to its own record instead (`version=`), such
+    as the newest history id of the approval the code unlocks. Then a
+    charge by another plan on the same ledger (a job running while the
+    person reads the page) does not make the code stale. That caller keeps
+    the code single use itself (its approval write moves the version) and
+    checks the cap again before it pays.
   * The standing allowance (optional, `allowance=`): the owner may declare
     ahead of time that plans keeping the ledger's total at or under an
     amount pass without the retype. It only replaces the person at the
@@ -235,13 +241,18 @@ class TakeStore:
                 reason: str | None, currency: str,
                 allowance: float | None = None,
                 allowance_note: str | None = None, code: str | None = None,
-                relay_user: str | None = None, relay_at: str | None = None
-                ) -> dict | None:
+                relay_user: str | None = None, relay_at: str | None = None,
+                version: object = None) -> dict | None:
         """The money path for a plan: {approved_by, reason} to spread on
         each ledger line (charge), or None when nothing in it is paid.
         `scope` names what the plan is for (a project); it is the subject's
         market slot. `allowance` is the owner's standing allowance, if they
-        declared one; it never covers a plan with an unconfirmed price."""
+        declared one; it never covers a plan with an unconfirmed price.
+        `version` is the subject's version: None = the ledger's length (any
+        charge moves it); a caller that binds the code to its own approval
+        record passes that record's version and keeps the code single use.
+        That version is not tagged, so such a caller gives its plans a
+        `scope` of their own, never one a ledger-length plan also uses."""
         paid = [i for i in items if i.paid]
         if not paid:
             return None
@@ -286,7 +297,8 @@ class TakeStore:
         expected = _shown(total)
         subj = human.subject("approve spend", scope, "takes",
                              {i.key: i.cost for i in paid},
-                             version=len(self.lines()))
+                             version=(len(self.lines()) if version is None
+                                      else version))
         channel = human.confirm(
             "approve spend",
             f"{len(paid)} paid takes for {scope}: {expected} {currency} "
