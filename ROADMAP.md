@@ -51,6 +51,7 @@ Turns 2 to 4 follow [RESTRUCTURE.md](RESTRUCTURE.md) (accepted 2026-10-05): one 
 - `amazon-ads-harness` passed conformance C1 and C2 on 2026-10-05 after its fix for thaddeus-growth-hacking/amazon-ads-harness#448 (`facts set` and `facts rollback` refuse to replace a confirmed value). The ppc adapter now follows its current CLI: numeric `values`, `init`'s profit-model prompts, `--reason`, no `--type`, and the confirm retyped on a terminal (`tty`).
 - The scaffold sets up Zylos itself: vendors the adapter, writes the manifest, passes `node zylos/lib.js check` (#25)
 - Quality evals in every harness; SEO and outreach adoption (#26)
+- Two proposed kit modules from the KOL harness's client, `workbook` (a client's spreadsheet in and out, stdlib) and `browser-ops` (a guarded browser: read, draft, operate): design in [docs/workbook-and-browser-ops.md](docs/workbook-and-browser-ops.md), no code; the first slice is `workbook` read plus the map registry, once the KOL harness's X33 needs it (owner agreed 2026-10-10)
 - Kit modules with no or one user: delete, move or keep; recheck `copylint` after KOL merges (#22)
 - Consent check limits, kept template copies, golden engine run end to end (#27)
 
