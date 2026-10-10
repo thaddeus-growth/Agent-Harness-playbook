@@ -21,14 +21,16 @@ At the end of every session, in the handoff ([templates/session-handoff.md](../.
 1. **Read the source.** `docs/ROADMAP.md` (Now, Waiting on owner, Next, Done, Parked, Decisions), `ssot/stages.tsv` and the stage checks, `git log` since the page's last version. Read the page's last version with the Artifact tool (`action: "read"`) and build on it; a first page starts from [page-template.html](page-template.html).
 2. **Take the numbers from commands, this session:** the test runner's total, the main commit, the kit version, line counts, the verb count. A number you did not just run is not on the page.
 3. **Judge each stage on three gates** and put them in the completion track and table: built; checked on synthetic data; run on the client's real data. **Real data is 0 until a real run exists.** Say what blocks each (a roadmap id, never a guess).
-4. **Fill the sections in this order**, dropping one only when it has no content:
-   1. Header: a lede of two or three sentences (what is built, what ran on real data, the one risk), a meta line (`vN · date · main sha · tests · kit`), four fact tiles.
-   2. Completion: the three-row track, then the table.
-   3. Scope risk, only when a plan or contract exists: one row per promised item against what is built today.
-   4. Architecture check: four verdict cards (decoupling, focus, minimalism, scope) with one line of evidence each.
-   5. Cleanup: what is done (with ids), what waits and for what evidence.
-   6. The flow figure: hand-drawn SVG with the template's `.dg` classes (green border built, amber partial, red dashed not built, grey dashed outside the harness; blue tags a person, purple the agent, grey a tool). Redraw only when the stages change.
-   7. Open roadmap items, then "Waiting on you" (each item: what, who gives it, what it unblocks), then an appendix in `<details>`.
+4. **Fill the sections in this order**, dropping one only when it has no content. What the owner must do comes first; what rarely changes goes last, folded.
+   1. Header: one sentence of verdict (what is built, whether anything ran on real data, what blocks it), a meta line (`vN · date · main sha · tests · kit`), and **three** tiles: where the project is now (its phase), how many stages ran on real data, and what is blocked and by whom.
+   2. **Waiting on you**, a table: id, what to do, **who owes it** (for example "client → you"), **days waited** (from the roadmap's date to today; a pill from three days on), what it unblocks. Sort by what blocks most. This is the part the owner acts on.
+   3. Since the last version: what the owner decided, what closed, what opened.
+   4. Completion track. When the project has phases (a ladder of what the harness may do), draw the track by phase; otherwise by stage. Three rows: built, checked on synthetic data, run on real data. Then the table by stage, if the stages are a separate view.
+   5. Scope against a plan or contract, only when one exists: one row per promised item against what is built today. List what is already decided; do not repeat the blocking inputs, they are in "Waiting on you".
+   6. Architecture check: four verdict cards (decoupling, focus, minimalism, scope), one line of evidence each.
+   7. Cleanup: done with ids, later and what it waits for.
+   8. Open roadmap items.
+   9. **Appendix, folded in one `<details>`:** the flow figure (hand-drawn SVG with the template's `.dg` classes: green border built, amber partial, red dashed not built, grey dashed outside the harness; blue tags a person, purple the agent, grey a tool; redraw only when the stages change), the table of how fast each layer can be read, what one unit is made of, deployment. These rarely change; they must not push the owner's actions down the page.
 5. **Publish.** Load the `artifact-design` skill first. Use the template's tokens (light and dark, phone width, a real fallback stack). The template names no web font host, because nothing published here may name one: when you publish, add the Artifact-allowed Google Fonts stylesheet link for IBM Plex Sans, IBM Plex Mono and Noto Sans SC to the page's head; without it the fallback stack renders. Publish with the Artifact tool to the project's existing URL; the first time, ask the owner to keep the link.
 6. **Record the URL** in the project's handoff, not in the repository's checked-in docs when the repository is public.
 
@@ -37,6 +39,7 @@ At the end of every session, in the handoff ([templates/session-handoff.md](../.
 - **Write in the owner's language** (the project's CLAUDE.md or the owner's memory says which); ids, commands and file names stay as they are.
 - **No invented facts.** A decision from a meeting the page's author was not told about is not on the page; write "the meeting's outcome is not recorded yet". The next free decision id comes from the roadmap, not from memory.
 - **No secrets or client data beyond what the owner already sees.** Tokens, keys and raw rows never appear; the artifact is private, but it is still a copy.
+- **Days waited are facts from the roadmap's dates**, not a feeling; if a row has no date, say so.
 - **Red is for risk, not for effort.** A stage waiting on the owner is red only when the wait blocks the first deliverable.
 - **Keep the title.** It names the project; the explanation goes in the publish description.
 - **One page.** Do not add a second progress page per audience; the client gets a report, not this page.

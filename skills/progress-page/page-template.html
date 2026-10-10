@@ -148,33 +148,60 @@ details[open] > summary { margin-bottom: 12px; }
 <main>
   <header>
     <h1>PROJECT NAME</h1>
-    <p class="lede">EXAMPLE: two or three sentences. What is built, what has run on real data, and the one risk that matters most.</p>
+    <p class="lede">EXAMPLE: one sentence. What is built, whether anything ran on real data, what blocks it.</p>
     <p class="meta">vN · YYYY-MM-DD · main abc1234 · N tests pass · kit X.Y.Z</p>
     <div class="facts">
-      <div class="fact"><b>EXAMPLE: 4 of 8 stages built</b><span>One line saying which.</span></div>
-      <div class="fact"><b>EXAMPLE: run on real data: 0 of 6</b><span>What they wait for.</span></div>
-      <div class="fact risk"><b>EXAMPLE: promised &gt; built</b><span>Where the plan outruns the code.</span></div>
-      <div class="fact"><b>EXAMPLE: cleanup done</b><span>What is left and when.</span></div>
+      <div class="fact"><b>EXAMPLE: now in phase A (record)</b><span>The project's own ladder, one line.</span></div>
+      <div class="fact risk"><b>EXAMPLE: run on real data: 0 of 5</b><span>How many stages are built, partial, not built.</span></div>
+      <div class="fact risk"><b>EXAMPLE: blocked by 3 inputs</b><span>Which ones, and the longest wait in days.</span></div>
     </div>
   </header>
 
-  <section aria-labelledby="prog">
-    <h2 id="prog">Completion</h2>
-    <p class="sub">Three gates per stage: built; checked on synthetic data; run on the client's real data.</p>
-    <div class="box">
-      <div class="track" role="img" aria-label="Completion of 8 stages: write the numbers here">
-        <span></span>
-        <span class="hd">A1</span><span class="hd">A2</span><span class="hd">A3</span><span class="hd">B1</span><span class="hd">C1</span><span class="hd">C2</span><span class="hd">D1</span><span class="hd">E1</span>
-        <span class="rl">built</span>
-        <span class="seg no"></span><span class="seg part"></span><span class="seg ok"></span><span class="seg ok"></span><span class="seg ok"></span><span class="seg ok"></span><span class="seg no"></span><span class="seg part"></span>
-        <span class="rl">synthetic</span>
-        <span class="seg"></span><span class="seg ok"></span><span class="seg ok"></span><span class="seg ok"></span><span class="seg ok"></span><span class="seg ok"></span><span class="seg"></span><span class="seg ok"></span>
-        <span class="rl">real data</span>
-        <span class="seg"></span><span class="seg part"></span><span class="seg no"></span><span class="seg no"></span><span class="seg no"></span><span class="seg no"></span><span class="seg"></span><span class="seg no"></span>
-      </div>
-      <div class="legend"><span><i class="ok"></i>done</span><span><i class="part"></i>partial</span><span><i class="no"></i>should be done, is not</span><span><i></i>not applicable (not built)</span></div>
+  <section aria-labelledby="you">
+    <h2 id="you">Waiting on you</h2>
+    <p class="sub">Sorted by what blocks most. Days run from the roadmap's date to today. "Owes" is who holds it now.</p>
+    <div class="scroll" role="region" aria-label="Waiting on you" tabindex="0">
+      <table class="wide">
+        <thead><tr><th>Id</th><th>What to do</th><th>Owes</th><th>Waited</th><th>Unblocks</th></tr></thead>
+        <tbody>
+          <tr><td class="id">W3</td><td>EXAMPLE: the one thing needed</td><td>client → you</td><td class="c"><span class="pill gap">9 days</span></td><td>X4, X6</td></tr>
+          <tr><td class="id">W9</td><td>EXAMPLE: a newer item</td><td>you</td><td class="c">1 day</td><td>X21</td></tr>
+        </tbody>
+      </table>
     </div>
-    <div class="scroll" role="region" aria-label="Completion by stage" tabindex="0" style="margin-top:16px">
+  </section>
+
+  <section aria-labelledby="chg">
+    <h2 id="chg">Since the last version</h2>
+    <div class="box"><ul class="plain">
+      <li><span class="k">Decided:</span> EXAMPLE, with ids.</li>
+      <li><span class="k">Closed:</span> EXAMPLE.</li>
+      <li><span class="k">Opened:</span> EXAMPLE.</li>
+    </ul></div>
+  </section>
+
+  <section aria-labelledby="prog">
+    <h2 id="prog">Completion: by phase</h2>
+    <p class="sub">Three gates per phase: built; checked on synthetic data; run on the client's real data. By stage instead, when the project has no phases: set the column count to the number of stages.</p>
+    <div class="box">
+      <div class="track" style="grid-template-columns: 7.5em repeat(4, minmax(0, 1fr))" role="img" aria-label="Completion of 4 phases: write the numbers here">
+        <span></span>
+        <span class="hd">A</span><span class="hd">B</span><span class="hd">C</span><span class="hd">D</span>
+        <span class="rl">built</span>
+        <span class="seg part"></span><span class="seg part"></span><span class="seg no"></span><span class="seg no"></span>
+        <span class="rl">synthetic</span>
+        <span class="seg part"></span><span class="seg part"></span><span class="seg"></span><span class="seg"></span>
+        <span class="rl">real data</span>
+        <span class="seg no"></span><span class="seg no"></span><span class="seg"></span><span class="seg"></span>
+      </div>
+      <div class="legend"><span><i class="ok"></i>done</span><span><i class="part"></i>partial</span><span><i class="no"></i>should be done, is not</span><span><i></i>not applicable</span></div>
+      <p class="small" style="margin-top:10px">EXAMPLE: one line per phase saying what is partial and what is missing.</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="stages">
+    <h2 id="stages">By stage</h2>
+    <div class="scroll" role="region" aria-label="Completion by stage" tabindex="0">
       <table class="wide">
         <thead><tr><th>Stage</th><th>Built</th><th>Synthetic</th><th>Real</th><th>What exists today</th><th>What blocks it</th></tr></thead>
         <tbody>
@@ -185,8 +212,8 @@ details[open] > summary { margin-bottom: 12px; }
   </section>
 
   <section aria-labelledby="scope">
-    <h2 id="scope">Scope risk: what was promised and what is built</h2>
-    <p class="sub">Only when a plan or contract exists. One row per promised item; a red pill where the first weeks cannot deliver it.</p>
+    <h2 id="scope">Scope: what was promised and what is built</h2>
+    <p class="sub">Only when a plan or contract exists. A red pill where the first weeks cannot deliver it; a grey pill where it moved to another line.</p>
     <div class="scroll" role="region" aria-label="Plan against built" tabindex="0">
       <table class="wide">
         <thead><tr><th>Promised</th><th>When</th><th>Built today</th><th>Gap</th></tr></thead>
@@ -195,6 +222,7 @@ details[open] > summary { margin-bottom: 12px; }
         </tbody>
       </table>
     </div>
+    <div style="margin-top:16px"><div class="box okbox"><h3>Already decided</h3><ul class="plain"><li><span class="k">EXAMPLE:</span> the decision, with its id.</li></ul></div></div>
   </section>
 
   <section aria-labelledby="arch">
@@ -228,11 +256,14 @@ details[open] > summary { margin-bottom: 12px; }
     </div>
   </section>
 
-  <section aria-labelledby="you">
-    <h2 id="you">Waiting on you</h2>
-    <div class="box">
-      <div class="q"><span class="num">W3</span><p>EXAMPLE: the one thing needed, who gives it, what it unblocks.</p></div>
-      <div class="q"><span class="num done">done</span><p>EXAMPLE: what closed since the last version.</p></div>
-    </div>
-  </section>
+  <details>
+    <summary>Appendix: flow figure, how fast each layer reads, what one unit is made of, deployment</summary>
+    <h3>Flow</h3>
+    <p class="sub">A hand-drawn SVG with the <code>.dg</code> classes: <code>node built</code>, <code>node part</code>, <code>node todo</code>, <code>node ext</code>, <code>ck ai|tool|you|gap</code> tags, <code>ln</code> arrows. Redraw only when the stages change.</p>
+    <h3>How fast each layer reads</h3>
+    <p class="sub">EXAMPLE: a table of the thresholds and the time to reach them.</p>
+    <h3>What one unit is made of</h3>
+    <p class="sub">EXAMPLE: the layers, as <code>.lay</code> rows in an SVG.</p>
+    <p class="small">Deployment: one paragraph, no secrets.</p>
+  </details>
 </main>
