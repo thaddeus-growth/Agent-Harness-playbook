@@ -89,6 +89,7 @@ The scaffolder generates exactly these files, each one call into the vendored ki
 | `tests/test_human_tables.py` | Human tables survive every rebuild; a lossy rebuild is refused; an older tool refuses a newer database |
 | `tests/test_gate.py` | Confirm and approve need a human; a code is bound to what was shown; a replayed or swapped code is refused; no bypass flag; the scope enters only through init |
 | `tests/test_release.py` | `git archive` leaves out the internal files, ships the kit and the console, and no shipped file holds `<<fill:` |
+| `tests/test_changelog.py` | `CHANGELOG.md` starts with Unreleased, its releases are in order, and `SKILL.md`'s version is the newest of them |
 | `tests/test_kit_drift.py` | `scripts/kit/` and `console/` match their `MANIFEST.sha256` and `VERSION` |
 
 The playbook's own check of this page, BUILD.md and the build skill: [tests/test_docs_build.py](../tests/test_docs_build.py).
@@ -97,7 +98,7 @@ The playbook's own check of this page, BUILD.md and the build skill: [tests/test
 
 Three folders are not rendered by the scaffolder. Each is a module a harness copies, and each has its own tests, kept out of the generated set above. The copy is the module only (from `tests/golden/`, just `engine.py` and `cases.py`; from `workflows/`, the scripts and `refcheck.py`). The golden and workflow tests run inside this playbook, and their runners import its `kit/` from the playbook root, so they do not travel with the copy.
 
-**`tests/`: the test kit for a repository that does not vendor the kit.** It holds the same rules as the ten generated tests, for the layout of the source project (`src/` beside a `common/` package at the root), with the rules as constants at the top of each file. A scaffolded harness does not copy it: the generated tests call the vendored kit, and `scripts/kit/` and its manifest keep every harness on one copy of each rule. The overlap, rule by rule:
+**`tests/`: the test kit for a repository that does not vendor the kit.** It holds the same rules as the first ten of the eleven generated tests (the changelog one exists only in the generated set), for the layout of the source project (`src/` beside a `common/` package at the root), with the rules as constants at the top of each file. A scaffolded harness does not copy it: the generated tests call the vendored kit, and `scripts/kit/` and its manifest keep every harness on one copy of each rule. The overlap, rule by rule:
 
 | Rule | Generated test, from the vendored kit | Standalone copy |
 | --- | --- | --- |
@@ -107,7 +108,7 @@ Three folders are not rendered by the scaffolder. Each is a module a harness cop
 | The release archive | `tests/test_release.py` (`kit.guards.release`) | [test_release_archive.py](./tests/test_release_archive.py) |
 | The kit tests itself | `kit/tests/` in this playbook | [tests/selftest/run.py](tests/selftest/run.py), [tests/selftest/_sample.py](tests/selftest/_sample.py), the sample's `common/` package ([dates.py](tests/selftest/sample/dates.py), [raw.py](tests/selftest/sample/raw.py), [runner.py](tests/selftest/sample/runner.py), [store.py](tests/selftest/sample/store.py)), [tests/selftest/test_archtest.py](tests/selftest/test_archtest.py), [tests/selftest/test_installed.py](tests/selftest/test_installed.py) |
 
-What the kit adds to the generated ten is [tests/README.md](tests/README.md): the rules no test can check, each with the incident that paid for it. Where a rule differs (the standalone runner also gives every child an environment allowlist), the generated test is the one the harness's CLAUDE.md names.
+What the kit adds to the generated tests is [tests/README.md](tests/README.md): the rules no test can check, each with the incident that paid for it. Where a rule differs (the standalone runner also gives every child an environment allowlist), the generated test is the one the harness's CLAUDE.md names.
 
 **`tests/golden/`: the golden-diff engine** (B10, before the first refactor). It is a tool, never shipped: [README](tests/golden/README.md), the engine [engine.py](tests/golden/engine.py) and the cases hook [cases.py](tests/golden/cases.py) the harness fills from its verb table. Its own tests: [_t.py](tests/golden/tests/_t.py), [fake_harness.py](tests/golden/tests/fake_harness.py), [run.py](tests/golden/tests/run.py), [test_cleanup.py](tests/golden/tests/test_cleanup.py), [test_compare.py](tests/golden/tests/test_compare.py) and [test_engine.py](tests/golden/tests/test_engine.py).
 

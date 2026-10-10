@@ -8,7 +8,7 @@ The checklist above, already built: a new harness starts from these instead of f
 
 - [`kit/`](../kit/): the shared harness modules (the gate, human tables, the write guard, message codes, the `--json` contract, the verb table and dispatcher, doctor, the guards), vendored into each harness as `scripts/kit/`; each module has a tier ([the admission rule](#the-admission-rule), [`kit-tiers.tsv`](../kit-tiers.tsv)). *Test:* `python3 kit/tests/run.py`, with `kit/tests/test_e2e_shop.py` proving the gate together with the console.
 - [`hosts/zylos/`](../hosts/zylos/): the worked example of a host adapter (write one per host), driven by one manifest: install, configure, scheduled tasks and the console as a service. *Test:* `python3 hosts/zylos/tests/run.py`.
-- [`scaffold/`](../scaffold/): `scaffold/new_harness.py` renders the templates, writes the skeleton, vendors the kit and the console, and generates the ten day-one tests; the result is green before its first feature. *Test:* `python3 scaffold/tests/run.py` (`scaffold/tests/test_new_harness.py`).
+- [`scaffold/`](../scaffold/): `scaffold/new_harness.py` renders the templates, writes the skeleton, vendors the kit and the console, and generates the eleven day-one tests; the result is green before its first feature. *Test:* `python3 scaffold/tests/run.py` (`scaffold/tests/test_new_harness.py`).
 - [`build/`](../build/): the build-time tools: check meeting intakes, turn items into console asks, apply the answers. *Test:* `python3 build/tests/run.py`.
 - [BUILD.md](../BUILD.md): the step-by-step workflow, B0 to B10: what each step produces, what fans out, who signs which gate. *Test:* `python3 tests/run.py` (`tests/test_docs_build.py`).
 - [`skills/build-harness/`](../skills/build-harness/SKILL.md): the skill an agent loads to follow BUILD.md from the files alone. *Test:* `tests/test_docs_build.py` holds it to the same steps.
@@ -69,4 +69,4 @@ Reading the registry: one row per module with its tier, its consumers as `who:ki
 | [`templates/SKILL.md`](../templates/SKILL.md) | 9 | The agent's rules and the skill's scope: read, pending writes, out of scope |
 | [`templates/README-operator.md`](../templates/README-operator.md) | 9 | The operator guide: install, configure, the daily loop, what needs a human |
 | [`templates/workflows.md`](../templates/workflows.md) | 9, 10 | Recipes: the daily check, why a number moved, a client meeting |
-| [`templates/README.md`](../templates/README.md) | all | Every template, the step that uses it and its target in a harness; the ten tests a new harness starts with |
+| [`templates/README.md`](../templates/README.md) | all | Every template, the step that uses it and its target in a harness; the eleven tests a new harness starts with |

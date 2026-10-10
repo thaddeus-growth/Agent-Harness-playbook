@@ -36,6 +36,7 @@ consent	generation	a real person's likeness under confirmed consent
 retry	data	read retries that honour quotas
 guards.__init__	testkit	
 guards.boundary	testkit	
+guards.changelog	testkit	
 guards.clock	testkit	
 guards.drift	testkit	
 guards.evals	testkit	no consumer yet

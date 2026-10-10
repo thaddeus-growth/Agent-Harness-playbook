@@ -38,7 +38,7 @@ PLACEHOLDER = re.compile(r"\{\{(\w+)\}\}")
 ACTIONS_EXPR = re.compile(r"\$\{\{[^}]*\}\}")     # a GitHub Actions expression, not a placeholder
 STEPS = ["B0", "B0.5", "B0.6", "B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "B10"]
 GENERATED = {"test_ssot.py", "test_layering.py", "test_clock.py", "test_json_contract.py", "test_release.py", "test_kit_drift.py",
-             "test_human_tables.py", "test_gate.py", "test_boundary.py", "test_run_tests.py"}
+             "test_human_tables.py", "test_gate.py", "test_boundary.py", "test_run_tests.py", "test_changelog.py"}
 
 
 def doc(rel: str) -> str:
@@ -189,7 +189,7 @@ def test_the_docs_say_how_many_tests_a_new_harness_starts_with_and_it_is_the_rea
     for rel, n in (("docs/kit-and-tools.md", 2), (BUILD, 1)):
         said = stated_test_counts(doc(rel))
         assert len(said) == n and set(said) == {want}, (rel, said, want)
-    assert set(stated_test_counts(doc("docs/kit-and-tools.md").replace("the ten tests", "the nine tests"))) != {want}   # a stale count shows
+    assert set(stated_test_counts(doc("docs/kit-and-tools.md").replace("the eleven tests", "the nine tests"))) != {want}   # a stale count shows
 
 
 def test_every_harness_test_named_is_one_the_scaffolder_generates():

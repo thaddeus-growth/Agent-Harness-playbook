@@ -25,7 +25,7 @@ What it writes (BUILD.md, B1):
     Dispatcher), scripts/verbs.py, the kit's facts, decisions, pending,
     compute stories, queue and execute verbs, scripts/_lib/ (the schema:
     human tables only; the one writer: an empty allowlist), .env.example,
-    evals/, .claude/, and exactly the ten tests templates/README.md
+    evals/, .claude/, and exactly the eleven tests templates/README.md
     names, each a thin call into kit.testing.suites, plus tests/run.py;
   * the kit and the console vendored (kit/tools/vendor.py) into
     scripts/kit/ and console/, each with its VERSION and MANIFEST.sha256;
@@ -98,7 +98,7 @@ KEPT_CONSTANTS = ("approval_ttl_hours",)
 GENERATED_TESTS = ("test_run_tests.py", "test_ssot.py", "test_layering.py",
                    "test_clock.py", "test_boundary.py", "test_json_contract.py",
                    "test_human_tables.py", "test_gate.py", "test_release.py",
-                   "test_kit_drift.py")
+                   "test_changelog.py", "test_kit_drift.py")
 
 # The day-one checklist in docs/stages.md, item by item (the item's first
 # words), and the generated file(s) that answer it. A new checklist item

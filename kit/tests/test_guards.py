@@ -50,7 +50,7 @@ os.environ["GIT_CONFIG_NOSYSTEM"] = "1"
 
 import _shop  # noqa: E402
 from kit import config, contract, messages  # noqa: E402
-from kit.guards import (boundary, clock, drift, json_contract,  # noqa: E402
+from kit.guards import (boundary, changelog, clock, drift, json_contract,  # noqa: E402
                         layering, release, ssot)
 from kit.messages import coded, msg  # noqa: E402
 from kit.testing.check import capture, check, finish, tmp_dir  # noqa: E402
@@ -184,6 +184,7 @@ FILES = {
     "CLAUDE.md": "# For people changing the code\n",
     "README.md": "# The shop harness\n",
     "SKILL.md": "---\nname: shop-harness\n---\n",
+    "CHANGELOG.md": "# Changelog\n\n## [Unreleased]\n",
     "evals/README.md": "# Agent-behaviour evals\n",
     ".claude/settings.json": "{}\n",
     "tests/test_ssot.py": "# the harness's ssot test\n",
@@ -349,12 +350,31 @@ def clean(label: str, problems: list[str]) -> None:
 def everything(root: Path, data: Path) -> dict[str, list[str]]:
     return {"ssot": ssot.check_index(root),
             "release": release.check_release(root),
+            "changelog": changelog.check_changelog(root),
             "layering": layering.check_layers(root),
             "clock": clock.check_reads(root),
             "boundary": boundary.check_boundaries(root, verbs=VERBS),
             "drift": drift.check_harness(root),
             "json contract": json_contract.check_read_verbs(data,
                                                             verbs=READS)}
+
+
+# ------------------------------------------------------------ [1b] changelog
+
+def test_changelog(root: Path) -> None:
+    print("\n[1b] changelog: whole, and SKILL.md's version is its newest release")
+    check("the rule's planted self-test: every fault caught, a clean log passes",
+          changelog.self_test() == [], changelog.self_test())
+    with planted(root, "CHANGELOG.md", remove=True):
+        caught("no CHANGELOG.md", changelog.check_changelog(root), "does not exist")
+    clean("a SKILL.md with no version is not held to one", changelog.check_changelog(root))
+    versioned = "---\nname: shop-harness\nversion: 0.2.0\n---\n"
+    with planted(root, "SKILL.md", versioned):
+        caught("SKILL.md bumped without an entry", changelog.check_changelog(root),
+               "a version bump needs its entry")
+        with planted(root, "CHANGELOG.md",
+                     "# Changelog\n\n## [Unreleased]\n\n## [0.2.0] - 2026-01-01\n\n### Added\n- x\n"):
+            clean("a log whose newest release is SKILL.md's version", changelog.check_changelog(root))
 
 
 # ---------------------------------------------------------------- [1] ssot
@@ -882,6 +902,7 @@ def main() -> int:
           rc == 0 and out.count("  PASS  ") >= 5, out)
 
     test_ssot(root)
+    test_changelog(root)
     test_release(root)
     test_layering(root)
     test_clock(root)

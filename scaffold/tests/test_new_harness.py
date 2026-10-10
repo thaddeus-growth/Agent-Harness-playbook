@@ -154,8 +154,8 @@ def test_tree(root: Path) -> None:
     table = (PLAYBOOK / "templates" / "README.md").read_text(encoding="utf-8")
     named = set(re.findall(r"^\| `tests/(test_\w+\.py)` \|", table, re.M))
     tests = {p.name for p in (root / "tests").glob("*.py")}
-    check("exactly the ten tests templates/README.md names, plus run.py",
-          tests == named | {"run.py"} and len(named) == 10
+    check("exactly the eleven tests templates/README.md names, plus run.py",
+          tests == named | {"run.py"} and len(named) == 11
           and set(nh.GENERATED_TESTS) == named, sorted(tests ^ named))
     for t in sorted(named):
         text = (root / "tests" / t).read_text(encoding="utf-8")

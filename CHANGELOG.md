@@ -17,6 +17,17 @@ scaffold, console, docs, conformance.
   add its line under Unreleased, or say `[no changelog]` in its title. Tested by running the
   job's own shell on sample file lists.
 
+## [0.10.0] - 2026-10-10
+### Added
+- `kit/guards/changelog.py` and `kit.testing.suites.changelog`: `CHANGELOG.md` starts with
+  Unreleased, its releases are in order (versions descending, dates not increasing, each with
+  a `### ` section), `SKILL.md`'s version is the newest release (a harness not yet released is
+  at 0.1.0), and every `vX.Y.Z` tag has a heading. A self-test plants each fault. Seen in
+  amazon-ads-harness, which wrote the same rule for itself.
+### Other
+- A new harness is generated with `tests/test_changelog.py`: eleven day-one tests, not ten.
+  `templates/AGENT_INSTRUCTIONS.md` gains the **Changelog** invariant, naming that test.
+
 ## [0.9.0] - 2026-10-08 · `7569fb2`
 ### Added
 - `tools/skill_upload.py` writes the copy of SKILL.md that claude.ai and the Skills API
