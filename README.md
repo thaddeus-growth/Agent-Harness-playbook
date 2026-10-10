@@ -128,6 +128,7 @@ Each guarantee is code in [`kit/`](kit/) with a test that fails when it breaks (
 | [docs/channels.md](docs/channels.md) | Reusing a harness for other channels; generated creative and real people |
 | [docs/kit-and-tools.md](docs/kit-and-tools.md) | What this repository holds, the kit's admission rule, every template |
 | [docs/lessons.md](docs/lessons.md) | Lessons kept after their code was removed |
+| [docs/workbook-and-browser-ops.md](docs/workbook-and-browser-ops.md) | Two proposed kit modules, design only: a client's spreadsheet in and out, and a guarded browser for platforms with no API |
 | [BUILD.md](BUILD.md) | The build workflow, B0 to B10 |
 | [ROADMAP.md](ROADMAP.md), [RESTRUCTURE.md](RESTRUCTURE.md) | Open work and the restructure in progress |
 
