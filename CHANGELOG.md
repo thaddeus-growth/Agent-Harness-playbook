@@ -17,6 +17,36 @@ scaffold, console, docs, conformance.
   add its line under Unreleased, or say `[no changelog]` in its title. Tested by running the
   job's own shell on sample file lists.
 
+## [0.11.0] - 2026-10-10
+### Added
+- Pack `workbook` (new; a harness takes it with `[kit] packs = ["workbook"]`): a client's
+  .xlsx read as it is and kept as a generic store, for a client that runs every project
+  in one workbook (the KOL harness's X33, R29). Stdlib only (`zipfile`, `xml.etree`).
+  Design: `docs/workbook-and-browser-ops.md`.
+  - `workbook.py`: `read()` gives every sheet's cells with their kind, text, number,
+    number format, ISO date (1900 or 1904 system), formula text beside its saved value
+    (never recalculated; shared and array formulas kept), hyperlink, comment mark,
+    hidden row or column and merge anchor; sheet states (hidden kept), merges,
+    validations, core properties and every part's sha256. A part with a DOCTYPE or an
+    ENTITY, or over the size caps, is refused (`workbook_unsafe`); a file that is not an
+    xlsx is `workbook_unreadable`.
+  - `workbook_map.py`: the client's map, `tables.tsv` (where each table is: sheet,
+    anchor text, search box, stop, key, market) and `columns.tsv` (what each column
+    means: field, direction in/out/both, owning harness, type, proposed/confirmed).
+    Three rules: an outgoing column has one owner; every field is in the harness's
+    vocabulary; `pending()` lists what the owner has not confirmed and `confirmed()`
+    is all a projection reads.
+  - `workbook_store.py`: eight cache tables (`wb_file`, `wb_sheet`, `wb_table`,
+    `wb_column`, `wb_row`, `wb_cell`, `wb_change`, `wb_issue`) in kit.db's format,
+    none naming a business field; tables found by anchor (blocks side by side,
+    group rows, a stop text, blank rows inside counted); rows keyed by the map; the
+    change record between imports of one workbook (the write-back conflict list);
+    `records()` for a harness's projection (typed values, each with its source cell,
+    an empty cell None, never 0); `summary()` for a read verb, personal columns and
+    any e-mail address masked.
+- `testing/xlsx.py` (testkit): a small deterministic xlsx writer, so a test builds the
+  workbook it reads. Tested on two SYNTHETIC clients' workbooks (`kit/tests/_workbooks.py`).
+
 ## [0.10.1] - 2026-10-10
 ### Changed
 - `TakeStore.approve(version=)`: a caller may bind the spend code to its own approval record (the

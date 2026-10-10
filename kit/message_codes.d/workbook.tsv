@@ -1,0 +1,3 @@
+code	params	meaning_en	meaning_zh
+workbook_unreadable	path,reason	{path} cannot be read as an xlsx workbook: {reason}	{path} 无法作为 xlsx 工作簿读取：{reason}
+workbook_unsafe	path,part,reason	{path}: part {part} is refused before it is read: {reason}	{path}：部件 {part} 在读取前被拒绝：{reason}
