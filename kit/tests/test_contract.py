@@ -154,7 +154,8 @@ def main() -> int:
           and m["evidence_level"] is None, m)
     check("harness block: name, version, kit_version",
           m["harness"] == {"name": "shop-harness", "version": None,
-                           "kit_version": "0.9.0"}, m["harness"])
+                           "kit_version": Path(contract.__file__).with_name("VERSION")
+                           .read_text().strip()}, m["harness"])
     full = contract.meta(
         window=w, sources=[{"table": "orders", "pulled_on": None}],
         stale=[{"table": "orders", "last_date": "2026-09-05", "lag_days": 5,

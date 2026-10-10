@@ -14,6 +14,7 @@ every kit cache that depends on it.
 """
 
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -66,9 +67,9 @@ def main() -> int:
     check("… and hashable (a cache may key on it); equal loads are equal",
           hash(cfg) == hash(config.load(_shop.SHOP))
           and cfg == config.load(_shop.SHOP))
-    check("kit.__version__ = kit/VERSION = 0.9.0",
+    check("kit.__version__ = kit/VERSION, a plain X.Y.Z",
           kit.__version__ == (_shop.KIT / "VERSION").read_text().strip()
-          == "0.9.0")
+          and bool(re.fullmatch(r"\d+\.\d+\.\d+", kit.__version__)))
 
     print("\n[2] defaults of the optional keys")
     b = config.load(harness(MINIMAL))

@@ -618,6 +618,16 @@ def _raw_help(cli: Cli, words: list[str]) -> tuple[int, str, str]:
     return rc, "", out + err
 
 
+# ---- changelog -----------------------------------------------------------------------
+
+def changelog(root: Path | str) -> Results:
+    bind(root)
+    from kit.guards import changelog as g
+    return [("the changelog rule catches each planted fault", g.self_test()),
+            ("CHANGELOG.md is whole, and SKILL.md's version is its newest "
+             "release", g.check_changelog(root))]
+
+
 # ---- release -------------------------------------------------------------------------
 
 def release(root: Path | str) -> Results:
