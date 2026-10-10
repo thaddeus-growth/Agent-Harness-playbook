@@ -1,0 +1,12 @@
+code	params	meaning_en	meaning_zh
+workbook_sheet_missing	table_id,sheet	{table_id}: the workbook has no sheet {sheet}	{table_id}：工作簿里没有工作表 {sheet}
+workbook_anchor_missing	table_id,sheet,anchor,search	{table_id}: no cell reads {anchor} in {sheet} ({search})	{table_id}：在 {sheet}（{search}）里找不到写着 {anchor} 的单元格
+workbook_anchor_ambiguous	table_id,sheet,anchor,refs	{table_id}: {anchor} is in more than one cell of {sheet} ({refs}); narrow the search box	{table_id}：{sheet} 里有多个单元格写着 {anchor}（{refs}）；请缩小查找范围
+workbook_header_duplicate	table_id,header,refs	{table_id}: header {header} shows more than once ({refs}); only the first is mapped	{table_id}：表头 {header} 出现不止一次（{refs}）；只映射第一个
+workbook_stop_missing	table_id,sheet,stop	{table_id}: no row of {sheet} starts with {stop} below the header; read to the sheet's last row	{table_id}：{sheet} 表头下没有以 {stop} 开头的行；读到工作表最后一行
+workbook_key_missing	table_id,header	{table_id}: key header {header} is not in the table's header row	{table_id}：键所用的表头 {header} 不在表头行里
+workbook_key_empty	table_id,row	{table_id}: row {row} has an empty key; matched by its content	{table_id}：第 {row} 行的键为空；按内容匹配
+workbook_key_duplicate	table_id,row,occurrence	{table_id}: row {row} repeats the key of an earlier row (occurrence {occurrence})	{table_id}：第 {row} 行与前面某行的键重复（第 {occurrence} 次）
+workbook_formula_no_value	table_id,ref	{table_id}: {ref} is a formula the file saved no value for; read as empty	{table_id}：{ref} 是公式，但文件没有保存它的结果；按空值读取
+workbook_table_unconfirmed	table_id	{table_id} is not a confirmed table of the map; nothing is projected from it	{table_id} 不是映射里已确认的表；不从它投影任何内容
+workbook_value_type	table_id,ref,type	{table_id}: {ref} does not read as {type}; left empty	{table_id}：{ref} 不能按 {type} 读取；留空

@@ -1,0 +1,12 @@
+code	params	meaning_en	meaning_zh
+workbook_map_missing	path	{path} is not a file; a workbook map is tables.tsv and columns.tsv in one folder	{path} 不是文件；工作簿映射是同一文件夹里的 tables.tsv 和 columns.tsv
+workbook_map_columns	file,missing	{file} lacks the column(s) {missing}	{file} 缺少列：{missing}
+workbook_map_bad_value	file,line,column,value,expected	{file} line {line}: {column} {value} is not {expected}	{file} 第 {line} 行：{column} 的值 {value} 不是 {expected}
+workbook_map_table_duplicate	table_id	tables.tsv: table {table_id} is declared twice	tables.tsv：表 {table_id} 声明了两次
+workbook_map_table_unknown	line,table_id	columns.tsv line {line}: table {table_id} is not in tables.tsv	columns.tsv 第 {line} 行：表 {table_id} 不在 tables.tsv 里
+workbook_map_owner_missing	line,header	columns.tsv line {line}: {header} goes out, so it needs its owning harness	columns.tsv 第 {line} 行：{header} 要写回工作簿，必须写明归属的 harness
+workbook_map_two_owners	sheet,header,owners	{sheet} / {header}: written by more than one row ({owners}); an outgoing column has one owner	{sheet} / {header}：有多行要写这一列（{owners}）；写回的列只能有一个归属
+workbook_map_field_unknown	line,field	columns.tsv line {line}: field {field} is not in the harness's field vocabulary	columns.tsv 第 {line} 行：字段 {field} 不在 harness 的字段表里
+workbook_map_no_place_reason	line,field	columns.tsv line {line}: a field with no place in the workbook ({field}) needs header - and a note that says why	columns.tsv 第 {line} 行：在工作簿里没有位置的字段（{field}）要写 header 为 - 并在 note 里说明原因
+workbook_map_key_unknown	table_id,header	tables.tsv: {table_id} names {header} (key or market) but columns.tsv has no row for it	tables.tsv：{table_id} 用到 {header}（键或市场），但 columns.tsv 没有这一列
+workbook_map_refused	count,problems	the workbook map has {count} problem(s); nothing was read through it	工作簿映射有 {count} 个问题；没有按它读取任何内容

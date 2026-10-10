@@ -34,6 +34,9 @@ prices	generation	vendor prices from an owner TSV
 preflight	generation	requests checked against the vendor schema
 consent	generation	a real person's likeness under confirmed consent
 retry	data	read retries that honour quotas
+workbook	workbook	a client's xlsx read as it is, stdlib only
+workbook_map	workbook	the client's map: tables, columns, one owner per outgoing column
+workbook_store	workbook	the generic store: tables by anchor, keyed rows, the change record
 guards.__init__	testkit	
 guards.boundary	testkit	
 guards.changelog	testkit	
@@ -49,6 +52,7 @@ testing.check	testkit
 testing.run_tests	testkit	
 testing.sandbox	testkit	
 testing.suites	testkit	the ten day-one tests
+testing.xlsx	testkit	a small xlsx writer, so a test builds the workbook it reads
 tools.manifest	testkit	the fingerprint, read by guards.drift
 tools.vendor	testkit	playbook tooling
 tools.packs	testkit	the pack table reader, used by tools.vendor
