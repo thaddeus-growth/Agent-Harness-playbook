@@ -147,6 +147,10 @@ def test_tree(root: Path) -> None:
     check("fill markers only in the files the build fills",
           set(fills) <= nh.FILLED and {"SKILL.md", "README.md"} <= set(fills),
           fills)
+    log = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+    check("CHANGELOG.md starts with Unreleased, and the CI has the job that asks for it",
+          log.startswith("# Changelog") and "\n## [Unreleased]\n" in log
+          and "\nchangelog:\n" in (root / ".gitlab-ci.yml").read_text(encoding="utf-8"))
     table = (PLAYBOOK / "templates" / "README.md").read_text(encoding="utf-8")
     named = set(re.findall(r"^\| `tests/(test_\w+\.py)` \|", table, re.M))
     tests = {p.name for p in (root / "tests").glob("*.py")}

@@ -56,6 +56,38 @@ story id:
         exit 1
       fi
 
+
+# CLAUDE.md: a change a host or an agent can see adds a line under
+# `## [Unreleased]` in CHANGELOG.md. Merge request pipelines only: GitLab gives
+# the diff base and the title there. Runtime paths: the code, the registries
+# (ssot/*.tsv, not the .agent.tsv notes), the skill, the references and the
+# console. A change with nothing visible says [no changelog] in its title. The
+# runner's own full clone holds the diff base: a fetch from inside the job needs
+# the server's certificate and fails on a self-signed one.
+changelog:
+  stage: check
+  image: alpine:3.20
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  variables:
+    GIT_DEPTH: "0"
+  script:
+    - apk add --no-cache git > /dev/null
+    - changed=$(git diff --name-only "$CI_MERGE_REQUEST_DIFF_BASE_SHA" HEAD)
+    - |
+      runtime=$(printf '%s\n' "$changed" | grep -E '^(scripts/|console/|references/|SKILL\.md$|ssot/[A-Za-z_]+\.tsv$)' | grep -vE '^console/ui_rules\.tsv$' || true)
+      if [ -z "$runtime" ]; then
+        echo "OK: no runtime path changed."
+      elif printf '%s\n' "$changed" | grep -qx 'CHANGELOG.md'; then
+        echo "OK: CHANGELOG.md changed."
+      elif printf '%s\n' "$CI_MERGE_REQUEST_TITLE" | grep -Eq '\[no changelog\]'; then
+        echo "OK: the title says [no changelog]."
+      else
+        echo "This change touches:"; printf '%s\n' "$runtime" | head -10
+        echo "Add a line under '## [Unreleased]' in CHANGELOG.md, or put [no changelog] in the MR title if nothing a host or agent can see changes (CLAUDE.md)."
+        exit 1
+      fi
+
 # The whole suite is offline: fixtures and temporary folders, no credentials.
 # The runner fails any test file that exits non-zero, prints no
 # "RESULT: N passed" line, or leaves files behind; this job also checks the

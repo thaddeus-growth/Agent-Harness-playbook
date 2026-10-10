@@ -490,12 +490,35 @@ def test_every_job_of_both_ci_templates_states_its_rules():
     assert jobs_without_rules(sample) == ["b"]                                  # the check would notice a job with none
     assert jobs_without_rules(without_rules(sample, "a")) == ["a", "b"]
     short, fuller = (doc(rel) for rel in CI_TEMPLATES)
-    assert {"secret scan", "story id", "{{cli}} test"} <= set(ci_jobs(short)) and len(ci_jobs(short)) == 3
-    assert {"secret scan", "story id", "test", "zylos check", "adapter smoke"} <= set(ci_jobs(fuller))
+    assert {"secret scan", "story id", "changelog", "{{cli}} test"} <= set(ci_jobs(short)) and len(ci_jobs(short)) == 4
+    assert {"secret scan", "story id", "changelog", "test", "zylos check", "adapter smoke"} <= set(ci_jobs(fuller))
     for rel, text in zip(CI_TEMPLATES, (short, fuller)):
         assert jobs_without_rules(text) == [], (rel, jobs_without_rules(text))
         for job in ci_jobs(text):                                                # and each job's rules are what is checked
             assert jobs_without_rules(without_rules(text, job)) == [job], (rel, job)
+
+
+def changelog_check(text: str) -> str:
+    """The shell of the `changelog` job's check, as the CI template writes it (the block under its `- |`)."""
+    block = text.split("\nchangelog:\n", 1)[1].split("    - |\n", 1)[1]
+    return "\n".join(ln[6:] for ln in block.splitlines() if ln.startswith("      ") or not ln.strip()).split("\n\n")[0]
+
+
+def test_the_changelog_job_asks_a_changelog_line_of_a_visible_change():
+    import subprocess
+    for rel in CI_TEMPLATES:
+        sh = changelog_check(doc(rel))
+        def run(changed: str, title: str = "S01 a change") -> tuple[int, str]:
+            r = subprocess.run(["sh", "-c", sh], capture_output=True, text=True,
+                               env={"changed": changed, "CI_MERGE_REQUEST_TITLE": title, "PATH": os.environ["PATH"]})
+            return r.returncode, r.stdout
+        assert run("tests/a.py\n.gitlab-ci.yml\nCLAUDE.md")[0] == 0, rel              # nothing a host sees
+        assert run("ssot/user-stories.agent.tsv\nconsole/ui_rules.tsv")[0] == 0, rel   # notes and the console's owner file
+        for visible in ("scripts/x.py", "SKILL.md", "ssot/constants.tsv", "console/serve.py", "references/w.md"):
+            code, out = run(visible)
+            assert code == 1 and visible in out, (rel, visible)                          # the line is missing
+            assert run(f"{visible}\nCHANGELOG.md")[0] == 0, (rel, visible)             # it is there
+            assert run(visible, "S01 a typo [no changelog]")[0] == 0, (rel, visible)    # the title opts out
 
 
 ZYLOS_CHECK = "node zylos/lib.js check"
