@@ -10,6 +10,11 @@ scaffold, console, docs, conformance.
 
 ## [Unreleased]
 ### Other
+- `docs/consoles.md`, client console item 8: a page behind a gateway answers within the gateway's limit (about 15 s)
+  whatever the read costs. Profile the read first; keep what is left per state of the data, made in a background
+  thread started with the console, with a bounded wait, then the previous result and a note, or a self-reloading page;
+  never cache a failure; the keep-alive probe's timeout exceeds the slowest page. Seen once (the SEO harness's
+  `/insights`, S36), tested in `tests/test_docs_build.py`.
 - `docs/roadmap.md` (new): planning a harness that already runs. The vision cut into four to six pillars plus one for
   operations; a read-only inventory per pillar (state, evidence, smallest task, size, a do-not-build-now list); the
   roadmap kept in the story registry (an owner row with its milestone, an agent row with proof commands as DONE and
