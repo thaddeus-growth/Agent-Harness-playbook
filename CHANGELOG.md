@@ -117,6 +117,16 @@ scaffold, console, docs, conformance.
   Rule 8: one gate for every platform and an adapter per platform row, the gate extracted when the second platform
   arrives (`apply_gate.py`, S51). `docs/lessons.md`: an export branch never merges back into main.
 
+## [0.33.0] - 2026-10-17
+### Added
+- Three languages per client: English, Simplified (`zh-Hans`) and Traditional (`zh-Hant`) Chinese (`docs/languages.md`; the video-ads skill pack's X73, owner rule R57). `kit.zhconv` (no dependency; `kit/zhconv.tsv`, built from OpenCC's dictionaries by `tools/build_zhconv.py`) converts one script to the other and, as `python3 -m kit.zhconv fill|check`, writes the missing script's columns into a registry TSV or the console's `i18n.json` once, to be read and committed; nothing converts at run time. `kit.lang`: the client's language from `<PREFIX>_LANG` (`en`, `zh-Hans`, `zh-Hant`; `zh-CN`, `zh-TW`, `zh-HK` and the old `zh` read as one of them), `resolve()` and `meaning(code, params)`, the agent's way to say a message code in the client's language. `kit.guards.languages.problems()`: the check a skill pack runs in its tests (every registry has a column per declared language, none empty, each Chinese column in its script, no stray `{placeholder}`). `doctor` shows the client's language (`language`) and fails on a value that is none. `pagestyle.ZH_HANT` beside `ZH`.
+- The console: `i18n.json` has `zh-Hans` and `zh-Hant` beside `en` (the old `zh` key is `zh-Hans`); the bar links the two other languages by their own names; `?lang=`, the cookie and `--lang` accept `zh-Hans`, `zh-Hant` and the old `zh` (as zh-Hans), so a console started before keeps working.
+- `scaffold/new_client.py --lang en|zh-Hans|zh-Hant` sets `<PREFIX>_LANG` in the client's `bin/` wrappers (an env value still wins), passes it to the console and names it in the client's brief; `scaffold/new_skill_pack.py --langs` accepts the script tags.
+### Changed
+- The kit's own message rows keep `meaning_zh` (Simplified, as before), gain `meaning_zh-Hant`, and are also served as `meaning_zh-Hans` (the same text as `zh`). `KIT_LANGUAGES` is `en, zh, zh-Hant`.
+### Skill pack to do when it re-vendors
+- Nothing breaks: `languages = ["en", "zh"]` loads as before. To serve a client in the other script: declare the scripts, fill them with `python3 -m kit.zhconv fill`, read the result, add `kit.guards.languages.problems()` to a test and set `<PREFIX>_LANG` per client (`docs/languages.md`, "Moving a skill pack onto it").
+
 ## [0.32.0] - 2026-10-17
 ### Added
 - `kit.guards.roadmap`: an optional `## Milestones` section right after Next (rule 8 of its docstring). A row `- [M1] YYYY-MM-DD name. includes: X1, D2. closes when: the proof` is one integration unit; the guard refuses a row with no items or no proof, an item that is no row of the file or is not in Next/Done, an item in two milestones, a fourth open milestone, and a milestone whose items are all Done (it leaves and a Done row records it). A skill pack without the section is unchanged: nothing to do when re-vendoring.

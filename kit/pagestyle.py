@@ -39,7 +39,7 @@ The rules the style carries, and the part that keeps each:
                                             placeholder's name stays text; no grid wider than a 320px phone's column
 
 Every visible word is the skill pack's: Style(words, lang) lays a skill pack's words over EN (the defaults; ZH is a ready
-Simplified Chinese set) and refuses an unknown key, an empty word, a template without its {n} or a more line that does
+Simplified Chinese set, ZH_HANT the same words in Traditional) and refuses an unknown key, an empty word, a template without its {n} or a more line that does
 not name the owner's fold (ValueError, naming the key). The module-level functions are an English Style's. Nothing
 here reads a file: a skill pack reads its own term table and passes the words.
 
@@ -135,6 +135,25 @@ ZH = {
     "copied": "已复制",
     "selected": "已选中，按 ⌘C",
     "expand_all": "全部展开",
+    "collapse_all": "全部收起",
+}
+
+ZH_HANT = {
+    "state_untested": "未測", "state_testing": "在測", "state_promising": "有希望", "state_down": "降權",
+    "state_closed": "關閉",
+    "sep": "，",
+    "money": "{n}",
+    "dots": "10 次里約 {n} 次比賬戶平均好",
+    "warnings": "留意",
+    "more": "另有 {n} 條，在頁尾“給負責人看”裡。",
+    "if_works": "如果行",
+    "if_fails": "如果不行",
+    "details": "詳情",
+    "owner": "給負責人看：怎麼算的",
+    "copy": "複製",
+    "copied": "已複製",
+    "selected": "已選中，按 ⌘C",
+    "expand_all": "全部展開",
     "collapse_all": "全部收起",
 }
 
@@ -685,7 +704,7 @@ class Style:
     problems() checks its own words and lang."""
 
     STATES, ICON, ORDER, WARNINGS_MAX, PHONE, GUTTER, NONE = STATES, ICON, ORDER, WARNINGS_MAX, PHONE, GUTTER, NONE
-    WORDS, TEMPLATES, EN, ZH, CODE_PATTERNS = WORDS, TEMPLATES, EN, ZH, CODE_PATTERNS
+    WORDS, TEMPLATES, EN, ZH, ZH_HANT, CODE_PATTERNS = WORDS, TEMPLATES, EN, ZH, ZH_HANT, CODE_PATTERNS
     e, amount, tenths, fit, text_width = (staticmethod(e), staticmethod(amount), staticmethod(tenths), staticmethod(fit),
                                           staticmethod(text_width))
     tiles, details, node_map, page_data, zones = (staticmethod(tiles), staticmethod(details), staticmethod(node_map),
@@ -992,7 +1011,7 @@ decision, warnings, story, owner, card, fold_row = (DEFAULT.decision, DEFAULT.wa
                                                     DEFAULT.card, DEFAULT.fold_row)
 expand_all, page = DEFAULT.expand_all, DEFAULT.page
 
-__all__ = ["STATES", "ICON", "ORDER", "WARNINGS_MAX", "PHONE", "GUTTER", "NONE", "WORDS", "TEMPLATES", "EN", "ZH",
+__all__ = ["STATES", "ICON", "ORDER", "WARNINGS_MAX", "PHONE", "GUTTER", "NONE", "WORDS", "TEMPLATES", "EN", "ZH", "ZH_HANT",
            "CSS", "CSP", "SCRIPT", "PAGE", "CODE_PATTERNS", "Style", "DEFAULT", "wordset", "fold_name", "e", "money",
            "amount", "tenths", "text_width", "fit", "tiles", "details", "page_data", "node_map", "zones", "problems",
            "word", "legend_text", "chip", "vchip", "bar", "legend", "dots", "decision", "warnings", "story", "owner",

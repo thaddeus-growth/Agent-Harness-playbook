@@ -49,6 +49,9 @@ reports them through kit.testing.check. A generated test is
   page_links    kit.guards.pages.check_links: no shipped file links to a
                 hosted artifact (opt-in: a skill pack adds `run(page_links(ROOT))`
                 to a test of its own), and its planted self-test
+  languages     kit.guards.languages.problems: every declared language is
+                complete and the Chinese ones are in their script (opt-in:
+                `run(languages(ROOT))`, docs/languages.md)
   kit_drift     kit.guards.drift.check_skill_pack
   never_table   kit.guards.evals.check_never_table: SKILL.md's first section
                 is `## Never`, whose table names exactly the verbs only a
@@ -268,6 +271,14 @@ def page_links(root: Path | str) -> Results:
     return [("the page-link rule catches each planted form", g.self_test()),
             ("no shipped file links to a hosted artifact (a page the skill pack "
              "delivers is drawn by one of its verbs)", g.check_links(root))]
+
+
+def languages(root: Path | str) -> Results:
+    """The language rule alone: a skill pack adds `run(languages(ROOT))` to a test of its own."""
+    bind(root)
+    from kit.guards import languages as g
+    return [("every declared language is complete, the Chinese ones in their script, "
+             "and the client's language is one the kit can serve", g.problems())]
 
 
 # ---- layering, boundary, drift ---------------------------------------------------

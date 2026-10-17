@@ -3,7 +3,7 @@
 
     python3 scaffold/new_client.py --skill-pack ../acme-skill-pack \\
         --clients ../acme-clients --client northwind --title "Northwind Tea" \\
-        [--port 8771] [--lang en|zh] [--language "Traditional Chinese"] \\
+        [--port 8771] [--lang en|zh-Hans|zh-Hant] [--language "Traditional Chinese"] \\
         [--relay-verbs "facts confirm,decisions confirm"] [--dry-run]
 
 A skill pack serves many clients; each client is one folder in a clients
@@ -102,6 +102,8 @@ def render(text: str, values: dict) -> str:
     return text
 
 
+WORDS = {"en": "English", "zh-Hans": "Simplified Chinese (简体中文)",
+         "zh-Hant": "Traditional Chinese (繁體中文)"}
 MIN_PYTHON = (3, 11)
 
 
@@ -126,6 +128,7 @@ def files(a, n: dict, gates: list[str], relay: list[str]) -> dict[str, tuple[str
 # {a.title}: {cli} pinned to this client's workspace ({p}_DATA_DIR = ./workspace).
 # {p}_SKILL_PACK points at another skill pack checkout; {p}_PYTHON names the interpreter.
 {python_check(p, "bin/" + cli)}export {p}_DATA_DIR="$(cd "$(dirname "$0")/../workspace" && pwd)"
+export {p}_LANG="${{{p}_LANG:-{a.lang}}}"
 exec "$py" {home}/{n['scripts']}/{cli}.py "$@"
 """
     console = f"""#!/bin/sh
@@ -139,9 +142,11 @@ set -e
 {p}_CONFIRM_CODE_SECRET="$(openssl rand -hex 32)"
 export {p}_CONFIRM_CODE_SECRET
 export {p}_DATA_DIR="$root/workspace" CONSOLE_DIR="$root/workspace/console"
+{p}_LANG="${{{p}_LANG:-{a.lang}}}"
+export {p}_LANG
 mkdir -p "$CONSOLE_DIR" && chmod 700 "$CONSOLE_DIR"
 exec "$py" {home}/console/serve.py --dir "$CONSOLE_DIR" --title "{a.title}" \\
-  --lang {a.lang} --port "${{{p}_CONSOLE_PORT:-{a.port}}}" \\
+  --lang "${{{p}_LANG}}" --port "${{{p}_CONSOLE_PORT:-{a.port}}}" \\
   --relay-cmd "$root/bin/{cli}" --relay-verbs "{','.join(relay)}" "$@"
 """
     ask = f"""#!/bin/sh
@@ -163,7 +168,7 @@ exec "$py" {home}/console/ask.py "$@"
     brief = render(TEMPLATE.read_text(encoding="utf-8"), {
         "skill_pack_name": n["name"], "title": a.title, "client": a.client,
         "skill_pack_dir": str(a.skill_pack), "cli": cli, "env_prefix": p,
-        "port": str(a.port), "language": a.language,
+        "port": str(a.port), "language": a.language, "lang_tag": a.lang,
         "gate_verbs": ", ".join(f"`{g}`" for g in gates) or "none"})
     return {"bin/" + cli: (wrapper, 0o755), "bin/console": (console, 0o755),
             "bin/ask": (ask, 0o755), "CLAUDE.md": (brief, 0o644),
@@ -184,16 +189,21 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--client", required=True)
     ap.add_argument("--title", required=True)
     ap.add_argument("--port", type=int, default=8771)
-    ap.add_argument("--lang", choices=("en", "zh"), default="en",
-                    help="the console's language")
-    ap.add_argument("--language", default="the client's language",
-                    help="the language the agent talks to the client in")
+    ap.add_argument("--lang", choices=("en", "zh-Hans", "zh-Hant", "zh"),
+                    default="en", help="the client's language: the console's, "
+                    "the CLI's (<PREFIX>_LANG) and the agent's replies "
+                    "(zh = zh-Hans)")
+    ap.add_argument("--language", help="the language the agent talks to the "
+                    "client in, in words (default: from --lang)")
     ap.add_argument("--relay-verbs",
                     help="comma-separated gate verbs the console may run "
                          "(default: the gated verbs ending in "
                          + ", ".join(RELAYED) + ")")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args(argv)
+    if a.lang == "zh":
+        a.lang = "zh-Hans"
+    a.language = a.language or WORDS[a.lang]
     try:
         a.skill_pack = a.skill_pack.expanduser().resolve()
         if not CLIENT_RE.fullmatch(a.client):

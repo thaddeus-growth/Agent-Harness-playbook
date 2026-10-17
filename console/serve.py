@@ -10,7 +10,7 @@ applied, say), as ask.py never calls the human's (tests/test_boundary.py).
 
     CONSOLE_DIR=… uv run serve.py [--dir DIR] [--host 127.0.0.1] [--port 8770]
         [--user NAME | --user-header NAME] [--allow-host HOST[:PORT]]
-        [--title TEXT] [--lang en|zh] [--relay-cmd "CMD ARGS"]
+        [--title TEXT] [--lang en|zh-Hans|zh-Hant] [--relay-cmd "CMD ARGS"]
         [--relay-verbs "facts confirm,queue approve"] [--default-reason TEXT]
         [--log-level debug|info|warning]
 
@@ -389,7 +389,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if path not in PAGES:
             raise Reject("not_found")
         picked = parse_qs(query).get("lang", [""])[0]
-        self._set_lang = picked if picked in i18n.LANGS else None
+        self._set_lang = i18n.canon(picked)
         try:
             st = c.state()
         except core.Refused as e:
@@ -472,7 +472,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         value that is not one of ours is ignored, wherever it comes from."""
         jar = "; ".join(self.headers.get_all("Cookie") or []) if self.headers is not None else ""
         pairs = (part.strip().partition("=") for part in jar.split(";"))
-        saved = next((v for name, _, v in pairs if name == self.server.app.lang_cookie and v in i18n.LANGS), None)
+        saved = next((v for name, _, v in pairs if name == self.server.app.lang_cookie and i18n.canon(v)), None)
+        saved = i18n.canon(saved)
         return self._set_lang or saved or self.server.app.lang
 
     def _ctx(self, user) -> dict:
@@ -544,7 +545,7 @@ def _parser() -> argparse.ArgumentParser:
     add("--user-header", help="take the user from this header, from a loopback peer only (a proxy sets it)")
     add("--allow-host", action="append", default=[], metavar="HOST[:PORT]", help="another Host to answer to")
     add("--title", default="Console")
-    add("--lang", choices=i18n.LANGS, default="en")
+    add("--lang", choices=(*i18n.LANGS, "zh"), default="en", help="the console's language (zh = zh-Hans)")
     add("--relay-cmd", help="the skill pack command that answers a gate")
     add("--relay-verbs", help="comma-separated verb prefixes it may be asked to run, e.g. 'facts confirm,queue approve'")
     add("--default-reason", default="console", help="the reason given to a gate when the person wrote no comment")
@@ -594,7 +595,7 @@ def main(argv=None) -> int:
         srv.server_close()
         die(str(e))
     srv.app = Console(store, secret, port=srv.server_address[1], user=user, user_header=a.user_header, allow=allow,
-                      title=a.title, lang=a.lang, cmd=cmd, verbs=verbs, reason=a.default_reason)
+                      title=a.title, lang=i18n.canon(a.lang), cmd=cmd, verbs=verbs, reason=a.default_reason)
     print(f"Console: http://{f'[{a.host}]' if ':' in a.host else a.host}:{srv.server_address[1]}/", flush=True)
     if cmd:
         print("Relay verbs: " + ", ".join(" ".join(v) for v in verbs), flush=True)

@@ -1,20 +1,20 @@
-code	params	meaning_en	meaning_zh
-queue_snapshot_unreadable	path,detail	cannot read the snapshot {path}: {detail}. Nothing was written	无法读取快照 {path}：{detail}。未写入任何内容
-queue_snapshot_invalid	problem	not a proposal document ({problem}): expected {{meta, proposals: [...]}}. Nothing was written	不是提案文档（{problem}）：应为 meta 加 proposals 列表。未写入任何内容
-queue_proposal_invalid	index,problem	proposal {index}: {problem}. Nothing was written	第 {index} 条提案：{problem}。未写入任何内容
-queue_snapshot_market	market,found	a proposal is for market {found}, not {market}. Nothing was written	有提案属于市场 {found}，不是 {market}。未写入任何内容
-queue_snapshot_assumed	assumed	the snapshot ran with --assume ({assumed}): a what-if, not the live state. Confirm the threshold or rerun without --assume. Nothing was written	快照是用 --assume（{assumed}）算出的假设情景，不是实际状态。请先确认阈值，或不带 --assume 重算。未写入任何内容
-queue_superseded	target_ref	superseded: a newer snapshot proposes something else for {target_ref}	已被取代：新的快照对 {target_ref} 提出了别的操作
-queue_revived	status	proposed again by a newer snapshot (was {status})	新的快照再次提出了这项操作（原状态 {status}）
-queue_snapshot_stale	stale	the snapshot's data is stale ({stale}); refresh it before approving: execute refuses an item whose basis has moved	快照数据已过期（{stale}）；批准前请先刷新数据：依据变了的操作在执行时会被拒绝
-queue_added	queued,known,rejected,superseded,revived	queued {queued} new, {known} already queued, {rejected} rejected by validation, {superseded} superseded, {revived} proposed again	新加入 {queued} 项，已在队列 {known} 项，校验拒绝 {rejected} 项，被取代 {superseded} 项，重新提出 {revived} 项
-queue_item_not_found	id	no queue item #{id}. Nothing was written	没有队列项 #{id}。未写入任何内容
-queue_item_superseded	id	#{id} was superseded; approve the newer proposal instead. Nothing was written	#{id} 已被取代，请批准新的提案。未写入任何内容
-queue_item_expired	id,decided_at,ttl_hours	#{id}: its approval of {decided_at} is older than {ttl_hours}h; a fresh queue add proposes it again. Nothing was written	#{id}：{decided_at} 的批准已超过 {ttl_hours} 小时；重新加入队列后会再次提出。未写入任何内容
-queue_item_wrong_status	id,status,allowed	#{id} is {status}, not {allowed}. Nothing was written	#{id} 的状态是 {status}，不是 {allowed}。未写入任何内容
-queue_item_changed	id	#{id} changed while it was being decided; list it again. Nothing was written	#{id} 在决定过程中被改动了，请重新查看。未写入任何内容
-queue_reason_code_invalid	reason_code	--reason-code {reason_code}: one snake_case word (a-z, 0-9, _), at most 64 characters. Nothing was written	--reason-code {reason_code}：须为一个小写下划线单词（a-z、0-9、_），最多 64 个字符。未写入任何内容
-queue_reason_code_unknown	reason_code,allowed	--reason-code {reason_code}: not one of {allowed}. Nothing was written	--reason-code {reason_code} 不在允许的列表 {allowed} 中。未写入任何内容
-queue_approved	ids,by	approved {ids} by {by}	{by} 已批准 {ids}
-queue_rejected	ids,reason_code	rejected {ids} ({reason_code})	已拒绝 {ids}（{reason_code}）
-queue_no_snapshot	cli	no report of this skill pack proposes anything yet: queue a saved proposal document with `{cli} queue add --from FILE`	这个工具还没有能提出建议的报表：请用 `{cli} queue add --from FILE` 加入保存好的建议文件
+code	params	meaning_en	meaning_zh	meaning_zh-Hant
+queue_snapshot_unreadable	path,detail	cannot read the snapshot {path}: {detail}. Nothing was written	无法读取快照 {path}：{detail}。未写入任何内容	無法讀取快照 {path}：{detail}。未寫入任何內容
+queue_snapshot_invalid	problem	not a proposal document ({problem}): expected {{meta, proposals: [...]}}. Nothing was written	不是提案文档（{problem}）：应为 meta 加 proposals 列表。未写入任何内容	不是提案文檔（{problem}）：應為 meta 加 proposals 列表。未寫入任何內容
+queue_proposal_invalid	index,problem	proposal {index}: {problem}. Nothing was written	第 {index} 条提案：{problem}。未写入任何内容	第 {index} 條提案：{problem}。未寫入任何內容
+queue_snapshot_market	market,found	a proposal is for market {found}, not {market}. Nothing was written	有提案属于市场 {found}，不是 {market}。未写入任何内容	有提案屬於市場 {found}，不是 {market}。未寫入任何內容
+queue_snapshot_assumed	assumed	the snapshot ran with --assume ({assumed}): a what-if, not the live state. Confirm the threshold or rerun without --assume. Nothing was written	快照是用 --assume（{assumed}）算出的假设情景，不是实际状态。请先确认阈值，或不带 --assume 重算。未写入任何内容	快照是用 --assume（{assumed}）算出的假設情景，不是實際狀態。請先確認閾值，或不帶 --assume 重算。未寫入任何內容
+queue_superseded	target_ref	superseded: a newer snapshot proposes something else for {target_ref}	已被取代：新的快照对 {target_ref} 提出了别的操作	已被取代：新的快照對 {target_ref} 提出了別的操作
+queue_revived	status	proposed again by a newer snapshot (was {status})	新的快照再次提出了这项操作（原状态 {status}）	新的快照再次提出了這項操作（原狀態 {status}）
+queue_snapshot_stale	stale	the snapshot's data is stale ({stale}); refresh it before approving: execute refuses an item whose basis has moved	快照数据已过期（{stale}）；批准前请先刷新数据：依据变了的操作在执行时会被拒绝	快照數據已過期（{stale}）；批准前請先刷新數據：依據變了的操作在執行時會被拒絕
+queue_added	queued,known,rejected,superseded,revived	queued {queued} new, {known} already queued, {rejected} rejected by validation, {superseded} superseded, {revived} proposed again	新加入 {queued} 项，已在队列 {known} 项，校验拒绝 {rejected} 项，被取代 {superseded} 项，重新提出 {revived} 项	新加入 {queued} 項，已在隊列 {known} 項，校驗拒絕 {rejected} 項，被取代 {superseded} 項，重新提出 {revived} 項
+queue_item_not_found	id	no queue item #{id}. Nothing was written	没有队列项 #{id}。未写入任何内容	沒有隊列項 #{id}。未寫入任何內容
+queue_item_superseded	id	#{id} was superseded; approve the newer proposal instead. Nothing was written	#{id} 已被取代，请批准新的提案。未写入任何内容	#{id} 已被取代，請批准新的提案。未寫入任何內容
+queue_item_expired	id,decided_at,ttl_hours	#{id}: its approval of {decided_at} is older than {ttl_hours}h; a fresh queue add proposes it again. Nothing was written	#{id}：{decided_at} 的批准已超过 {ttl_hours} 小时；重新加入队列后会再次提出。未写入任何内容	#{id}：{decided_at} 的批准已超過 {ttl_hours} 小時；重新加入隊列後會再次提出。未寫入任何內容
+queue_item_wrong_status	id,status,allowed	#{id} is {status}, not {allowed}. Nothing was written	#{id} 的状态是 {status}，不是 {allowed}。未写入任何内容	#{id} 的狀態是 {status}，不是 {allowed}。未寫入任何內容
+queue_item_changed	id	#{id} changed while it was being decided; list it again. Nothing was written	#{id} 在决定过程中被改动了，请重新查看。未写入任何内容	#{id} 在決定過程中被改動了，請重新查看。未寫入任何內容
+queue_reason_code_invalid	reason_code	--reason-code {reason_code}: one snake_case word (a-z, 0-9, _), at most 64 characters. Nothing was written	--reason-code {reason_code}：须为一个小写下划线单词（a-z、0-9、_），最多 64 个字符。未写入任何内容	--reason-code {reason_code}：須為一個小寫下劃線單詞（a-z、0-9、_），最多 64 個字符。未寫入任何內容
+queue_reason_code_unknown	reason_code,allowed	--reason-code {reason_code}: not one of {allowed}. Nothing was written	--reason-code {reason_code} 不在允许的列表 {allowed} 中。未写入任何内容	--reason-code {reason_code} 不在允許的列表 {allowed} 中。未寫入任何內容
+queue_approved	ids,by	approved {ids} by {by}	{by} 已批准 {ids}	{by} 已批准 {ids}
+queue_rejected	ids,reason_code	rejected {ids} ({reason_code})	已拒绝 {ids}（{reason_code}）	已拒絕 {ids}（{reason_code}）
+queue_no_snapshot	cli	no report of this skill pack proposes anything yet: queue a saved proposal document with `{cli} queue add --from FILE`	这个工具还没有能提出建议的报表：请用 `{cli} queue add --from FILE` 加入保存好的建议文件	這個工具還沒有能提出建議的報表：請用 `{cli} queue add --from FILE` 加入保存好的建議文件

@@ -34,11 +34,15 @@ guard as a library call: every msg() call names its code as a string
 literal, the code is registered, the call passes exactly the registered
 params, and every registered skill pack code is emitted somewhere.
 
-Deviation (SPEC §messages): kit base rows must carry the kit's own
-languages (KIT_LANGUAGES = en, zh), not every language of
-`config().languages`: the kit ships en + zh only, so a skill pack declaring
-a third language would otherwise be unable to load the kit at all.
-Skill pack rows must carry every declared language.
+Languages (docs/languages.md): a client's language is en, zh-Hans or
+zh-Hant. Deviation (SPEC §messages): kit base rows carry the kit's own
+languages (KIT_LANGUAGES = en, zh, zh-Hant), not every language of
+`config().languages`, so a skill pack declaring a language the kit does not
+have (ja) can still load the kit. The kit's `zh` is Simplified and is also
+served as `meaning_zh-Hans`; `zh-Hant` is the written-out Traditional column
+(`python3 -m kit.zhconv fill`), so a skill pack declaring en + zh, en +
+zh-Hans or en + zh-Hant all load. Skill pack rows must carry every declared
+language, in the script the tag says (kit.zhconv checks it).
 
 Test: kit/tests/test_messages.py.
 """
@@ -58,7 +62,8 @@ from kit import config as _config
 KIT_DIR = Path(__file__).resolve().parent
 BASE_TSV = KIT_DIR / "message_codes.tsv"
 FRAGMENTS_DIR = KIT_DIR / "message_codes.d"
-KIT_LANGUAGES = ("en", "zh")
+KIT_LANGUAGES = ("en", "zh", "zh-Hant")
+KIT_ALIASES = {"zh-Hans": "zh"}      # the kit's zh is Simplified
 # An error the skill pack has no finer code for (sqlite, a crash…): its one
 # param is the raw English text.
 UNCLASSIFIED = "unclassified_error"
@@ -71,7 +76,8 @@ class RegistryError(ValueError):
     header or row (plain text: the registry cannot code its own errors)."""
 
 
-def read_rows(path: Path, languages: tuple[str, ...]) -> list[dict]:
+def read_rows(path: Path, languages: tuple[str, ...],
+              aliases: dict[str, str] | None = None) -> list[dict]:
     """The rows of one registry TSV, strictly: header has `code`, `params`
     and `meaning_<lang>` for each of `languages`; every row has exactly the
     header's cell count, a non-empty code and non-empty meanings. No
@@ -103,6 +109,8 @@ def read_rows(path: Path, languages: tuple[str, ...]) -> list[dict]:
                                 f"{', '.join(empty)}")
         row["params"] = tuple(p.strip() for p in row["params"].split(",")
                               if p.strip())
+        for alias, col in (aliases or {}).items():
+            row.setdefault(f"meaning_{alias}", row[f"meaning_{col}"])
         row["file"] = str(path)
         out.append(row)
     return out
@@ -127,7 +135,7 @@ def base_registry() -> dict[str, dict]:
     """The kit base registry alone (no skill pack needed)."""
     reg: dict[str, dict] = {}
     for f in kit_files():
-        _merge(reg, read_rows(f, KIT_LANGUAGES), "kit")
+        _merge(reg, read_rows(f, KIT_LANGUAGES, KIT_ALIASES), "kit")
     return reg
 
 

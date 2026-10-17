@@ -1,13 +1,13 @@
-code	params	meaning_en	meaning_zh
-confirm_needs_human	what	{what} must be run by a human at an interactive terminal (stdin is not a TTY); agents and scripts may propose, only the owner confirms. Nothing was written	{what}：需要本人在终端确认，AI 助手和脚本只能提议。未写入任何内容
-confirm_code_required	what,summary,confirm_code,ttl_minutes	{what}: not at an interactive terminal — relay the summary and code {confirm_code} (good for ~{ttl_minutes} minutes) to the person who decides, then rerun with --code: {summary}. Nothing was written	{what}：请把以下内容和确认码 {confirm_code} 转给本人（约 {ttl_minutes} 分钟内有效），本人回复确认码后再提交：{summary}。未写入任何内容
-confirm_code_mismatch	what,confirm_code,ttl_minutes	{what}: code {confirm_code} does not match this exact request — issued for other ids, values or market, already used, or expired (~{ttl_minutes} min). Nothing was written	{what}：确认码 {confirm_code} 不对——它是为别的内容签发的、已用过或已过期（约 {ttl_minutes} 分钟有效）。未写入任何内容
-confirm_relay_audit_missing		--code needs --relay-user and --relay-at too: history must show who relayed the confirmation and when	用确认码确认时，还要写明是谁、在什么时间转达的确认
-confirm_relay_audit_invalid	field	{field} is not valid: --relay-user is one token (no space or bracket), --relay-at an ISO 8601 time with its zone. Nothing was written	{field} 无效：--relay-user 须为一个词（不含空格和方括号），--relay-at 须为带时区的 ISO 8601 时间。未写入任何内容
-confirm_relay_quote_missing		--code needs --relay-quote too: the confirming person's own words, as sent (history keeps them). Nothing was written	用确认码确认时，还要附上本人确认时的原话（照原样，历史记录会保留）。未写入任何内容
-confirm_typed_mismatch	what,typed,expected	{what}: typed {typed}, expected {expected}. Nothing was written	{what}：输入的是 {typed}，应当输入 {expected}。未写入任何内容
-confirm_no_terminal		No controlling terminal (/dev/tty) to ask the person at. Nothing was written	没有可以询问本人的终端（/dev/tty）。未写入任何内容
-confirm_tty_eof		No answer at the terminal (end of input). Nothing was written	终端没有收到回答（输入已结束）。未写入任何内容
-confirm_aborted		Aborted at the keyboard. Nothing was written	已在键盘上中止。未写入任何内容
-confirm_code_unavailable	var	{var} is not set, so no confirm code can be issued or checked; a person at an interactive terminal can still confirm directly	没有设置 {var}，无法签发或核对确认码；本人仍可以在终端直接确认
-client_name_empty		--for-client needs the client name (history records client:<name>). Nothing was written	--for-client 需要客户的名字（历史记录为 client:<名字>）。未写入任何内容
+code	params	meaning_en	meaning_zh	meaning_zh-Hant
+confirm_needs_human	what	{what} must be run by a human at an interactive terminal (stdin is not a TTY); agents and scripts may propose, only the owner confirms. Nothing was written	{what}：需要本人在终端确认，AI 助手和脚本只能提议。未写入任何内容	{what}：需要本人在終端確認，AI 助手和腳本只能提議。未寫入任何內容
+confirm_code_required	what,summary,confirm_code,ttl_minutes	{what}: not at an interactive terminal — relay the summary and code {confirm_code} (good for ~{ttl_minutes} minutes) to the person who decides, then rerun with --code: {summary}. Nothing was written	{what}：请把以下内容和确认码 {confirm_code} 转给本人（约 {ttl_minutes} 分钟内有效），本人回复确认码后再提交：{summary}。未写入任何内容	{what}：請把以下內容和確認碼 {confirm_code} 轉給本人（約 {ttl_minutes} 分鐘內有效），本人回覆確認碼後再提交：{summary}。未寫入任何內容
+confirm_code_mismatch	what,confirm_code,ttl_minutes	{what}: code {confirm_code} does not match this exact request — issued for other ids, values or market, already used, or expired (~{ttl_minutes} min). Nothing was written	{what}：确认码 {confirm_code} 不对——它是为别的内容签发的、已用过或已过期（约 {ttl_minutes} 分钟有效）。未写入任何内容	{what}：確認碼 {confirm_code} 不對——它是為別的內容簽發的、已用過或已過期（約 {ttl_minutes} 分鐘有效）。未寫入任何內容
+confirm_relay_audit_missing		--code needs --relay-user and --relay-at too: history must show who relayed the confirmation and when	用确认码确认时，还要写明是谁、在什么时间转达的确认	用確認碼確認時，還要寫明是誰、在什麼時間轉達的確認
+confirm_relay_audit_invalid	field	{field} is not valid: --relay-user is one token (no space or bracket), --relay-at an ISO 8601 time with its zone. Nothing was written	{field} 无效：--relay-user 须为一个词（不含空格和方括号），--relay-at 须为带时区的 ISO 8601 时间。未写入任何内容	{field} 無效：--relay-user 須為一個詞（不含空格和方括號），--relay-at 須為帶時區的 ISO 8601 時間。未寫入任何內容
+confirm_relay_quote_missing		--code needs --relay-quote too: the confirming person's own words, as sent (history keeps them). Nothing was written	用确认码确认时，还要附上本人确认时的原话（照原样，历史记录会保留）。未写入任何内容	用確認碼確認時，還要附上本人確認時的原話（照原樣，歷史記錄會保留）。未寫入任何內容
+confirm_typed_mismatch	what,typed,expected	{what}: typed {typed}, expected {expected}. Nothing was written	{what}：输入的是 {typed}，应当输入 {expected}。未写入任何内容	{what}：輸入的是 {typed}，應當輸入 {expected}。未寫入任何內容
+confirm_no_terminal		No controlling terminal (/dev/tty) to ask the person at. Nothing was written	没有可以询问本人的终端（/dev/tty）。未写入任何内容	沒有可以詢問本人的終端（/dev/tty）。未寫入任何內容
+confirm_tty_eof		No answer at the terminal (end of input). Nothing was written	终端没有收到回答（输入已结束）。未写入任何内容	終端沒有收到回答（輸入已結束）。未寫入任何內容
+confirm_aborted		Aborted at the keyboard. Nothing was written	已在键盘上中止。未写入任何内容	已在鍵盤上中止。未寫入任何內容
+confirm_code_unavailable	var	{var} is not set, so no confirm code can be issued or checked; a person at an interactive terminal can still confirm directly	没有设置 {var}，无法签发或核对确认码；本人仍可以在终端直接确认	沒有設置 {var}，無法簽發或核對確認碼；本人仍可以在終端直接確認
+client_name_empty		--for-client needs the client name (history records client:<name>). Nothing was written	--for-client 需要客户的名字（历史记录为 client:<名字>）。未写入任何内容	--for-client 需要客戶的名字（歷史記錄為 client:<名字>）。未寫入任何內容

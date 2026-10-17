@@ -279,7 +279,7 @@ def test_every_page_is_a_complete_document_in_both_languages():
 def test_top_bar_marks_the_current_tab_and_links_the_other_language():
     log = full_log()
     for lang in LANGS:
-        other = "zh" if lang == "en" else "en"
+        others = [x for x in LANGS if x != lang]
         for name, doc, tab in (("inbox", inbox(log, lang), "./"), ("history", history(log, lang), "history")):
             bar = doc.find("header", "bar")
             tabs = bar.find("nav", "tabs").find_all("a")
@@ -287,13 +287,13 @@ def test_top_bar_marks_the_current_tab_and_links_the_other_language():
             assert [a.attrs.get("aria-current") for a in tabs].count("page") == 1
             assert [a for a in tabs if a.attrs.get("aria-current") == "page"][0].attrs["href"] == tab
             assert T("nav.waiting", lang) in tabs[0].text() and T("nav.history", lang) in tabs[1].text()
-            lk = bar.find("a", "lang")
-            assert lk.attrs["href"] == f"?lang={other}" and lk.attrs["lang"] == other
-            assert lk.text() == T("lang.other", lang)
+            lks = bar.find_all("a", "lang")
+            assert [a.attrs["href"] for a in lks] == [f"?lang={o}" for o in others]
+            assert [a.attrs["lang"] for a in lks] == others and [a.text() for a in lks] == [i18n.NAMES[o] for o in others]
             assert bar.find("a", "brand").text() == "Northwind Console"
         # a POST answer's page is not a GET url: its language link goes to ./
         for doc in (Doc(pages.render_result(ctx(lang), [])), Doc(pages.render_error(ctx(lang), "forbidden"))):
-            assert doc.find("a", "lang").attrs["href"] == f"./?lang={other}"
+            assert [a.attrs["href"] for a in doc.find_all("a", "lang")] == [f"./?lang={o}" for o in others]
             assert not [a for a in doc.find("nav", "tabs").find_all("a") if "aria-current" in a.attrs]
 
 
@@ -338,7 +338,7 @@ def test_flash_text_words_a_finished_reopen_or_note_and_nothing_else():
         for key in ("answered", "", "REOPENED", "reopened ", None, 7, ["reopened"], "err.forbidden", "flash.noted"):
             assert pages.flash_text(lang, key) is None, key         # a link cannot make the page say anything else
     assert pages.flash_text("fr", "noted") == T("flash.noted", "en")   # an unknown language is English
-    assert T("flash.reopened", "en") != T("flash.noted", "en") and T("flash.reopened", "zh") != T("flash.noted", "zh")
+    assert T("flash.reopened", "en") != T("flash.noted", "en") and T("flash.reopened", "zh-Hans") != T("flash.noted", "zh-Hans")
     # and the words reach the top of the page, as text, in the console's own kind of banner
     for lang in LANGS:
         for page in (inbox(full_log(), lang, flash={"kind": "ok", "text": pages.flash_text(lang, "reopened")}),
@@ -712,7 +712,7 @@ def test_group_button_only_when_every_ask_has_a_suggestion_and_there_are_two():
 def test_the_reason_the_group_button_may_be_off_is_given_in_both_languages():
     for lang in LANGS:
         f = inbox(full_log(), lang).find("form", "all")
-        assert f.attrs["data-busy"] == T("all.busy", lang) and f.attrs["data-busy"] != T("all.busy", "zh" if lang == "en" else "en")
+        assert f.attrs["data-busy"] == T("all.busy", lang) and f.attrs["data-busy"] != T("all.busy", "zh-Hans" if lang == "en" else "en")
         assert "data-busy" not in f.find("p", "gnote").attrs and "busy" not in f.find("p", "gnote").classes   # only the script draws it
 
 
@@ -1176,7 +1176,7 @@ def test_ages_are_worked_out_from_ctx_now_never_the_clock():
                         ("2026-09-28T13:59:59Z", "3 h ago", "3 小时前"), ("2026-10-01T10:00:00Z", "3 d ago", "3 天前"),
                         ("2026-09-28T09:00:00Z", "just now", "刚刚")):           # a clock that is behind
         assert inbox(L, "en", now=now).find("span", "age").text() == en
-        assert inbox(L, "zh", now=now).find("span", "age").text() == zh
+        assert inbox(L, "zh-Hans", now=now).find("span", "age").text() == zh
     assert inbox(L, now="garbage").find("span", "age").text() == ""
 
 
@@ -1323,8 +1323,8 @@ def test_answer_label_words_an_answer_the_way_the_human_saw_it():
         assert pages.answer_label(lang, asks["p4"], "x y") == "x y"
     assert pages.answer_label("fr", asks["c1"], "yes") == "Yes"                   # an unknown language is English
     # the same words the pages use for it
-    d = history(_answered(L, "a1", "no"), "zh")
-    assert d.find("span", "chip").text() == T("ans.reject", "zh")
+    d = history(_answered(L, "a1", "no"), "zh-Hans")
+    assert d.find("span", "chip").text() == T("ans.reject", "zh-Hans")
 
 
 def _answered(L, id, value):

@@ -1083,12 +1083,12 @@ def flashed(markup: str):
 
 
 def test_the_waiting_page_shows_the_banner_of_a_finished_redirect_and_only_for_the_two_words_it_knows():
-    with _t.tmpdir() as root, Srv(root, "--lang", "zh") as srv:
+    with _t.tmpdir() as root, Srv(root, "--lang", "zh-Hans") as srv:
         srv.agent(raw_ask("confirm", "c1"))
         assert flashed(srv.get().text) is None                                         # a plain visit says nothing
         for done, key in (("noted", "flash.noted"), ("reopened", "flash.reopened")):
             page = srv.get(f"?done={done}")
-            assert flashed(page.text) == say(key, "zh") and page.status == 200         # in the console's language
+            assert flashed(page.text) == say(key, "zh-Hans") and page.status == 200         # in the console's language
             assert flashed(srv.get(f"?done={done}&lang=en").text) == say(key, "en")
             assert flashed(srv.get(f"?done={done}", Cookie=f"console_lang_{srv.port}=en").text) == say(key, "en")
         for junk in ("", "nope", "NOTED", "noted%20", "noted%26done=reopened", "%3Cscript%3Ealert(1)%3C/script%3E", "flash.noted",
@@ -1096,7 +1096,7 @@ def test_the_waiting_page_shows_the_banner_of_a_finished_redirect_and_only_for_t
             page = srv.get(f"?done={junk}")
             assert page.status == 200 and flashed(page.text) is None and "flash" not in page.text, junk
             assert "<script>alert" not in page.text
-        assert flashed(srv.get("?done=noted&done=nope").text) == say("flash.noted", "zh")           # the first one counts
+        assert flashed(srv.get("?done=noted&done=nope").text) == say("flash.noted", "zh-Hans")           # the first one counts
         assert flashed(srv.get("?done=nope&done=noted").text) is None
 
 
@@ -1763,44 +1763,52 @@ def test_the_language_a_person_picks_is_kept_in_the_cookie_named_for_the_port_an
         srv.agent(raw_ask("confirm", "c1"))
         en = srv.get()
         assert '<html lang="en">' in en.text and "Set-Cookie" not in en.headers
-        zh = srv.get("?lang=zh")
-        assert '<html lang="zh">' in zh.text and say("page.waiting", "zh") in zh.text
+        zh = srv.get("?lang=zh-Hans")
+        assert '<html lang="zh-Hans">' in zh.text and say("page.waiting", "zh-Hans") in zh.text
         assert len(zh.headers.get_all("Set-Cookie")) == 1
         attrs = [x.strip() for x in zh.headers["Set-Cookie"].split(";")]
-        assert attrs[0] == f"{jar}=zh" and "SameSite=Lax" in attrs and "HttpOnly" in attrs, attrs
+        assert attrs[0] == f"{jar}=zh-Hans" and "SameSite=Lax" in attrs and "HttpOnly" in attrs, attrs
         assert not [a for a in attrs if a.lower().split("=")[0] in ("path", "domain")], attrs   # scoped by the browser to where it is served
         # a later request, with no ?lang, uses it, on every page
-        assert say("nav.history", "zh") in srv.get("history", Cookie=f"{jar}=zh").text          # the internal link has no ?lang
+        assert say("nav.history", "zh-Hans") in srv.get("history", Cookie=f"{jar}=zh-Hans").text          # the internal link has no ?lang
         assert say("nav.history", "en") in srv.get("history").text
-        assert '<html lang="zh">' in srv.get("history", Cookie=f"a=b; {jar}=zh; c=d").text
-        assert '<html lang="zh">' in srv.get("history", Cookie=f"a=b;{jar}=zh").text
-        two = raw(srv.port, f"GET /history HTTP/1.0\r\nHost: 127.0.0.1:{srv.port}\r\nCookie: a=b\r\nCookie: {jar}=zh\r\n\r\n".encode())
-        assert '<html lang="zh">' in two.text                                                    # a proxy may send the jar in two lines
-        assert "Set-Cookie" not in srv.get("history", Cookie=f"{jar}=zh").headers              # kept, not set again
+        assert '<html lang="zh-Hans">' in srv.get("history", Cookie=f"a=b; {jar}=zh-Hans; c=d").text
+        assert '<html lang="zh-Hans">' in srv.get("history", Cookie=f"a=b;{jar}=zh-Hans").text
+        two = raw(srv.port, f"GET /history HTTP/1.0\r\nHost: 127.0.0.1:{srv.port}\r\nCookie: a=b\r\nCookie: {jar}=zh-Hans\r\n\r\n".encode())
+        assert '<html lang="zh-Hans">' in two.text                                                    # a proxy may send the jar in two lines
+        assert "Set-Cookie" not in srv.get("history", Cookie=f"{jar}=zh-Hans").headers              # kept, not set again
         # what is not one of ours is ignored: another value, another cookie that ends the same
-        for junk in ("lang=zh", f"{jar}=fr", f"{jar}=", f"{jar}=zhx", f"x{jar}=zh", f"{jar}=ZH",
-                     f"{jar}=zh-CN", f'{jar}="zh"', f"{jar}=zh_", f"my_{jar}=zh", "zh"):
+        for junk in ("lang=zh", f"{jar}=fr", f"{jar}=", f"{jar}=zhx", f"x{jar}=zh-Hans", f"{jar}=ZH",
+                     f"{jar}=zh-CN", f'{jar}="zh-Hans"', f"{jar}=zh_", f"my_{jar}=zh-Hans", "zh-Hans"):
             assert '<html lang="en">' in srv.get("history", Cookie=junk).text, junk
-        assert '<html lang="zh">' in srv.get("history", Cookie=f"{jar}=fr; {jar}=zh").text     # a junk one is skipped
-        assert '<html lang="en">' in srv.get("history", Cookie=f"{jar}=en; {jar}=zh").text     # the first good one wins
+        assert '<html lang="zh-Hans">' in srv.get("history", Cookie=f"{jar}=fr; {jar}=zh-Hans").text     # a junk one is skipped
+        assert '<html lang="en">' in srv.get("history", Cookie=f"{jar}=en; {jar}=zh-Hans").text     # the first good one wins
         # ?lang wins over the cookie and becomes the cookie; one that is not ours changes nothing
-        back = srv.get("?lang=en", Cookie=f"{jar}=zh")
+        back = srv.get("?lang=en", Cookie=f"{jar}=zh-Hans")
         assert '<html lang="en">' in back.text and back.headers["Set-Cookie"].startswith(f"{jar}=en;")
         for bad in ("fr", "", "zhx", "ZH", "zh%00", "zh,en"):
-            r = srv.get("?lang=" + bad, Cookie=f"{jar}=zh")
-            assert '<html lang="zh">' in r.text and "Set-Cookie" not in r.headers, bad
+            r = srv.get("?lang=" + bad, Cookie=f"{jar}=zh-Hans")
+            assert '<html lang="zh-Hans">' in r.text and "Set-Cookie" not in r.headers, bad
             assert '<html lang="en">' in srv.get("?lang=" + bad).text and "Set-Cookie" not in srv.get("?lang=" + bad).headers, bad
-        assert srv.get("history?lang=zh").headers["Set-Cookie"].startswith(f"{jar}=zh;")        # on any page that is a page
-        assert "Set-Cookie" not in srv.get("static/console.css?lang=zh").headers and "Set-Cookie" not in srv.get("nope?lang=zh").headers
+        assert srv.get("history?lang=zh-Hans").headers["Set-Cookie"].startswith(f"{jar}=zh-Hans;")        # on any page that is a page
+        assert "Set-Cookie" not in srv.get("static/console.css?lang=zh-Hans").headers and "Set-Cookie" not in srv.get("nope?lang=zh-Hans").headers
         # the pages after a click and the errors speak it too
-        r = srv.submit(form_for(srv.get("", Cookie=f"{jar}=zh").text, "answer", "c1"), headers={"Cookie": f"{jar}=zh"})
-        assert say("result.line_ok", "zh", value=say("ans.yes", "zh")) in flat(r.text) and '<html lang="zh">' in r.text
-        assert say("err.bad_host", "zh") in flat(srv.get("", Host="evil.example", Cookie=f"{jar}=zh").text)
-    with _t.tmpdir() as root, Srv(root, "--lang", "zh") as srv:
+        r = srv.submit(form_for(srv.get("", Cookie=f"{jar}=zh-Hans").text, "answer", "c1"), headers={"Cookie": f"{jar}=zh-Hans"})
+        assert say("result.line_ok", "zh-Hans", value=say("ans.yes", "zh-Hans")) in flat(r.text) and '<html lang="zh-Hans">' in r.text
+        assert say("err.bad_host", "zh-Hans") in flat(srv.get("", Host="evil.example", Cookie=f"{jar}=zh-Hans").text)
+    with _t.tmpdir() as root, Srv(root, "--lang", "zh-Hans") as srv:
         jar = f"console_lang_{srv.port}"
-        assert '<html lang="zh">' in srv.get().text and '<html lang="en">' in srv.get("?lang=en").text
+        assert '<html lang="zh-Hans">' in srv.get().text and '<html lang="en">' in srv.get("?lang=en").text
         assert '<html lang="en">' in srv.get(Cookie=f"{jar}=en").text                           # a person's pick beats the operator's
-        assert '<html lang="zh">' in srv.get(Cookie="lang=en").text
+        assert '<html lang="zh-Hans">' in srv.get(Cookie="lang=en").text
+    with _t.tmpdir() as root, Srv(root, "--lang", "zh-Hant") as srv:                              # the third language
+        jar = f"console_lang_{srv.port}"
+        assert '<html lang="zh-Hant">' in srv.get().text and say("page.waiting", "zh-Hant") in srv.get().text
+        assert srv.get("?lang=zh").headers["Set-Cookie"].startswith(f"{jar}=zh-Hans;")          # the old tag is zh-Hans
+        assert '<html lang="zh-Hans">' in srv.get(Cookie=f"{jar}=zh").text                      # a cookie set before there were two scripts
+        assert '<html lang="zh-Hant">' in srv.get(Cookie=f"{jar}=fr").text and srv.get("?lang=en").text.count('class="lang"') == 2
+    with _t.tmpdir() as root, Srv(root, "--lang", "zh") as srv:                                    # --lang zh = zh-Hans
+        assert '<html lang="zh-Hans">' in srv.get().text
     with _t.tmpdir() as root, Srv(root, "--title", "Northwind <Console>") as srv:                    # the operator's title is escaped
         assert "Northwind &lt;Console&gt;" in srv.get().text
 
@@ -1808,12 +1816,12 @@ def test_the_language_a_person_picks_is_kept_in_the_cookie_named_for_the_port_an
 def test_two_consoles_on_one_host_keep_their_own_language_because_cookies_ignore_ports():
     with _t.tmpdir() as a_root, _t.tmpdir() as b_root, Srv(a_root) as a, Srv(b_root) as b:
         assert a.port != b.port
-        picked = a.get("?lang=zh").headers["Set-Cookie"].split(";")[0]                 # what the browser stores for the host
-        assert picked == f"console_lang_{a.port}=zh" and picked != b.get("?lang=zh").headers["Set-Cookie"].split(";")[0]
-        assert '<html lang="zh">' in a.get(Cookie=picked).text
+        picked = a.get("?lang=zh-Hans").headers["Set-Cookie"].split(";")[0]                 # what the browser stores for the host
+        assert picked == f"console_lang_{a.port}=zh-Hans" and picked != b.get("?lang=zh-Hans").headers["Set-Cookie"].split(";")[0]
+        assert '<html lang="zh-Hans">' in a.get(Cookie=picked).text
         assert '<html lang="en">' in b.get(Cookie=picked).text                        # the other console's choice is not ours
         both = f"{picked}; console_lang_{b.port}=en"
-        assert '<html lang="zh">' in a.get(Cookie=both).text and '<html lang="en">' in b.get(Cookie=both).text
+        assert '<html lang="zh-Hans">' in a.get(Cookie=both).text and '<html lang="en">' in b.get(Cookie=both).text
         assert '<html lang="en">' in a.get(Cookie="console_lang=zh").text             # and the name without a port is nobody's
 
 

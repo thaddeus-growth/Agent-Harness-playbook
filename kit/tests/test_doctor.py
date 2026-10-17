@@ -117,7 +117,7 @@ def test_fresh() -> None:
     ids = [c["check"] for c in doc["checks"]]
     check("the built-in checks, in order",
           [i for i in dict.fromkeys(ids)] == ["skill_pack", "env_chain",
-                                             "token_source", "data_dir", "db",
+                                             "language", "token_source", "data_dir", "db",
                                              "markets", "writes", "verbs"],
           ids)
     check("the skill pack line", codes(doc, "skill_pack") == ["doctor_skill_pack"]

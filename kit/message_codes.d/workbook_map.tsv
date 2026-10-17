@@ -1,15 +1,15 @@
-code	params	meaning_en	meaning_zh
-workbook_map_missing	path	{path} is not a file; a workbook map is tables.tsv and columns.tsv in one folder	{path} 不是文件；工作簿映射是同一文件夹里的 tables.tsv 和 columns.tsv
-workbook_map_columns	file,missing	{file} lacks the column(s) {missing}	{file} 缺少列：{missing}
-workbook_map_bad_value	file,line,column,value,expected	{file} line {line}: {column} {value} is not {expected}	{file} 第 {line} 行：{column} 的值 {value} 不是 {expected}
-workbook_map_table_duplicate	table_id	tables.tsv: table {table_id} is declared twice	tables.tsv：表 {table_id} 声明了两次
-workbook_map_table_unknown	line,table_id	columns.tsv line {line}: table {table_id} is not in tables.tsv	columns.tsv 第 {line} 行：表 {table_id} 不在 tables.tsv 里
-workbook_map_owner_missing	line,header	columns.tsv line {line}: {header} goes out, so it needs its owning skill pack	columns.tsv 第 {line} 行：{header} 要写回工作簿，必须写明归属的 skill pack
-workbook_map_two_owners	sheet,header,owners	{sheet} / {header}: written by more than one row ({owners}); an outgoing column has one owner	{sheet} / {header}：有多行要写这一列（{owners}）；写回的列只能有一个归属
-workbook_map_field_unknown	line,field	columns.tsv line {line}: field {field} is not in the skill pack's field vocabulary	columns.tsv 第 {line} 行：字段 {field} 不在 skill pack 的字段表里
-workbook_map_no_place_reason	line,field	columns.tsv line {line}: a field with no place in the workbook ({field}) needs header - and a note that says why	columns.tsv 第 {line} 行：在工作簿里没有位置的字段（{field}）要写 header 为 - 并在 note 里说明原因
-workbook_map_key_unknown	table_id,header	tables.tsv: {table_id} names {header} (key or market) but columns.tsv has no row for it	tables.tsv：{table_id} 用到 {header}（键或市场），但 columns.tsv 没有这一列
-workbook_map_refused	count,problems	the workbook map has {count} problem(s); nothing was read through it	工作簿映射有 {count} 个问题；没有按它读取任何内容
-workbook_map_value_key_unknown	line,key	values.tsv line {line}: {key} is not one of the skill pack's fact keys	values.tsv 第 {line} 行：{key} 不是本 skill pack 的事实键
-workbook_map_value_duplicate	key,market	values.tsv: {key} [{market}] is stated twice	values.tsv：{key} [{market}] 写了两次
-workbook_map_cell_twice	first,line,sheet,cell	cells.tsv lines {first} and {line} both write {sheet} {cell}	cells.tsv 第 {first} 行和第 {line} 行都写入 {sheet} {cell}
+code	params	meaning_en	meaning_zh	meaning_zh-Hant
+workbook_map_missing	path	{path} is not a file; a workbook map is tables.tsv and columns.tsv in one folder	{path} 不是文件；工作簿映射是同一文件夹里的 tables.tsv 和 columns.tsv	{path} 不是文件；工作簿映射是同一文件夾裡的 tables.tsv 和 columns.tsv
+workbook_map_columns	file,missing	{file} lacks the column(s) {missing}	{file} 缺少列：{missing}	{file} 缺少列：{missing}
+workbook_map_bad_value	file,line,column,value,expected	{file} line {line}: {column} {value} is not {expected}	{file} 第 {line} 行：{column} 的值 {value} 不是 {expected}	{file} 第 {line} 行：{column} 的值 {value} 不是 {expected}
+workbook_map_table_duplicate	table_id	tables.tsv: table {table_id} is declared twice	tables.tsv：表 {table_id} 声明了两次	tables.tsv：表 {table_id} 聲明了兩次
+workbook_map_table_unknown	line,table_id	columns.tsv line {line}: table {table_id} is not in tables.tsv	columns.tsv 第 {line} 行：表 {table_id} 不在 tables.tsv 里	columns.tsv 第 {line} 行：表 {table_id} 不在 tables.tsv 裡
+workbook_map_owner_missing	line,header	columns.tsv line {line}: {header} goes out, so it needs its owning skill pack	columns.tsv 第 {line} 行：{header} 要写回工作簿，必须写明归属的 skill pack	columns.tsv 第 {line} 行：{header} 要寫回工作簿，必須寫明歸屬的 skill pack
+workbook_map_two_owners	sheet,header,owners	{sheet} / {header}: written by more than one row ({owners}); an outgoing column has one owner	{sheet} / {header}：有多行要写这一列（{owners}）；写回的列只能有一个归属	{sheet} / {header}：有多行要寫這一列（{owners}）；寫回的列只能有一個歸屬
+workbook_map_field_unknown	line,field	columns.tsv line {line}: field {field} is not in the skill pack's field vocabulary	columns.tsv 第 {line} 行：字段 {field} 不在 skill pack 的字段表里	columns.tsv 第 {line} 行：字段 {field} 不在 skill pack 的字段表裡
+workbook_map_no_place_reason	line,field	columns.tsv line {line}: a field with no place in the workbook ({field}) needs header - and a note that says why	columns.tsv 第 {line} 行：在工作簿里没有位置的字段（{field}）要写 header 为 - 并在 note 里说明原因	columns.tsv 第 {line} 行：在工作簿裡沒有位置的字段（{field}）要寫 header 為 - 並在 note 裡說明原因
+workbook_map_key_unknown	table_id,header	tables.tsv: {table_id} names {header} (key or market) but columns.tsv has no row for it	tables.tsv：{table_id} 用到 {header}（键或市场），但 columns.tsv 没有这一列	tables.tsv：{table_id} 用到 {header}（鍵或市場），但 columns.tsv 沒有這一列
+workbook_map_refused	count,problems	the workbook map has {count} problem(s); nothing was read through it	工作簿映射有 {count} 个问题；没有按它读取任何内容	工作簿映射有 {count} 個問題；沒有按它讀取任何內容
+workbook_map_value_key_unknown	line,key	values.tsv line {line}: {key} is not one of the skill pack's fact keys	values.tsv 第 {line} 行：{key} 不是本 skill pack 的事实键	values.tsv 第 {line} 行：{key} 不是本 skill pack 的事實鍵
+workbook_map_value_duplicate	key,market	values.tsv: {key} [{market}] is stated twice	values.tsv：{key} [{market}] 写了两次	values.tsv：{key} [{market}] 寫了兩次
+workbook_map_cell_twice	first,line,sheet,cell	cells.tsv lines {first} and {line} both write {sheet} {cell}	cells.tsv 第 {first} 行和第 {line} 行都写入 {sheet} {cell}	cells.tsv 第 {first} 行和第 {line} 行都寫入 {sheet} {cell}

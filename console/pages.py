@@ -198,14 +198,14 @@ def _decides(ctx: dict) -> bool:
 
 
 def _lang(ctx: dict) -> str:
-    return ctx["lang"] if ctx.get("lang") in i18n.LANGS else "en"
+    return i18n.canon(ctx.get("lang")) or "en"
 
 
 def answer_label(lang: str, ask: dict, value) -> str:
     """An answer in the words the human saw it in (Approve, an option's
     label, 4.2 USD), as plain text: what serve.py puts in a result line's
     `value`, since only it has the ask."""
-    return _answer(_T(lang if lang in i18n.LANGS else "en"), ask, value)
+    return _answer(_T(i18n.canon(lang) or "en"), ask, value)
 
 
 def flash_text(lang: str, key) -> str | None:
@@ -213,13 +213,12 @@ def flash_text(lang: str, key) -> str | None:
     None for any other key."""
     if not isinstance(key, str) or key not in FLASH:
         return None
-    return _T(lang if lang in i18n.LANGS else "en").raw(FLASH[key])
+    return _T(i18n.canon(lang) or "en").raw(FLASH[key])
 
 
 # --------------------------------------------------------------- the shell --
 
 def _bar(t: _T, ctx: dict, tab, n_open: int, href: str) -> str:
-    other = "zh" if t.lang == "en" else "en"
 
     def tab_link(name, url, key, count=0):
         cur = ' aria-current="page"' if tab == name else ""
@@ -230,7 +229,8 @@ def _bar(t: _T, ctx: dict, tab, n_open: int, href: str) -> str:
             f'<nav class="tabs" aria-label="{t("nav.label")}">'
             f'{tab_link("waiting", "./", "nav.waiting", n_open)}'
             f'{tab_link("history", "history", "nav.history")}</nav>'
-            f'<a class="lang" href="{href}{other}" lang="{other}" hreflang="{other}">{t("lang.other")}</a>'
+            + "".join(f'<a class="lang" href="{href}{o}" lang="{o}" hreflang="{o}">{i18n.NAMES[o]}</a>'
+                      for o in i18n.LANGS if o != t.lang) +
             f'</div></header>')
 
 

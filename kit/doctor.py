@@ -221,6 +221,26 @@ def check_env_chain(ctx: Context) -> None:
                                   name=var, value=shown, source=src))
 
 
+def check_language(ctx: Context) -> None:
+    from kit import lang
+    var = ctx.cfg.env("LANG")
+    try:
+        chosen = lang.client_language(ctx.cfg)
+    except ValueError:
+        value = os.environ.get(var, "")
+        ctx.fail("language", msg("doctor_language_bad", f"{var}={value} is "
+                                 f"not a language: use {', '.join(lang.TAGS)}",
+                                 var=var, value=value, allowed=list(lang.TAGS)),
+                 [f"set {var} to one of {', '.join(lang.TAGS)} in the client's "
+                  f".env"])
+        return
+    ctx.info("language", msg("doctor_language", f"client language: {chosen} "
+                             f"({'set by ' + var if os.environ.get(var) else 'default: the first language declared'}); "
+                             f"the skill pack declares {', '.join(ctx.cfg.languages)}",
+                             language=chosen, var=var,
+                             declared=list(ctx.cfg.languages)))
+
+
 def check_token_source(ctx: Context) -> None:
     from kit import auth
     try:
@@ -534,6 +554,7 @@ def check_checkout(ctx: Context) -> None:
 
 
 BUILTIN: tuple[Check, ...] = (check_skill_pack, check_env_chain,
+                              check_language,
                               check_token_source, check_home_secrets,
                               check_env_files, check_console_secret,
                               check_data_dir, check_db,

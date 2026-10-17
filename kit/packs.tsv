@@ -4,6 +4,8 @@ config	base	skill-pack.toml, the one binding
 contract	base	--json document, SkillPackError, exit codes
 dates	base	the one clock
 messages	base	coded messages
+lang	base	the client's language: en, zh-Hans or zh-Hant, from <P>_LANG (doctor and the guard read it)
+zhconv	base	Simplified and Traditional Chinese from one text, and the check that a column is in its script
 paths	base	data dir and DB path
 db	base	database with protected human tables
 schema_base	base	the six human tables
@@ -51,6 +53,7 @@ guards.clock	testkit
 guards.drift	testkit	
 guards.evals	testkit	eval cases: no consumer yet; the Never table: suites.never_table
 guards.json_contract	testkit	
+guards.languages	testkit	declared Chinese columns are complete, in their script
 guards.layering	testkit	
 guards.pages	testkit	no shipped file links to a hosted artifact: a page is drawn by a verb
 guards.release	testkit	

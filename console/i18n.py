@@ -1,4 +1,4 @@
-"""The console's words. `i18n.json` is `{key: {"en": …, "zh": …}}` and this
+"""The console's words. `i18n.json` is `{key: {"en": …, "zh-Hans": …, "zh-Hant": …}}` and this
 is its one reader: everything the console itself says to the human comes
 through `t()`; the agent's own text is never here.
 
@@ -14,7 +14,17 @@ from __future__ import annotations
 import json
 import os
 
-LANGS = ("en", "zh")
+LANGS = ("en", "zh-Hans", "zh-Hant")
+NAMES = {"en": "English", "zh-Hans": "简体中文", "zh-Hant": "繁體中文"}   # each in its own script
+
+
+def canon(tag) -> str | None:
+    """The language `tag` names: one of LANGS, or `zh` (what a console said
+    before there were two Chinese scripts) as zh-Hans; None for anything else."""
+    if tag == "zh":
+        return "zh-Hans"
+    return tag if isinstance(tag, str) and tag in LANGS else None
+
 
 with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "i18n.json"),
           encoding="utf-8") as _f:

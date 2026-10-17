@@ -4,7 +4,7 @@
     python3 scaffold/new_skill_pack.py --name acme-skill-pack --cli acme \\
         --prefix ACME --dir ../acme-skill-pack [--markets AA,BB] \\
         [--packs compliance,data] [--owner @handle] [--repo-home WHERE] \\
-        [--langs en,zh] [--dry-run]
+        [--langs en,zh-Hans,zh-Hant] [--dry-run]
     python3 scaffold/new_skill_pack.py --dir ../acme-skill-pack --update-kit
 
 What it writes (BUILD.md, B1):
@@ -63,6 +63,7 @@ TEMPLATES = PLAYBOOK / "templates"
 SKELETON = Path(__file__).resolve().parent / "skeleton"
 sys.path.insert(0, str(PLAYBOOK))
 
+from kit import zhconv  # noqa: E402
 from kit.tools import packs as kit_packs, vendor  # noqa: E402
 
 # the pre-push hook the next steps install (kit/tools/leak_guard.py)
@@ -160,7 +161,7 @@ NAME = re.compile(r"^[a-z][a-z0-9-]{1,40}$")
 CLI = re.compile(r"^[a-z][a-z0-9]{1,15}$")
 PREFIX = re.compile(r"^[A-Z][A-Z0-9]{1,15}$")
 MARKET = re.compile(r"^[A-Za-z0-9_-]{1,16}$")
-LANG = re.compile(r"^[a-z]{2,3}$")
+LANG = re.compile(r"^[a-z]{2,3}(?:-[A-Z][a-z]{3})?$")
 TAKEN = {"kit", "verbs", "facts", "decisions", "pending", "compute_stories",
          "queue_actions", "execute_actions", "console", "test", "tests"}
 PLACEHOLDER = re.compile(r"\{\{(\w+)\}\}")
@@ -230,6 +231,16 @@ def labels(head: list[str], langs: list[str]) -> list[str]:
     return out
 
 
+def chinese(row: dict, col: str) -> str:
+    """The template's label for `col`: its own Chinese (the template writes
+    Simplified) for zh, zh-Hans and zh-Hant (converted), English otherwise."""
+    if col in row:
+        return row[col]
+    if col in ("label_zh-Hans", "label_zh-Hant"):
+        return zhconv.convert(row["label_zh"], col.removeprefix("label_"))
+    return row["label_en"]
+
+
 def constants(langs: list[str]) -> str:
     rows = (TEMPLATES / "ssot" / "constants.tsv").read_text(
         encoding="utf-8").rstrip("\n").split("\n")
@@ -243,8 +254,8 @@ def constants(langs: list[str]) -> str:
                     "must be approved again: the playbook's gate")
         cells = []
         for c in labels(head, langs):
-            m = re.match(r"^label_(\w+)$", c)
-            cells.append(r.get(c, r["label_en"]) if m else r[c])
+            m = re.match(r"^label_([\w-]+)$", c)
+            cells.append(chinese(r, c) if m else r[c])
         out.append("\t".join(cells))
     return "\n".join(out) + "\n"
 

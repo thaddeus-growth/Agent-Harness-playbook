@@ -134,7 +134,7 @@ Each rule has a test that fails when it breaks.
 - **Stdlib only.** Vendoring stays a plain copy, and a skill pack installs nothing for the kit. *(tests/test_kit_rules.py)*
 - **No domain words.** The kit names no platform, client or product (it still names `market` as its partition, a known leftover of the source project); everything domain-specific is a parameter in `skill-pack.toml` or a hook. *(tests/test_kit_rules.py)*
 - **Never imports the console, and the console never imports the kit.** They meet only in JSON: the gate challenge (`confirm_code_required`, `subject`) and the console's ask format. *(tests/test_kit_rules.py; tests/test_e2e_shop.py proves they still meet)*
-- **Every message coded.** A module owns one fragment, `message_codes.d/<module>.tsv`, en and zh, and emits every code in it. *(each module's test, `check_registry_closed`)*
+- **Every message coded.** A module owns one fragment, `message_codes.d/<module>.tsv`, en, zh (Simplified) and zh-Hant ([docs/languages.md](../docs/languages.md)), and emits every code in it. *(each module's test, `check_registry_closed`)*
 - **Every test file** runs alone (`python3 kit/tests/test_x.py`), uses `kit.testing.check`, and prints `RESULT: N passed`; `python3 kit/tests/run.py [filter]` fails a file without that line.
 
 ## Upgrades and drift

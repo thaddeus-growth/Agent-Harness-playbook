@@ -81,7 +81,7 @@ def main() -> int:
 
     print("[2] the folder")
     rc, out, err = run(*base, "--client", "northwind", "--title", "Northwind",
-                       "--lang", "zh", "--language", "Traditional Chinese")
+                       "--lang", "zh-Hant", "--language", "Traditional Chinese")
     f = clients / "northwind"
     check("written", rc == 0 and f.is_dir(), out + err)
     for b in ("bin/acme", "bin/console", "bin/ask"):
@@ -122,6 +122,14 @@ def main() -> int:
           "never in workspace/.env (the kit never loads it from a file)",
           "export ACME_CONFIRM_CODE_SECRET" in console
           and ".env" not in console and ">>" not in console, console)
+    check("one language per client: ACME_LANG is set in the CLI wrapper and the console "
+          "(a process env value still wins), and the console reads it",
+          'export ACME_LANG="${ACME_LANG:-zh-Hant}"' in texts[f / "bin" / "acme"]
+          and 'ACME_LANG="${ACME_LANG:-zh-Hant}"' in console
+          and '--lang "${ACME_LANG}"' in console, console)
+    check("the brief names the tag and the language in words",
+          "`ACME_LANG=zh-Hant`" in texts[f / "CLAUDE.md"]
+          and "Traditional Chinese" in texts[f / "CLAUDE.md"])
     launch = json.loads(texts[f / ".claude" / "launch.json"])
     check("the console is a preview on its port",
           launch["configurations"][0]["port"] == 8771

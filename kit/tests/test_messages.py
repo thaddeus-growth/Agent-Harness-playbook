@@ -35,6 +35,7 @@ from kit.messages import Msg, code, coded, failure, joined, msg, relayed  # noqa
 from kit.testing.check import check, finish, raises, tmp_dir  # noqa: E402
 
 HEAD = "code\tparams\tmeaning_en\tmeaning_zh\n"
+KIT_HEAD = "code\tparams\tmeaning_en\tmeaning_zh\tmeaning_zh-Hant\n"
 SHARED = ("unclassified_error", "data_dir_unset", "no_db", "joined",
           "reason_required")
 # The foundation modules and the shared codes they must emit themselves
@@ -156,8 +157,8 @@ def main() -> int:
     check("the shared codes are in kit/message_codes.tsv",
           all(reg[c]["file"] == str(messages.BASE_TSV) for c in SHARED))
     base_head = messages.BASE_TSV.read_text(encoding="utf-8").splitlines()[0]
-    check("kit base header = code, params, meaning_en, meaning_zh",
-          base_head.split("\t") == ["code", "params", "meaning_en", "meaning_zh"])
+    check("kit base header = code, params, meaning_en, meaning_zh (Simplified), meaning_zh-Hant",
+          base_head.split("\t") == ["code", "params", "meaning_en", "meaning_zh", "meaning_zh-Hant"])
     check("every kit base row has en + zh meanings",
           all(r["meaning_en"] and r["meaning_zh"]
               for r in messages.base_registry().values()))
@@ -220,8 +221,8 @@ def main() -> int:
           e is not None and "meaning_ja" in str(e), e)
 
     frag = Path(tmp_dir("frag-"))
-    (frag / "b.tsv").write_text(HEAD + "zz_b\t\tb\tb\n", encoding="utf-8")
-    (frag / "a.tsv").write_text(HEAD + "zz_a\tn\ta {n}\ta {n}\n",
+    (frag / "b.tsv").write_text(KIT_HEAD + "zz_b\t\tb\tb\tb\n", encoding="utf-8")
+    (frag / "a.tsv").write_text(KIT_HEAD + "zz_a\tn\ta {n}\ta {n}\ta {n}\n",
                                 encoding="utf-8")
     saved = messages.FRAGMENTS_DIR
     messages.FRAGMENTS_DIR = frag
@@ -348,7 +349,7 @@ def main() -> int:
     files = sorted({p for g in FOUNDATION for p in _shop.KIT.glob(g)})
     emitted = {c for _, c, _ in messages.msg_calls(files, _shop.KIT)}
     shared = {r["code"] for r in messages.read_rows(messages.BASE_TSV,
-                                                    ("en", "zh"))}
+                                                    messages.KIT_LANGUAGES)}
     check("every code of kit/message_codes.tsv is emitted by a foundation "
           "module (reason_required: by kit/human.py)",
           shared - {"reason_required"} <= emitted,

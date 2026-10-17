@@ -40,6 +40,7 @@ os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
 os.environ["GIT_CONFIG_GLOBAL"] = os.devnull
 os.environ["GIT_CONFIG_NOSYSTEM"] = "1"
 
+from kit import zhconv  # noqa: E402
 from kit.testing.check import check, finish, tmp_dir  # noqa: E402
 
 SCAFFOLD = PLAYBOOK / "scaffold" / "new_skill_pack.py"
@@ -361,6 +362,25 @@ def test_other_shape() -> None:
           r.stdout[-1500:])
 
 
+def test_chinese_scripts() -> None:
+    print("\n[9] en + zh-Hans + zh-Hant")
+    root = Path(tmp_dir("scaffold-hans-")).resolve() / "acme"
+    rc, out, err = scaffold(*args(root, "--langs", "en,zh-Hans,zh-Hant"))
+    check("generated", rc == 0, err)
+    cfg = tomllib.loads((root / "skill-pack.toml").read_text(encoding="utf-8"))
+    check("languages en, zh-Hans, zh-Hant", cfg["skill_pack"]["languages"] == ["en", "zh-Hans", "zh-Hant"])
+    rows = [l.split("\t") for l in (root / "ssot" / "constants.tsv").read_text(
+        encoding="utf-8").splitlines()]
+    head, row = rows[0], dict(zip(rows[0], rows[1]))
+    check("constants: a column per language, the Chinese ones in their script",
+          {"label_en", "label_zh-Hans", "label_zh-Hant"} <= set(head) and "label_zh" not in head
+          and row["label_zh-Hans"] and row["label_zh-Hant"] and row["label_zh-Hans"] != row["label_en"]
+          and not zhconv.script_problems(row["label_zh-Hant"], "zh-Hant")
+          and not zhconv.script_problems(row["label_zh-Hans"], "zh-Hans"), row)
+    check("every generated registry passes the three-language check",
+          all(not zhconv.problems(f, "zh-Hans", "zh-Hant") for f in (root / "ssot").glob("*.tsv")))
+
+
 def main() -> int:
     test_refusals()
     root = Path(tmp_dir("scaffold-")).resolve() / "acme"
@@ -377,6 +397,7 @@ def main() -> int:
     test_cli(root)
     test_update_kit(root)
     test_other_shape()
+    test_chinese_scripts()
     return finish()
 
 

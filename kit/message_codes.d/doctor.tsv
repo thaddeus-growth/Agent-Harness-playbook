@@ -1,37 +1,39 @@
-code	params	meaning_en	meaning_zh
-doctor_skill_pack	name,version,kit_version,root	{name} {version} (kit {kit_version}) at {root}	{name} {version}（kit {kit_version}），位置 {root}
-doctor_env_chain	files	env chain (later wins, the process env before all): {files}	环境变量查找链（后面的覆盖前面的，进程环境变量优先）：{files}
-doctor_env_process_only	var	env chain: none — process env only ({var}=none or empty: the cloud / multi-client setting)	没有环境变量文件：只用进程环境变量（{var}=none 或为空：云端或多客户的设置）
-doctor_env_var	name,value,source	{name} = {value} [{source}]	{name} = {value}（来源：{source}）
-doctor_token_source	mode	token source (every API): {mode}	令牌来源（所有接口）：{mode}
-doctor_home_secrets	names,file,var	{names} came from {file} (HOME-level: shared by every client of this user) — export them in the process env instead and set {var}=none	{names} 来自 {file}（用户主目录级文件：这个用户的所有客户共用）——请改为在进程环境变量里设置，并设 {var}=none
-doctor_env_file_loose	path	{path} is readable by other users	{path} 其他用户也能读取
-doctor_env_gate_secret_in_file	file,name	{name} is written in {file}: the skill pack never loads a gate secret from a file (an agent that can read or write the file could make its own approval codes). Remove the line; set it only in the process env of what runs the gate	{file} 里写了 {name}：工具从不从文件读取确认用的密钥（能读写这个文件的助手就能自己生成批准码）。请删掉这一行，只在运行确认流程的进程环境变量里设置它
-doctor_env_file_unsafe_name	file,name	{name} is written in {file}: the skill pack never loads it from a file (it would change who the gate thinks is at the terminal, which skill pack is bound, or the code that runs). Remove the line	{file} 里写了 {name}：工具从不从文件读取它（它会改变确认流程认为谁在终端前、绑定哪个工具，或运行哪段代码）。请删掉这一行
-doctor_console_secret_in_env	var	{var} is set in the environment this skill pack runs in: it is the owner console's own secret, which the console withholds from every skill pack call; an agent here could sign the console's answers. Unset it; it belongs only to the console process	运行这个工具的环境里设置了 {var}：这是负责人控制台自己的密钥，控制台调用工具时从不传给它；这里的助手可以冒签控制台的回答。请取消设置，它只属于控制台进程
-doctor_path	var,path	{var} -> {path}	{var} -> {path}
-doctor_data_dir_from_home	var,file	{var} came from {file} (HOME-level: any client that leaves it unset lands in this data dir)	{var} 来自 {file}（用户主目录级文件：任何没设置它的客户都会落到这个数据目录）
-doctor_inside_repo	var,path	{var} -> {path} is inside the skill pack checkout: client data would ship in a release or leak into a commit	{var} -> {path} 在工具的代码目录里：客户数据可能随发布版本发出，或被提交进仓库
-doctor_no_db	path	no database yet at {path} (a write verb creates it)	{path} 还没有数据库（写入类命令会创建它）
-doctor_db_present	path	database at {path} (no schema given to doctor: its shape is not checked)	数据库在 {path}（没有提供表结构，未检查结构）
-doctor_db_unreadable	path,detail	the database at {path} cannot be read: {detail}	无法读取 {path} 的数据库：{detail}
-doctor_db_stale	tables	cache table(s) in an older shape: {tables} — the next ingest rebuilds them	缓存表结构过旧：{tables}——下次导入会重建
-doctor_db_unknown	tables	table(s) no longer in the schema (left by an older skill pack; do not read them): {tables}	表结构里已没有的表（旧版本留下的，不要读取）：{tables}
-doctor_db_ok	path,version	database at {path}: schema v{version}, current	数据库 {path}：表结构 v{version}，是最新的
-doctor_no_partition		no market partition (markets = []): nothing to declare	没有市场分区（markets = []）：无需声明
-doctor_markets_declared	markets	declared market(s): {markets}	已声明的市场：{markets}
-doctor_markets_pending	markets	market(s) {markets} declared but not confirmed: a person confirms the declaration	市场 {markets} 已声明但未确认：需要由人确认
-doctor_not_onboarded		no market declared — this skill pack is not onboarded yet	还没有声明任何市场——这个工具还没完成初始设置
-doctor_writes_on	var	writes: ON ({var}=1) — only the calls on the skill pack's allowlist can go out	写入：已开启（{var}=1）——只有白名单里的调用能发出
-doctor_writes_bad_value	var,value	{var}={value} does not turn writes on (only 1 does): writes are off	{var}={value} 不会开启写入（只有 1 会）：写入是关闭的
-doctor_writes_off	reason	writes: off ({reason}) — the healthy default	写入：关闭（{reason}）——这是正常的默认状态
-doctor_platform_lock_set	detail	platform rule: set {detail}	平台规则：已设置 {detail}
-doctor_platform_lock_unknown	detail	platform rule: unknown — ask the client's admin to set the platform's own limit on what agents may do, then record it {detail}	平台规则：未知——请客户的管理员在平台上设置助手可做事项的限制，然后记录下来 {detail}
-doctor_verb_script_missing	verb,script	`{verb}` has no script at {script}	命令 `{verb}` 找不到脚本 {script}
-doctor_verbs_ok	count	{count} verb(s), every script present	{count} 个命令，脚本都在
-doctor_verbs_no_examples	count,verbs	{count} verb(s) list no examples, so their --help ends with none: {verbs}	{count} 个命令没有登记示例，它们的 --help 末尾没有示例调用：{verbs}
-doctor_kit_tty	var	{var} is set: the human gate's test seam stands in for the terminal (tests only)	设置了 {var}：人工确认的测试替身正在代替终端（只应在测试中）
-doctor_checkout_differs	docs,docs_head,docs_dirty,runs,runs_head,runs_dirty	the cwd is in {docs} ({docs_head}; uncommitted: {docs_dirty}), not the checkout whose code runs ({runs}, {runs_head}; uncommitted: {runs_dirty}): the docs read there may not describe the code that runs. Read the docs of the checkout you run, or run that one	当前目录在 {docs}（{docs_head}；未提交：{docs_dirty}），不是正在运行的代码所在的副本（{runs}，{runs_head}；未提交：{runs_dirty}）：在那里读到的文档可能和运行的代码不一致。请读正在运行的那个副本的文档，或者改为运行这个副本
-doctor_check_crashed	check,detail	the check {check} crashed: {detail}	检查 {check} 出错：{detail}
-doctor_summary_warnings	warnings,failures	{warnings} warning(s), {failures} failure(s) — each names its fix above	{warnings} 个警告，{failures} 个失败——每项上面都写了修复方法
-doctor_summary_ok		OK — no warnings	正常——没有警告
+code	params	meaning_en	meaning_zh	meaning_zh-Hant
+doctor_skill_pack	name,version,kit_version,root	{name} {version} (kit {kit_version}) at {root}	{name} {version}（kit {kit_version}），位置 {root}	{name} {version}（kit {kit_version}），位置 {root}
+doctor_env_chain	files	env chain (later wins, the process env before all): {files}	环境变量查找链（后面的覆盖前面的，进程环境变量优先）：{files}	環境變量查找鏈（後面的覆蓋前面的，進程環境變量優先）：{files}
+doctor_env_process_only	var	env chain: none — process env only ({var}=none or empty: the cloud / multi-client setting)	没有环境变量文件：只用进程环境变量（{var}=none 或为空：云端或多客户的设置）	沒有環境變量文件：只用進程環境變量（{var}=none 或為空：雲端或多客戶的設置）
+doctor_env_var	name,value,source	{name} = {value} [{source}]	{name} = {value}（来源：{source}）	{name} = {value}（來源：{source}）
+doctor_token_source	mode	token source (every API): {mode}	令牌来源（所有接口）：{mode}	令牌來源（所有接口）：{mode}
+doctor_home_secrets	names,file,var	{names} came from {file} (HOME-level: shared by every client of this user) — export them in the process env instead and set {var}=none	{names} 来自 {file}（用户主目录级文件：这个用户的所有客户共用）——请改为在进程环境变量里设置，并设 {var}=none	{names} 來自 {file}（用戶主目錄級文件：這個用戶的所有客戶共用）——請改為在進程環境變量裡設置，並設 {var}=none
+doctor_env_file_loose	path	{path} is readable by other users	{path} 其他用户也能读取	{path} 其他用戶也能讀取
+doctor_env_gate_secret_in_file	file,name	{name} is written in {file}: the skill pack never loads a gate secret from a file (an agent that can read or write the file could make its own approval codes). Remove the line; set it only in the process env of what runs the gate	{file} 里写了 {name}：工具从不从文件读取确认用的密钥（能读写这个文件的助手就能自己生成批准码）。请删掉这一行，只在运行确认流程的进程环境变量里设置它	{file} 裡寫了 {name}：工具從不從文件讀取確認用的密鑰（能讀寫這個文件的助手就能自己生成批准碼）。請刪掉這一行，只在運行確認流程的進程環境變量裡設置它
+doctor_env_file_unsafe_name	file,name	{name} is written in {file}: the skill pack never loads it from a file (it would change who the gate thinks is at the terminal, which skill pack is bound, or the code that runs). Remove the line	{file} 里写了 {name}：工具从不从文件读取它（它会改变确认流程认为谁在终端前、绑定哪个工具，或运行哪段代码）。请删掉这一行	{file} 裡寫了 {name}：工具從不從文件讀取它（它會改變確認流程認為誰在終端前、綁定哪個工具，或運行哪段代碼）。請刪掉這一行
+doctor_console_secret_in_env	var	{var} is set in the environment this skill pack runs in: it is the owner console's own secret, which the console withholds from every skill pack call; an agent here could sign the console's answers. Unset it; it belongs only to the console process	运行这个工具的环境里设置了 {var}：这是负责人控制台自己的密钥，控制台调用工具时从不传给它；这里的助手可以冒签控制台的回答。请取消设置，它只属于控制台进程	運行這個工具的環境裡設置了 {var}：這是負責人控制台自己的密鑰，控制台調用工具時從不傳給它；這裡的助手可以冒籤控制台的回答。請取消設置，它只屬於控制台進程
+doctor_path	var,path	{var} -> {path}	{var} -> {path}	{var} -> {path}
+doctor_data_dir_from_home	var,file	{var} came from {file} (HOME-level: any client that leaves it unset lands in this data dir)	{var} 来自 {file}（用户主目录级文件：任何没设置它的客户都会落到这个数据目录）	{var} 來自 {file}（用戶主目錄級文件：任何沒設置它的客戶都會落到這個數據目錄）
+doctor_inside_repo	var,path	{var} -> {path} is inside the skill pack checkout: client data would ship in a release or leak into a commit	{var} -> {path} 在工具的代码目录里：客户数据可能随发布版本发出，或被提交进仓库	{var} -> {path} 在工具的代碼目錄裡：客戶數據可能隨發佈版本發出，或被提交進倉庫
+doctor_no_db	path	no database yet at {path} (a write verb creates it)	{path} 还没有数据库（写入类命令会创建它）	{path} 還沒有數據庫（寫入類命令會創建它）
+doctor_db_present	path	database at {path} (no schema given to doctor: its shape is not checked)	数据库在 {path}（没有提供表结构，未检查结构）	數據庫在 {path}（沒有提供表結構，未檢查結構）
+doctor_db_unreadable	path,detail	the database at {path} cannot be read: {detail}	无法读取 {path} 的数据库：{detail}	無法讀取 {path} 的數據庫：{detail}
+doctor_db_stale	tables	cache table(s) in an older shape: {tables} — the next ingest rebuilds them	缓存表结构过旧：{tables}——下次导入会重建	緩存表結構過舊：{tables}——下次導入會重建
+doctor_db_unknown	tables	table(s) no longer in the schema (left by an older skill pack; do not read them): {tables}	表结构里已没有的表（旧版本留下的，不要读取）：{tables}	表結構裡已沒有的表（舊版本留下的，不要讀取）：{tables}
+doctor_db_ok	path,version	database at {path}: schema v{version}, current	数据库 {path}：表结构 v{version}，是最新的	數據庫 {path}：表結構 v{version}，是最新的
+doctor_no_partition		no market partition (markets = []): nothing to declare	没有市场分区（markets = []）：无需声明	沒有市場分區（markets = []）：無需聲明
+doctor_markets_declared	markets	declared market(s): {markets}	已声明的市场：{markets}	已聲明的市場：{markets}
+doctor_markets_pending	markets	market(s) {markets} declared but not confirmed: a person confirms the declaration	市场 {markets} 已声明但未确认：需要由人确认	市場 {markets} 已聲明但未確認：需要由人確認
+doctor_not_onboarded		no market declared — this skill pack is not onboarded yet	还没有声明任何市场——这个工具还没完成初始设置	還沒有聲明任何市場——這個工具還沒完成初始設置
+doctor_writes_on	var	writes: ON ({var}=1) — only the calls on the skill pack's allowlist can go out	写入：已开启（{var}=1）——只有白名单里的调用能发出	寫入：已開啟（{var}=1）——只有白名單裡的調用能發出
+doctor_writes_bad_value	var,value	{var}={value} does not turn writes on (only 1 does): writes are off	{var}={value} 不会开启写入（只有 1 会）：写入是关闭的	{var}={value} 不會開啟寫入（只有 1 會）：寫入是關閉的
+doctor_writes_off	reason	writes: off ({reason}) — the healthy default	写入：关闭（{reason}）——这是正常的默认状态	寫入：關閉（{reason}）——這是正常的默認狀態
+doctor_platform_lock_set	detail	platform rule: set {detail}	平台规则：已设置 {detail}	平台規則：已設置 {detail}
+doctor_platform_lock_unknown	detail	platform rule: unknown — ask the client's admin to set the platform's own limit on what agents may do, then record it {detail}	平台规则：未知——请客户的管理员在平台上设置助手可做事项的限制，然后记录下来 {detail}	平台規則：未知——請客戶的管理員在平台上設置助手可做事項的限制，然後記錄下來 {detail}
+doctor_verb_script_missing	verb,script	`{verb}` has no script at {script}	命令 `{verb}` 找不到脚本 {script}	命令 `{verb}` 找不到腳本 {script}
+doctor_verbs_ok	count	{count} verb(s), every script present	{count} 个命令，脚本都在	{count} 個命令，腳本都在
+doctor_verbs_no_examples	count,verbs	{count} verb(s) list no examples, so their --help ends with none: {verbs}	{count} 个命令没有登记示例，它们的 --help 末尾没有示例调用：{verbs}	{count} 個命令沒有登記示例，它們的 --help 末尾沒有示例調用：{verbs}
+doctor_kit_tty	var	{var} is set: the human gate's test seam stands in for the terminal (tests only)	设置了 {var}：人工确认的测试替身正在代替终端（只应在测试中）	設置了 {var}：人工確認的測試替身正在代替終端（只應在測試中）
+doctor_checkout_differs	docs,docs_head,docs_dirty,runs,runs_head,runs_dirty	the cwd is in {docs} ({docs_head}; uncommitted: {docs_dirty}), not the checkout whose code runs ({runs}, {runs_head}; uncommitted: {runs_dirty}): the docs read there may not describe the code that runs. Read the docs of the checkout you run, or run that one	当前目录在 {docs}（{docs_head}；未提交：{docs_dirty}），不是正在运行的代码所在的副本（{runs}，{runs_head}；未提交：{runs_dirty}）：在那里读到的文档可能和运行的代码不一致。请读正在运行的那个副本的文档，或者改为运行这个副本	當前目錄在 {docs}（{docs_head}；未提交：{docs_dirty}），不是正在運行的代碼所在的副本（{runs}，{runs_head}；未提交：{runs_dirty}）：在那裡讀到的文檔可能和運行的代碼不一致。請讀正在運行的那個副本的文檔，或者改為運行這個副本
+doctor_check_crashed	check,detail	the check {check} crashed: {detail}	检查 {check} 出错：{detail}	檢查 {check} 出錯：{detail}
+doctor_summary_warnings	warnings,failures	{warnings} warning(s), {failures} failure(s) — each names its fix above	{warnings} 个警告，{failures} 个失败——每项上面都写了修复方法	{warnings} 個警告，{failures} 個失敗——每項上面都寫了修複方法
+doctor_summary_ok		OK — no warnings	正常——没有警告	正常——沒有警告
+doctor_language_bad	var,value,allowed	{var}={value} is not a language: use en, zh-Hans or zh-Hant	{var}={value} 不是支持的语言：请用 en、zh-Hans 或 zh-Hant	{var}={value} 不是支持的語言：請用 en、zh-Hans 或 zh-Hant
+doctor_language	language,var,declared	Client language: {language} (set by {var}, or the first language the skill pack declares); the skill pack declares {declared}	客户语言：{language}（由 {var} 设置，未设置时取技能包声明的第一种语言）；技能包声明了 {declared}	客戶語言：{language}（由 {var} 設置，未設置時取技能包聲明的第一種語言）；技能包聲明了 {declared}

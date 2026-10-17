@@ -57,38 +57,47 @@ def scan(name):
     return literal, dynamic, consts
 
 
-def test_the_dictionary_is_well_formed_and_both_languages_are_complete():
-    assert i18n.LANGS == ("en", "zh")
+def test_the_dictionary_is_well_formed_and_every_language_is_complete():
+    assert i18n.LANGS == ("en", "zh-Hans", "zh-Hant")
     assert len(i18n.WORDS) > 100
     for key, v in i18n.WORDS.items():
         assert re.fullmatch(r"[a-z_]+(\.[a-z_]+)+", key), key
-        assert set(v) == {"en", "zh"}, f"{key}: exactly en and zh, got {sorted(v)}"
+        assert set(v) == set(i18n.LANGS), f"{key}: exactly {i18n.LANGS}, got {sorted(v)}"
         for lang in i18n.LANGS:
             assert isinstance(v[lang], str) and v[lang].strip() == v[lang] and v[lang], (key, lang)
 
 
-def test_both_languages_use_the_same_params():
+def test_every_language_uses_the_same_params():
     for key, v in i18n.WORDS.items():
-        assert params(v["en"]) == params(v["zh"]), f"{key}: {params(v['en'])} vs {params(v['zh'])}"
+        for lang in i18n.LANGS:
+            assert params(v["en"]) == params(v[lang]), f"{key} {lang}: {params(v['en'])} vs {params(v[lang])}"
     assert params(i18n.WORDS["budget.over"]["en"]) == {"open", "over", "max"}   # the check is not vacuous
 
 
 def test_the_chinese_is_chinese_and_the_english_is_not():
     for key, v in i18n.WORDS.items():
-        if key == "lang.other":           # each language names the other in its own script
-            assert not CJK.search(v["zh"]) and CJK.search(v["en"])
-            continue
-        assert CJK.search(v["zh"]), f"{key}: zh has no Chinese: {v['zh']!r}"
+        for lang in ("zh-Hans", "zh-Hant"):
+            assert CJK.search(v[lang]), f"{key}: {lang} has no Chinese: {v[lang]!r}"
         assert not CJK.search(v["en"]), f"{key}: en has Chinese: {v['en']!r}"
-        assert "{" not in re.sub(r"\{\w+\}", "", v["zh"] + v["en"]), key            # no stray braces
+        assert "{" not in re.sub(r"\{\w+\}", "", "".join(v.values())), key            # no stray braces
     # a translation, not a copy: nothing but the params/punctuation may be equal
     for key, v in i18n.WORDS.items():
-        assert v["en"] != v["zh"], key
+        assert v["en"] != v["zh-Hans"] and v["en"] != v["zh-Hant"], key
+    # the two scripts are two columns, not one copied: most lines differ
+    differ = sum(v["zh-Hans"] != v["zh-Hant"] for v in i18n.WORDS.values())
+    assert differ > len(i18n.WORDS) * 0.8, differ
+
+
+def test_a_language_is_one_of_ours_or_the_old_zh():
+    assert [i18n.canon(x) for x in ("en", "zh-Hans", "zh-Hant", "zh")] == ["en", "zh-Hans", "zh-Hant", "zh-Hans"]
+    assert all(i18n.canon(x) is None for x in ("fr", "", "ZH", "zh-CN", "zh_Hant", None, 3))
+    assert set(i18n.NAMES) == set(i18n.LANGS)
 
 
 def test_t_fills_params_and_refuses_what_it_cannot_say():
     assert i18n.t("budget.line", "en", open=3, max=10) == "3 of 10 asks open"
-    assert i18n.t("budget.line", "zh", open=3, max=10) == "待处理 3 / 10 项"
+    assert i18n.t("budget.line", "zh-Hans", open=3, max=10) == "待处理 3 / 10 项"
+    assert i18n.t("budget.line", "zh-Hant", open=3, max=10) == "待處理 3 / 10 項"
     assert i18n.t("age.min", "en", n=5, unused="x") == "5 min ago"          # extra params are harmless
     for call, what in ((lambda: i18n.t("no.such.key", "en"), "key"), (lambda: i18n.t("nav.waiting", "fr"), "language"),
                        (lambda: i18n.t("budget.line", "en", open=3), "param"), (lambda: i18n.t("nav.waiting", None), "language")):
@@ -192,18 +201,18 @@ def test_a_refusal_after_the_skill_pack_may_have_been_written_never_says_nothing
     check."""
     for code in ("gate_refused", "gate_timeout", "gate_unsure", "not_recorded"):
         w = i18n.WORDS[f"err.{code}"]
-        assert "nothing was saved" not in w["en"].lower() and "没有保存" not in w["zh"], code
+        assert "nothing was saved" not in w["en"].lower() and "没有保存" not in w["zh-Hans"], code
     for code in ("gate_timeout", "gate_unsure"):
         w = i18n.WORDS[f"err.{code}"]
-        assert "may or may not" in w["en"] and "agent" in w["en"] and "agent" in w["zh"] and "也可能没有" in w["zh"], code
+        assert "may or may not" in w["en"] and "agent" in w["en"] and "agent" in w["zh-Hans"] and "也可能没有" in w["zh-Hans"], code
     # a refusal that stopped before any code was sent still says so
-    assert "Nothing was saved" in i18n.WORDS["err.gate_changed"]["en"] and "没有保存" in i18n.WORDS["err.gate_changed"]["zh"]
+    assert "Nothing was saved" in i18n.WORDS["err.gate_changed"]["en"] and "没有保存" in i18n.WORDS["err.gate_changed"]["zh-Hans"]
 
 
 def test_the_number_and_date_sentences_say_the_exact_shape_core_accepts():
-    for lang, want in (("en", ("plain number", "no commas")), ("zh", ("普通数字", "逗号"))):
+    for lang, want in (("en", ("plain number", "no commas")), ("zh-Hans", ("普通数字", "逗号"))):
         assert all(w in i18n.WORDS["bad_value.number"][lang] for w in want), lang
-    assert "2026-10-01" in i18n.WORDS["bad_value.date"]["en"] and "2026-10-01" in i18n.WORDS["bad_value.date"]["zh"]
+    assert "2026-10-01" in i18n.WORDS["bad_value.date"]["en"] and "2026-10-01" in i18n.WORDS["bad_value.date"]["zh-Hans"]
     for text in ("4.2", "2026-10-01"):          # and what they show as an example is itself valid
         v, err = core.check_value({"step": "provide", "input": {"type": "number" if "." in text else "date"}}, text)
         assert v == text and err is None

@@ -305,7 +305,7 @@ def test_u08_same_bar_everywhere_usable_at_375_no_sideways_scroll_big_tap_target
             assert bar.find("a", "lang") and bar.find("a", "brand")
             assert d.find("meta", name="viewport").attrs["content"] == "width=device-width, initial-scale=1"
             bars.add((lang, tuple((a.attrs["href"].split("?")[0], a.text().split()[0]) for a in tabs if a.parent.tag == "nav")))
-    assert len(bars) == 2                                  # one bar per language, nothing page-specific in it
+    assert len(bars) == len(LANGS)                         # one bar per language, nothing page-specific in it
     for sel in (".btn", ".opt", "summary", ".tabs a", ".lang", ".jump a", "textarea",
                 'input[type="number"]', 'input[type="text"]', 'input[type="date"]', 'input[type="url"]'):
         got = [d.get("min-height") for m, sels, d in CSS if not m and any(s == sel for s in sels) and "min-height" in d]
@@ -405,7 +405,7 @@ def test_u09_the_consoles_words_come_only_from_the_dictionary_the_agents_are_sho
         for e in log.events:
             strings({k: v for k, v in e.items() if k in fields})
     agent |= {"Northwind Console", "alice", "Done", RES_TITLE, RES_VALUE, RES_MESSAGE, ERR_DETAIL}
-    for lang in ("zh", "en"):
+    for lang in ("zh-Hans", "en"):
         srcs = every_page(lang) + [pages.render_inbox(L.state(), ctx(lang)), pages.render_history(L.state(), ctx(lang))]
         english_runs = 0
         for src in srcs:
@@ -420,7 +420,7 @@ def test_u09_the_consoles_words_come_only_from_the_dictionary_the_agents_are_sho
     # and the agent's words are exactly as written: escaped, nothing else done to them
     L2 = Log()
     L2.ask(ask_raw("confirm", "q", title="  <b>Odd</b> title & \"more\"  "[2:-2], why="Line 1\nLine 2  spaced"))
-    d = Doc(pages.render_inbox(L2.state(), ctx("zh")))
+    d = Doc(pages.render_inbox(L2.state(), ctx("zh-Hans")))
     assert d.find("span", "ttl").text() == '<b>Odd</b> title & "more"'
     assert "".join(d.find("p", "why").texts()) == "Line 1\nLine 2  spaced"
 

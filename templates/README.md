@@ -69,7 +69,8 @@ The files a new skill pack starts from. The build workflow, [BUILD.md](../BUILD.
 | `{{client}}` | The client's folder id, for example `acme-us` | `new_client.py --client` |
 | `{{title}}` | The client's display name | `new_client.py --title` |
 | `{{port}}` | The client console's port | `new_client.py --port` |
-| `{{language}}` | The language the agent replies to the client in | `new_client.py --language` |
+| `{{language}}` | The language the agent replies to the client in, in words | `new_client.py --language`, else from `--lang` |
+| `{{lang_tag}}` | The client's language tag: `en`, `zh-Hans` or `zh-Hant` | `new_client.py --lang` |
 | `{{gate_verbs}}` | The skill pack's gated verbs, denied through the client's wrapper | the skill pack's `scripts/verbs.py` (kind `gated`) |
 
 `<<fill: …>>` marks what only the build can write: the skill's description, the domain's verbs and recipes, names in decision rights. The release step refuses a shipped file that still has one.

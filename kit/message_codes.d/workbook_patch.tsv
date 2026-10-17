@@ -1,9 +1,9 @@
-code	params	meaning_en	meaning_zh
-workbook_patch_sheet_missing	sheet	the workbook has no sheet {sheet}	工作簿没有工作表 {sheet}
-workbook_patch_merged	sheet,ref	{sheet}!{ref} is covered by a merge: not set	{sheet}!{ref} 在合并单元格里：不写入
-workbook_patch_formula	sheet,ref	{sheet}!{ref} holds a formula: not set	{sheet}!{ref} 有公式：不写入
-workbook_patch_client_value	sheet,ref	{sheet}!{ref} holds a value the client entered: not set	{sheet}!{ref} 有客户自己填的值：不写入
-workbook_patch_unsupported	part,reason	{part}: {reason}; the copy is not written	{part}：{reason}；不生成副本
-workbook_patch_table_unknown	table_id	{table_id} is not a confirmed table of the map	{table_id} 不是映射里已确认的表
-workbook_patch_keys_missing	table_id,count	{table_id}: {count} key(s) the skill pack has are not rows of the sheet; not added	{table_id}：skill pack 有 {count} 个键不在工作表的行里；不新增
-workbook_patch_values_length	field,values,cells,sheet,cell	{field}: {values} value(s) for the {cells} cell(s) of {sheet} {cell}; not set	{field}：{values} 个值对应 {sheet} {cell} 的 {cells} 个单元格；不写入
+code	params	meaning_en	meaning_zh	meaning_zh-Hant
+workbook_patch_sheet_missing	sheet	the workbook has no sheet {sheet}	工作簿没有工作表 {sheet}	工作簿沒有工作表 {sheet}
+workbook_patch_merged	sheet,ref	{sheet}!{ref} is covered by a merge: not set	{sheet}!{ref} 在合并单元格里：不写入	{sheet}!{ref} 在合併單元格里：不寫入
+workbook_patch_formula	sheet,ref	{sheet}!{ref} holds a formula: not set	{sheet}!{ref} 有公式：不写入	{sheet}!{ref} 有公式：不寫入
+workbook_patch_client_value	sheet,ref	{sheet}!{ref} holds a value the client entered: not set	{sheet}!{ref} 有客户自己填的值：不写入	{sheet}!{ref} 有客戶自己填的值：不寫入
+workbook_patch_unsupported	part,reason	{part}: {reason}; the copy is not written	{part}：{reason}；不生成副本	{part}：{reason}；不生成副本
+workbook_patch_table_unknown	table_id	{table_id} is not a confirmed table of the map	{table_id} 不是映射里已确认的表	{table_id} 不是映射裡已確認的表
+workbook_patch_keys_missing	table_id,count	{table_id}: {count} key(s) the skill pack has are not rows of the sheet; not added	{table_id}：skill pack 有 {count} 个键不在工作表的行里；不新增	{table_id}：skill pack 有 {count} 個鍵不在工作表的行裡；不新增
+workbook_patch_values_length	field,values,cells,sheet,cell	{field}: {values} value(s) for the {cells} cell(s) of {sheet} {cell}; not set	{field}：{values} 个值对应 {sheet} {cell} 的 {cells} 个单元格；不写入	{field}：{values} 個值對應 {sheet} {cell} 的 {cells} 個單元格；不寫入
